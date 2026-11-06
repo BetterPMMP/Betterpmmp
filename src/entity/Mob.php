@@ -183,6 +183,23 @@ abstract class Mob extends Living{
 		return $this->fleeTicks > 0;
 	}
 
+	/** Runs away from a position for a while (vanilla PanicGoal / AvoidEntityGoal). */
+	protected function startPanic(Vector3 $from, int $ticks = 60) : void{
+		$dx = $this->getPosition()->x - $from->x;
+		$dz = $this->getPosition()->z - $from->z;
+		$length = sqrt($dx * $dx + $dz * $dz);
+		if($length < 0.0001){
+			$angle = deg2rad((float) mt_rand(0, 359));
+			$dx = sin($angle);
+			$dz = cos($angle);
+			$length = 1.0;
+		}
+		$this->fleeX = $dx / $length;
+		$this->fleeZ = $dz / $length;
+		$this->fleeTicks = $ticks;
+		$this->getNavigator()->stop();
+	}
+
 	protected function tickWandering(int $tickDiff) : void{
 		if($this->fleeTicks > 0){
 			$this->fleeTicks = max(0, $this->fleeTicks - $tickDiff);

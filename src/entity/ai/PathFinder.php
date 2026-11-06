@@ -86,7 +86,7 @@ final class PathFinder{
 			self::$budgetUsed = 0;
 			self::$budgetTime = 0.0;
 		}
-		if(self::$budgetUsed >= self::PATHS_PER_TICK || self::$budgetTime >= self::TIME_PER_TICK){
+		if(self::$budgetUsed >= self::PATHS_PER_TICK || self::$budgetTime >= \pocketmine\BetterPMMPConfig::pathfindingSecondsPerTick()){
 			return false;
 		}
 		++self::$budgetUsed;

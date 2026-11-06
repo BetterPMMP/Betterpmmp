@@ -21,6 +21,8 @@ final class StructureStart{
 	public int $maxZ = PHP_INT_MIN;
 	/** @var StructurePiece[] */
 	public array $pieces = [];
+	/** @var array<string, array{int, int, int}> named points of interest (e.g. the stronghold portal room) */
+	public array $markers = [];
 
 	public function __construct(
 		public readonly string $type,

@@ -23,6 +23,11 @@ declare(strict_types=1);
 
 namespace pocketmine\entity;
 
+use pocketmine\block\Bed;
+use pocketmine\block\Bell;
+use pocketmine\block\Block;
+use pocketmine\block\BlockTypeIds;
+use pocketmine\block\Crops;
 use pocketmine\data\bedrock\BiomeIds;
 use pocketmine\entity\effect\EffectInstance;
 use pocketmine\entity\effect\VanillaEffects;
@@ -43,7 +48,13 @@ use pocketmine\player\Player;
 use pocketmine\utils\Random;
 use pocketmine\world\format\io\GlobalBlockStateHandlers;
 use pocketmine\world\World;
+use function array_slice;
+use function atan2;
+use function max;
+use function min;
+use function usort;
 use function count;
+use function rad2deg;
 use function mt_rand;
 
 /**
@@ -105,6 +116,10 @@ class Villager extends Mob implements Ageable{
 			$this->tradeExperience = $data->getInt("TradeExperience", 0);
 			$this->skin = $data->getInt("Skin", 0);
 			$this->tradeSeed = $data->getInt("TradeSeed", mt_rand());
+			if($data->getByte("Baby", 0) !== 0){
+				$this->setBaby(true);
+				$this->growTicks = $data->getInt("GrowTicks", 24000);
+			}
 			if($data->getTag("JobSiteX") !== null){
 				$this->jobSite = new Vector3($data->getInt("JobSiteX"), $data->getInt("JobSiteY"), $data->getInt("JobSiteZ"));
 			}
@@ -127,7 +142,9 @@ class Villager extends Mob implements Ageable{
 			->setInt("Level", $this->level)
 			->setInt("TradeExperience", $this->tradeExperience)
 			->setInt("Skin", $this->skin)
-			->setInt("TradeSeed", $this->tradeSeed);
+			->setInt("TradeSeed", $this->tradeSeed)
+			->setByte("Baby", $this->baby ? 1 : 0)
+			->setInt("GrowTicks", $this->growTicks);
 		if($this->jobSite !== null){
 			$data->setInt("JobSiteX", $this->jobSite->getFloorX());
 			$data->setInt("JobSiteY", $this->jobSite->getFloorY());
@@ -260,6 +277,12 @@ class Villager extends Mob implements Ageable{
 
 	protected function entityBaseTick(int $tickDiff = 1) : bool{
 		$result = parent::entityBaseTick($tickDiff);
+		if($this->baby && $this->isAlive()){
+			$this->growTicks -= $tickDiff;
+			if($this->growTicks <= 0){
+				$this->setBaby(false);
+			}
+		}
 		if(!$this->isAlive() || $this->baby){
 			return $result;
 		}
@@ -351,7 +374,345 @@ class Villager extends Mob implements Ageable{
 		}
 	}
 
+	// ------------------------------------------------------------------
+	// Daily schedule (vanilla villager brain, simplified)
+	// ------------------------------------------------------------------
+
+	/** @var array<int, array<int, int>> world id => bed hash => villager entity id */
+	private static array $claimedBeds = [];
+	private ?Vector3 $bed = null;
+	private bool $sleeping = false;
+	private int $brainTicks = 0;
+	private int $workTicks = 0;
+	private ?Vector3 $harvestTarget = null;
+	private int $golemTicks = 0;
+	private int $breedTicks = 0;
+
+	private const ACTIVITY_IDLE = 0;
+	private const ACTIVITY_WORK = 1;
+	private const ACTIVITY_MEET = 2;
+	private const ACTIVITY_REST = 3;
+
+	private function activity() : int{
+		$time = $this->getWorld()->getTimeOfDay();
+		if($time >= 12000){
+			return self::ACTIVITY_REST;
+		}
+		if($this->baby){
+			return self::ACTIVITY_IDLE;
+		}
+		if($time >= 2000 && $time < 9000 && $this->jobSite !== null){
+			return self::ACTIVITY_WORK;
+		}
+		if($time >= 9000 && $time < 11000){
+			return self::ACTIVITY_MEET;
+		}
+		return self::ACTIVITY_IDLE;
+	}
+
+	/** Monsters villagers run from. */
+	private static function isThreat(Entity $entity) : bool{
+		return $entity instanceof Zombie || $entity instanceof ZombieVillagerMob || $entity instanceof HuskMob || $entity instanceof DrownedMob
+			|| $entity instanceof VindicatorMob || $entity instanceof PillagerMob || $entity instanceof EvokerMob || $entity instanceof RavagerMob
+			|| $entity instanceof ZoglinMob || $entity instanceof VexMob;
+	}
+
+	protected function tickWandering(int $tickDiff) : void{
+		if($this->isPanicking()){
+			$this->wakeUp();
+			parent::tickWandering($tickDiff);
+			return;
+		}
+		$this->brainTicks -= $tickDiff;
+		$scan = $this->brainTicks <= 0;
+		if($scan){
+			$this->brainTicks = 20;
+			foreach($this->getWorld()->getNearbyEntities($this->getBoundingBox()->expandedCopy(8, 4, 8), $this) as $entity){
+				if(self::isThreat($entity) && $entity->isAlive()){
+					$this->startPanic($entity->getPosition(), 80);
+					return;
+				}
+			}
+			$this->tickVillageLife();
+		}
+		$navigator = $this->getNavigator();
+		switch($this->activity()){
+			case self::ACTIVITY_REST:
+				$this->tickRest($scan, $tickDiff);
+				return;
+			case self::ACTIVITY_WORK:
+				$this->wakeUp();
+				$this->tickWork($scan, $tickDiff);
+				return;
+			case self::ACTIVITY_MEET:
+				$this->wakeUp();
+				if($scan && !$navigator->isMoving()){
+					if($this->meetingPointAge-- <= 0){
+						$this->meetingPointAge = 30;
+						$this->meetingPoint = $this->findBlocksNear(24, 4, "bell", 1)[0] ?? null;
+					}
+					$bell = $this->meetingPoint;
+					if($bell !== null && $bell->distanceSquared($this->getPosition()) > 16){
+						$navigator->moveTo($bell->add(mt_rand(-3, 3) + 0.5, 0, mt_rand(-3, 3) + 0.5), $this->getWalkSpeed(), 2.0);
+					}
+				}
+				break;
+			default:
+				$this->wakeUp();
+				break;
+		}
+		parent::tickWandering($tickDiff);
+	}
+
+	/** Go to the claimed bed and sleep in it. */
+	private function tickRest(bool $scan, int $tickDiff) : void{
+		$navigator = $this->getNavigator();
+		if($this->sleeping){
+			$this->setMotion(new Vector3(0, $this->getMotion()->y, 0));
+			return;
+		}
+		if($scan && ($this->bed === null || !$this->isBedValid($this->bed))){
+			$this->bed = null;
+			$this->claimBed();
+		}
+		if($this->bed === null){
+			parent::tickWandering($tickDiff);
+			return;
+		}
+		$target = $this->bed->add(0.5, 0.6, 0.5);
+		if($this->getPosition()->distanceSquared($target) <= 2.5){
+			$navigator->stop();
+			$this->sleeping = true;
+			$this->teleport($target);
+			$this->networkPropertiesDirty = true;
+			return;
+		}
+		$navigator->moveTo($target, $this->getWalkSpeed(), 1.0);
+		if(!$navigator->tick($tickDiff)){
+			$navigator->moveTo($target, $this->getWalkSpeed(), 1.0);
+		}
+	}
+
+	private function wakeUp() : void{
+		if($this->sleeping){
+			$this->sleeping = false;
+			$this->networkPropertiesDirty = true;
+		}
+	}
+
+	private function isBedValid(Vector3 $pos) : bool{
+		$world = $this->getWorld();
+		return $world->isChunkLoaded($pos->getFloorX() >> 4, $pos->getFloorZ() >> 4) && $world->getBlock($pos) instanceof Bed;
+	}
+
+	private int $bedSearchCooldown = 0;
+	private ?Vector3 $meetingPoint = null;
+	private int $meetingPointAge = 0;
+
+	private function claimBed() : void{
+		if($this->bedSearchCooldown-- > 0){
+			return;
+		}
+		$this->bedSearchCooldown = 30; // searches every 30 brain ticks (~30 s) at most
+		$world = $this->getWorld();
+		$worldId = $world->getId();
+		foreach($this->findBlocksNear(24, 4, "bed") as $bed){
+			$hash = World::blockHash($bed->getFloorX(), $bed->getFloorY(), $bed->getFloorZ());
+			$claimant = self::$claimedBeds[$worldId][$hash] ?? null;
+			if($claimant === null || $claimant === $this->getId() || $world->getEntity($claimant) === null){
+				self::$claimedBeds[$worldId][$hash] = $this->getId();
+				$this->bed = $bed;
+				return;
+			}
+		}
+	}
+
+	/** Work at the job site; farmers harvest and replant crops. */
+	private function tickWork(bool $scan, int $tickDiff) : void{
+		$navigator = $this->getNavigator();
+		if($this->profession === VillagerTrades::FARMER && $this->harvestTarget === null && $scan){
+			$this->harvestTarget = $this->findBlocksNear(9, 2, "crop", 1)[0] ?? null;
+		}
+		if($this->harvestTarget !== null){
+			$target = $this->harvestTarget;
+			if($this->getPosition()->distanceSquared($target->add(0.5, 0, 0.5)) <= 3.0){
+				$block = $this->getWorld()->getBlock($target);
+				if($block instanceof Crops && $block->getAge() >= $block::MAX_AGE){
+					// harvest: drop the produce, replant at age 0 (vanilla farmers keep the seeds)
+					foreach($block->getDrops(VanillaItems::AIR()) as $drop){
+						if(!($drop->getTypeId() === VanillaItems::WHEAT_SEEDS()->getTypeId() || $drop->getTypeId() === VanillaItems::BEETROOT_SEEDS()->getTypeId())){
+							$this->getWorld()->dropItem($target->add(0.5, 0.5, 0.5), $drop);
+						}
+					}
+					$this->getWorld()->setBlock($target, (clone $block)->setAge(0));
+					$this->broadcastAnimation(new \pocketmine\entity\animation\ArmSwingAnimation($this));
+				}
+				$this->harvestTarget = null;
+				$navigator->stop();
+				return;
+			}
+			$navigator->moveTo($target->add(0.5, 0, 0.5), $this->getWalkSpeed(), 1.2);
+			if(!$navigator->tick($tickDiff)){
+				$this->harvestTarget = null;
+			}
+			return;
+		}
+		$site = $this->jobSite;
+		if($site === null){
+			return;
+		}
+		$distance = $this->getPosition()->distanceSquared($site->add(0.5, 0, 0.5));
+		if($distance > 4){
+			$navigator->moveTo($site->add(0.5, 0, 0.5), $this->getWalkSpeed(), 1.5);
+			$navigator->tick($tickDiff);
+			return;
+		}
+		$navigator->stop();
+		// look at the workstation
+		$dx = $site->x + 0.5 - $this->getPosition()->x;
+		$dz = $site->z + 0.5 - $this->getPosition()->z;
+		$this->setRotation(rad2deg(atan2(-$dx, $dz)), 20.0);
+		$this->workTicks += $tickDiff;
+		if($this->workTicks >= 200){
+			$this->workTicks = 0;
+			// working at the job site restocks trades (vanilla: up to twice a day)
+			foreach($this->offers as $offer){
+				$offer->restock();
+			}
+		}
+	}
+
+	/**
+	 * Iron golem spawning and breeding:
+	 * - 5+ villagers within 16 blocks and no golem within 16: sometimes a golem appears.
+	 * - With free beds in the village, adult villagers occasionally have a baby.
+	 */
+	private function tickVillageLife() : void{
+		if($this->baby){
+			return;
+		}
+		$world = $this->getWorld();
+		$this->golemTicks += 20;
+		$this->breedTicks += 20;
+		if($this->golemTicks >= 600){
+			$this->golemTicks = 0;
+			$villagers = 0;
+			$golem = false;
+			foreach($world->getNearbyEntities($this->getBoundingBox()->expandedCopy(16, 8, 16), $this) as $entity){
+				if($entity instanceof Villager){
+					++$villagers;
+				}elseif($entity instanceof IronGolemMob){
+					$golem = true;
+				}
+			}
+			if(!$golem && $villagers >= 4 && mt_rand(0, 4) === 0){
+				$spot = $this->findRandomStandPos(8, 6);
+				if($spot !== null){
+					(new IronGolemMob(Location::fromObject($spot, $world)))->spawnToAll();
+				}
+			}
+		}
+		if($this->breedTicks >= 1200){
+			$this->breedTicks = 0;
+			if(mt_rand(0, 7) !== 0){
+				return;
+			}
+			$villagers = 1;
+			$partner = null;
+			foreach($world->getNearbyEntities($this->getBoundingBox()->expandedCopy(32, 8, 32), $this) as $entity){
+				if($entity instanceof Villager){
+					++$villagers;
+					if(!$entity->isBaby() && $partner === null && $entity->getPosition()->distanceSquared($this->getPosition()) < 64){
+						$partner = $entity;
+					}
+				}
+			}
+			if($partner === null){
+				return;
+			}
+			$beds = count($this->findBlocksNear(24, 4, "bed", 64));
+			if($beds > $villagers){
+				$baby = new Villager(Location::fromObject($this->getPosition(), $world));
+				$baby->setBaby(true);
+				$baby->spawnToAll();
+				$this->getWorld()->addParticle($this->getPosition()->add(0, 2, 0), new \pocketmine\world\particle\HeartParticle());
+			}
+		}
+	}
+
+	/** Babies grow up after 20 minutes. */
+	private int $growTicks = 0;
+
+	public function setBaby(bool $baby) : void{
+		$this->baby = $baby;
+		$this->growTicks = $baby ? 24000 : 0;
+		$this->setScale($baby ? 0.5 : 1.0);
+		$this->networkPropertiesDirty = true;
+	}
+
+	/** @var array<string, array<int, bool>> kind => state id => matches */
+	private static array $kindCache = [];
+
+	private static function stateIs(string $kind, int $stateId) : bool{
+		if(isset(self::$kindCache[$kind][$stateId])){
+			return self::$kindCache[$kind][$stateId];
+		}
+		$block = \pocketmine\block\RuntimeBlockStateRegistry::getInstance()->fromStateId($stateId);
+		return self::$kindCache[$kind][$stateId] = match($kind){
+			"bed" => $block instanceof Bed && $block->isHeadPart(),
+			"bell" => $block instanceof Bell,
+			"crop" => $block instanceof Crops && $block->getAge() >= $block::MAX_AGE,
+			default => false,
+		};
+	}
+
+	/**
+	 * Positions of blocks of a kind ("bed", "bell", "crop") around the
+	 * villager, nearest first. Reads raw chunk data, so it is cheap.
+	 * @return Vector3[]
+	 */
+	private function findBlocksNear(int $radius, int $vertical, string $kind, int $limit = 16) : array{
+		$world = $this->getWorld();
+		$base = $this->getPosition()->floor();
+		$found = [];
+		for($x = $base->getFloorX() - $radius; $x <= $base->getFloorX() + $radius; ++$x){
+			for($z = $base->getFloorZ() - $radius; $z <= $base->getFloorZ() + $radius; ++$z){
+				$chunk = $world->getChunk($x >> 4, $z >> 4);
+				if($chunk === null){
+					continue;
+				}
+				for($y = max($world->getMinY(), $base->getFloorY() - $vertical); $y <= min($world->getMaxY() - 1, $base->getFloorY() + $vertical); ++$y){
+					if(self::stateIs($kind, $chunk->getBlockStateId($x & 15, $y, $z & 15))){
+						$found[] = new Vector3($x, $y, $z);
+					}
+				}
+			}
+		}
+		usort($found, fn(Vector3 $a, Vector3 $b) => $a->distanceSquared($base) <=> $b->distanceSquared($base));
+		return array_slice($found, 0, $limit);
+	}
+
+	/** Vanilla: villagers killed by zombies turn into zombie villagers (normal 50 %, hard 100 %). */
+	protected function onDeath() : void{
+		$cause = $this->getLastDamageCause();
+		if($cause instanceof EntityDamageByEntityEvent){
+			$damager = $cause->getDamager();
+			$difficulty = $this->getWorld()->getDifficulty();
+			if(($damager instanceof Zombie || $damager instanceof ZombieVillagerMob || $damager instanceof HuskMob || $damager instanceof DrownedMob)
+				&& ($difficulty === World::DIFFICULTY_HARD || ($difficulty === World::DIFFICULTY_NORMAL && mt_rand(0, 1) === 0))){
+				$zombie = new ZombieVillagerMob(Location::fromObject($this->getPosition(), $this->getWorld(), $this->location->yaw, 0.0));
+				$zombie->spawnToAll();
+				$this->flagForDespawn();
+				return;
+			}
+		}
+		parent::onDeath();
+	}
+
 	protected function onDispose() : void{
+		if($this->bed !== null && $this->location->isValid()){
+			unset(self::$claimedBeds[$this->getWorld()->getId()][World::blockHash($this->bed->getFloorX(), $this->bed->getFloorY(), $this->bed->getFloorZ())]);
+		}
 		if($this->jobSite !== null && $this->location->isValid()){
 			unset(self::$claimedJobSites[$this->getWorld()->getId()][World::blockHash($this->jobSite->getFloorX(), $this->jobSite->getFloorY(), $this->jobSite->getFloorZ())]);
 		}
@@ -360,6 +721,7 @@ class Villager extends Mob implements Ageable{
 
 	protected function syncNetworkData(EntityMetadataCollection $properties) : void{
 		parent::syncNetworkData($properties);
+		$properties->setGenericFlag(EntityMetadataFlags::SLEEPING, $this->sleeping);
 		$properties->setGenericFlag(EntityMetadataFlags::BABY, $this->baby);
 		$properties->setInt(EntityMetadataProperties::VARIANT, $this->profession);
 		$properties->setInt(EntityMetadataProperties::MARK_VARIANT, $this->skin);
