@@ -105,6 +105,14 @@ final class EntityFactory{
 			return new Egg(Helper::parseLocation($nbt, $world), null, $nbt);
 		}, ['Egg', 'minecraft:egg']);
 
+		$this->register(\pocketmine\entity\object\BoatEntity::class, function(World $world, CompoundTag $nbt) : \pocketmine\entity\object\BoatEntity{
+			return new \pocketmine\entity\object\BoatEntity(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['Boat', 'minecraft:boat']);
+
+		$this->register(\pocketmine\entity\object\MinecartEntity::class, function(World $world, CompoundTag $nbt) : \pocketmine\entity\object\MinecartEntity{
+			return new \pocketmine\entity\object\MinecartEntity(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['MinecartRideable', 'minecraft:minecart']);
+
 		$this->register(EndCrystal::class, function(World $world, CompoundTag $nbt) : EndCrystal{
 			return new EndCrystal(Helper::parseLocation($nbt, $world), $nbt);
 		}, ['EnderCrystal', 'minecraft:ender_crystal']);

@@ -29,5 +29,11 @@ class Minecart extends Item{
 		return 1;
 	}
 
-	//TODO
+	public function onInteractBlock(\pocketmine\player\Player $player, \pocketmine\block\Block $blockReplace, \pocketmine\block\Block $blockClicked, int $face, \pocketmine\math\Vector3 $clickVector, array &$returnedItems) : ItemUseResult{
+		if(\pocketmine\entity\object\MinecartEntity::placeOnRail($player, $player->getWorld(), $blockClicked->getPosition())){
+			$this->pop();
+			return ItemUseResult::SUCCESS;
+		}
+		return ItemUseResult::NONE;
+	}
 }

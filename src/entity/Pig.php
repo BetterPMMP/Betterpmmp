@@ -16,7 +16,9 @@ use pocketmine\item\VanillaItems;
 use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 use function mt_rand;
 
-class Pig extends Animal{
+class Pig extends Animal implements \pocketmine\entity\riding\Rideable{
+	use \pocketmine\entity\riding\MountableAnimalTrait;
+	protected function mountKind() : string{ return "pig"; }
 	public static function getNetworkTypeId() : string{ return EntityIds::PIG; }
 	protected function getInitialSizeInfo() : EntitySizeInfo{ return new EntitySizeInfo(0.9, 0.9); }
 	public function getName() : string{ return "Pig"; }

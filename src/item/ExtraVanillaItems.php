@@ -146,6 +146,7 @@ final class ExtraVanillaItems{
 			$name === "minecraft:brush" => new SimpleDurableItem($id, "Brush", 64, 1, 1),
 			$name === "minecraft:carrot_on_a_stick" => new SimpleDurableItem($id, "Carrot on a Stick", 25, 1, 1),
 			$name === "minecraft:warped_fungus_on_a_stick" => new SimpleDurableItem($id, "Warped Fungus on a Stick", 100, 1, 1),
+			str_ends_with($name, "_boat") || str_ends_with($name, "_raft") => new VehicleBoatItem($id, $display, $name, 1),
 			default => new GenericBedrockItem($id, $display, $name, self::stackSize($name)),
 		};
 	}

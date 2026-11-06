@@ -1652,6 +1652,7 @@ abstract class Entity{
 	 * because it may be needed by descendent classes.
 	 */
 	protected function onDispose() : void{
+		\pocketmine\entity\riding\RidingManager::dismount($this);
 		$this->despawnFromAll();
 		if($this->location->isValid()){
 			$this->getWorld()->removeEntity($this);
