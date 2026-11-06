@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 4.4-redstone-beta.2)
+# BetterPMMP – Vanilla-Parität (Stand 4.5-worldgen-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -27,12 +27,14 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 
 | System | Stand | Hinweis |
 |---|---|---|
-| Overworld-Generator | 🟡 | klassischer PMMP-Generator (Simplex), **nicht** der Vanilla-Generator; ~15 Biome statt ~65 |
-| Strukturen (Dörfer, Festungen, Tempel, Ancient City …) | ❌ | |
-| Höhlen / Schluchten / Aquifere (1.18+) | ❌ | |
-| Nether | 🟡 | einfacher Generator, keine Nether-Biome, keine Festungen/Bastionen |
+| Overworld-Generator | ✅/🟡 | **neu in 4.5**: Multi-Noise wie 1.18, y -64..319, 50 Oberflächen- + 3 Höhlenbiome, Deepslate. Nicht seedgleich mit Bedrock |
+| Höhlen | 🟡 | **neu in 4.5**: Käse-, Spaghetti-, Nudelhöhlen, Lava unter -55. Fehlen: Schluchten, Aquifere, Geoden |
+| Höhlenbiome | 🟡 | üppige Höhlen und Tiefes Dunkel dekoriert; Moos/Tropfstein-Blöcke fehlen im Kern |
+| Dörfer | 🟡 | **neu in 4.5**: Brunnen, Wege, gedrehte Häuser, Felder, Laternen in 5 Biomtypen; nur kleine Häuser |
+| Andere Strukturen (Festung, Antike Stadt, Tempel, Monument …) | ❌ | |
+| Nether | ✅/🟡 | **neu in 4.5**: 5 Nether-Biome mit Vegetation, Glowstone, Erzen, Antikem Schrott; keine Festungen/Bastionen |
 | End | 🟡 | eigener Generator mit Bossbar (4.2), keine End-Städte |
-| Portale (Nether/End) | 🟡 | siehe vorhandene Implementierung; Vanilla-Verknüpfung 1:8 nicht verifiziert |
+| Portale (Nether/End) | 🟡 | neue Nether-Welten nutzen den neuen Generator |
 
 ## Kreaturen
 
@@ -55,11 +57,11 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 
 ## Reihenfolge der nächsten Schritte
 
-1. Kolben (größter fehlender Redstone-Baustein), danach Beobachter, Werfer/Spender.
-2. Speichern geplanter Blockticks über Neustarts.
-3. Mob-Spawning nach Vanilla-Regeln + weitere feindliche Mobs.
-4. Neuer Overworld-Generator mit Vanilla-Biomen und Höhlen.
-5. Strukturen, Nether-Biome, Festungen.
+1. Fehlende Blöcke registrieren (Moos, Tropfstein, Seegras, Seetang, Pulverschnee).
+2. Strukturen: Minen, Festung, Netherfestung, Bastion, Antike Stadt, Tempel, Monument.
+3. Kolben, Beobachter, Werfer/Spender.
+4. Mob-Spawning nach Vanilla-Regeln + weitere feindliche Mobs.
+5. Speichern geplanter Blockticks über Neustarts.
 
 Jeder Punkt ist ein eigenes, großes Paket. „100 % Vanilla“ erreicht man nur Schritt
 für Schritt, mit Vergleichstests gegen den offiziellen Bedrock-Server.
