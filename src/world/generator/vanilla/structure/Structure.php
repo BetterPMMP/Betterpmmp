@@ -57,7 +57,7 @@ abstract class Structure{
 	public function candidateChunk(int $seed, int $regionX, int $regionZ) : array{
 		$spacing = $this->getSpacing();
 		$range = $spacing - $this->getSeparation();
-		$r = new Random(($regionX * 341873128712 + $regionZ * 132897987541 + $seed + $this->getSalt()) & 0x7fffffffffff);
+		$r = new Random((($regionX & 0xffffff) * 341873128712 ^ ($regionZ & 0xffffff) * 132897987541 ^ $seed ^ $this->getSalt()) & 0x7fffffffffff);
 		if($this->isTriangular()){
 			$ox = intdiv($r->nextBoundedInt($range) + $r->nextBoundedInt($range), 2);
 			$oz = intdiv($r->nextBoundedInt($range) + $r->nextBoundedInt($range), 2);
