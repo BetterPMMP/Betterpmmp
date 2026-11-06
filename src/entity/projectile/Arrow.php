@@ -41,6 +41,7 @@ use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataFlags;
 use pocketmine\player\Player;
 use pocketmine\world\sound\ArrowHitSound;
 use function ceil;
+use function count;
 use function mt_rand;
 use function sqrt;
 
@@ -145,8 +146,30 @@ class Arrow extends Projectile{
 		$this->broadcastAnimation(new ArrowShakeAnimation($this, 7));
 	}
 
+	/** BetterPMMP: Piercing - passes through this many mobs (crossbow) */
+	protected int $piercing = 0;
+	/** @var array<int, true> */
+	private array $pierced = [];
+
+	public function setPiercing(int $level) : void{ $this->piercing = $level; }
+	public function getPiercing() : int{ return $this->piercing; }
+
+	protected function despawnsOnEntityHit() : bool{
+		return count($this->pierced) > $this->piercing;
+	}
+
+	public function canCollideWith(Entity $entity) : bool{
+		return !isset($this->pierced[$entity->getId()]) && parent::canCollideWith($entity);
+	}
+
 	protected function onHitEntity(Entity $entityHit, RayTraceResult $hitResult) : void{
+		$this->pierced[$entityHit->getId()] = true;
+		$motion = clone $this->motion;
 		parent::onHitEntity($entityHit, $hitResult);
+		if(!$this->despawnsOnEntityHit()){
+			// keep flying through the mob (the hit handler only zeroes an unchanged motion)
+			$this->motion = $motion->multiply(0.999);
+		}
 		if($this->punchKnockback > 0){
 			$horizontalSpeed = sqrt($this->motion->x ** 2 + $this->motion->z ** 2);
 			if($horizontalSpeed > 0){

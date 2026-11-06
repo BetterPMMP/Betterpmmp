@@ -21,6 +21,7 @@ use pocketmine\world\sound\VanillaSound;
 use function cos;
 use function deg2rad;
 use function max;
+use function mt_rand;
 use function sin;
 
 /**
@@ -62,7 +63,8 @@ class Crossbow extends SimpleDurableItem implements Releasable{
 		if($this->isCharged()){
 			return false;
 		}
-		return !$player->hasFiniteResources() || $player->getOffHandInventory()->contains($arrow = VanillaItems::ARROW()) || $player->getInventory()->contains($arrow);
+		return !$player->hasFiniteResources() || $player->getOffHandInventory()->getItem(0) instanceof FireworkRocket
+			|| $player->getOffHandInventory()->contains($arrow = VanillaItems::ARROW()) || $player->getInventory()->contains($arrow);
 	}
 
 	public function onClickAir(Player $player, Vector3 $directionVector, array &$returnedItems) : ItemUseResult{
@@ -83,6 +85,18 @@ class Crossbow extends SimpleDurableItem implements Releasable{
 			return ItemUseResult::FAIL;
 		}
 		$arrow = VanillaItems::ARROW();
+		// vanilla: a firework rocket in the off hand is loaded instead of an arrow
+		$offHand = $player->getOffHandInventory()->getItem(0);
+		if($offHand instanceof FireworkRocket){
+			$rocket = (clone $offHand)->setCount(1);
+			if($player->hasFiniteResources()){
+				$offHand->pop();
+				$player->getOffHandInventory()->setItem(0, $offHand);
+			}
+			$this->setCharged($rocket);
+			$player->getWorld()->addSound($player->getPosition(), new VanillaSound(LevelSoundEvent::CROSSBOW_LOADING_END));
+			return ItemUseResult::SUCCESS;
+		}
 		if($player->hasFiniteResources()){
 			$inventory = match(true){
 				$player->getOffHandInventory()->contains($arrow) => $player->getOffHandInventory(),
@@ -100,8 +114,22 @@ class Crossbow extends SimpleDurableItem implements Releasable{
 		return ItemUseResult::SUCCESS;
 	}
 
+	private function chargedItem() : ?Item{
+		$tag = $this->getNamedTag()->getCompoundTag(self::TAG_CHARGED);
+		if($tag === null){
+			return null;
+		}
+		try{
+			return Item::nbtDeserialize($tag);
+		}catch(\Exception){
+			return null;
+		}
+	}
+
 	private function fire(Player $player) : void{
+		$projectile = $this->chargedItem();
 		$this->setCharged(null);
+		$piercing = $this->getEnchantmentLevel(ExtraEnchantments::get("piercing"));
 		$multishot = $this->getEnchantmentLevel(ExtraEnchantments::get("multishot")) > 0;
 		foreach($multishot ? [0.0, -10.0, 10.0] : [0.0] as $index => $offset){
 			$location = $player->getLocation();
@@ -110,10 +138,18 @@ class Crossbow extends SimpleDurableItem implements Releasable{
 			$y = -sin(deg2rad($pitch));
 			$xz = cos(deg2rad($pitch));
 			$direction = new Vector3(-$xz * sin(deg2rad($yaw)), $y, $xz * cos(deg2rad($yaw)));
-			$entity = new ArrowEntity(Location::fromObject($player->getEyePos(), $player->getWorld(), ($yaw > 180 ? 360 : 0) - $yaw, -$pitch), $player, false);
-			$entity->setMotion($direction->multiply(self::SPEED));
-			if($index > 0 || !$player->hasFiniteResources()){
-				$entity->setPickupMode(ArrowEntity::PICKUP_CREATIVE);
+			$location = Location::fromObject($player->getEyePos(), $player->getWorld(), ($yaw > 180 ? 360 : 0) - $yaw, -$pitch);
+			if($projectile instanceof FireworkRocket){
+				$entity = new \pocketmine\entity\object\CrossbowFirework($location, ($projectile->getFlightTimeMultiplier() + 1) * 10 + mt_rand(0, 12), $projectile->getExplosions());
+				$entity->setOwningEntity($player);
+				$entity->setMotion($direction->multiply(1.6));
+			}else{
+				$entity = new ArrowEntity($location, $player, false);
+				$entity->setMotion($direction->multiply(self::SPEED));
+				$entity->setPiercing($piercing);
+				if($index > 0 || !$player->hasFiniteResources() || $piercing > 0){
+					$entity->setPickupMode(ArrowEntity::PICKUP_CREATIVE);
+				}
 			}
 			$ev = new ProjectileLaunchEvent($entity);
 			$ev->call();
@@ -125,7 +161,7 @@ class Crossbow extends SimpleDurableItem implements Releasable{
 		}
 		$player->getWorld()->addSound($player->getPosition(), new VanillaSound(LevelSoundEvent::CROSSBOW_SHOOT));
 		if($player->hasFiniteResources()){
-			$this->applyDamage($multishot ? 3 : 1);
+			$this->applyDamage(($multishot ? 3 : 1) * ($projectile instanceof FireworkRocket ? 3 : 1));
 		}
 	}
 }

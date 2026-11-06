@@ -39,11 +39,38 @@ use function mt_rand;
 
 class Zombie extends Mob{
 	use \pocketmine\entity\ai\CombatAI;
+	use \pocketmine\entity\ai\BreaksDoors;
+
+	/** BetterPMMP: 5 % of zombies are babies - small, 50 % faster, 12 XP */
+	protected bool $baby = false;
 
 	protected function initEntity(\pocketmine\nbt\tag\CompoundTag $nbt) : void{
 		$this->setMaxHealth(20);
 		$this->setMovementSpeed(0.23);
 		parent::initEntity($nbt);
+		$baby = $nbt->getTag("IsBaby");
+		$this->setBaby($baby instanceof \pocketmine\nbt\tag\ByteTag ? $baby->getValue() === 1 : mt_rand(0, 99) < 5);
+	}
+
+	public function isBaby() : bool{ return $this->baby; }
+	protected function isBabyMob() : bool{ return $this->baby; }
+	protected function baseSpeedAttribute() : float{ return parent::baseSpeedAttribute() * ($this->baby ? 1.5 : 1.0); }
+
+	public function setBaby(bool $baby) : void{
+		$this->baby = $baby;
+		$this->setScale($baby ? 0.5 : 1.0);
+		$this->networkPropertiesDirty = true;
+	}
+
+	public function saveNBT() : \pocketmine\nbt\tag\CompoundTag{
+		$nbt = parent::saveNBT();
+		$nbt->setByte("IsBaby", $this->baby ? 1 : 0);
+		return $nbt;
+	}
+
+	protected function syncNetworkData(\pocketmine\network\mcpe\protocol\types\entity\EntityMetadataCollection $properties) : void{
+		parent::syncNetworkData($properties);
+		$properties->setGenericFlag(\pocketmine\network\mcpe\protocol\types\entity\EntityMetadataFlags::BABY, $this->baby);
 	}
 	protected function burnsInDaylight() : bool{ return true; }
 
@@ -80,11 +107,11 @@ class Zombie extends Mob{
 	}
 
 	public function getXpDropAmount() : int{
-		//TODO: check for equipment and whether it's a baby
-		return 5;
+		return $this->baby ? 12 : 5;
 	}
 
 	protected function tickWandering(int $tickDiff) : void{
+		$this->tickDoorBreaking($tickDiff);
 		$target = $this->updateCombatTarget($tickDiff);
 		if($target === null){
 			parent::tickWandering($tickDiff);

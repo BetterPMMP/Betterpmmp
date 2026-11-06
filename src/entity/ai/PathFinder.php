@@ -72,8 +72,20 @@ final class PathFinder{
 		private World $world,
 		private int $height = 2,
 		private bool $canSwim = true,
-		private bool $avoidWater = false
+		private bool $avoidWater = false,
+		private bool $breakDoors = false
 	){}
+
+	/** @var array<int, bool> state id => is a closed wooden door */
+	private static array $woodenDoors = [];
+
+	private static function isClosedWoodenDoor(int $stateId) : bool{
+		if(isset(self::$woodenDoors[$stateId])){
+			return self::$woodenDoors[$stateId];
+		}
+		$block = RuntimeBlockStateRegistry::getInstance()->fromStateId($stateId);
+		return self::$woodenDoors[$stateId] = $block instanceof Door && !$block->isOpen() && $block->getTypeId() !== BlockTypeIds::IRON_DOOR;
+	}
 
 	/**
 	 * Whether another path may be computed now. The budget is shared by all
@@ -176,7 +188,11 @@ final class PathFinder{
 		if($chunk === null){
 			return $this->cache[$hash] = self::UNLOADED;
 		}
-		return $this->cache[$hash] = self::classifyState($chunk->getBlockStateId($x & 15, $y, $z & 15));
+		$stateId = $chunk->getBlockStateId($x & 15, $y, $z & 15);
+		if($this->breakDoors && self::isClosedWoodenDoor($stateId)){
+			return $this->cache[$hash] = self::OPEN; // door breakers plan through wooden doors
+		}
+		return $this->cache[$hash] = self::classifyState($stateId);
 	}
 
 	/**
