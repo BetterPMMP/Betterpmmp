@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 4.5-worldgen-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 4.6-worldgen-beta.2)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -28,13 +28,13 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 | System | Stand | Hinweis |
 |---|---|---|
 | Overworld-Generator | ✅/🟡 | **neu in 4.5**: Multi-Noise wie 1.18, y -64..319, 50 Oberflächen- + 3 Höhlenbiome, Deepslate. Nicht seedgleich mit Bedrock |
-| Höhlen | 🟡 | **neu in 4.5**: Käse-, Spaghetti-, Nudelhöhlen, Lava unter -55. Fehlen: Schluchten, Aquifere, Geoden |
+| Höhlen | ✅/🟡 | Käse-, Spaghetti-, Nudelhöhlen, Lava unter -55, **Schluchten, Geoden, Seen, Fossilien (4.6)**. Fehlen: Aquifere |
 | Höhlenbiome | 🟡 | üppige Höhlen und Tiefes Dunkel dekoriert; Moos/Tropfstein-Blöcke fehlen im Kern |
-| Dörfer | 🟡 | **neu in 4.5**: Brunnen, Wege, gedrehte Häuser, Felder, Laternen in 5 Biomtypen; nur kleine Häuser |
-| Andere Strukturen (Festung, Antike Stadt, Tempel, Monument …) | ❌ | |
-| Nether | ✅/🟡 | **neu in 4.5**: 5 Nether-Biome mit Vegetation, Glowstone, Erzen, Antikem Schrott; keine Festungen/Bastionen |
-| End | 🟡 | eigener Generator mit Bossbar (4.2), keine End-Städte |
-| Portale (Nether/End) | 🟡 | neue Nether-Welten nutzen den neuen Generator |
+| Dörfer | ✅/🟡 | **4.6**: verzweigte Straßen, 12 Berufsgebäude mit Arbeitsblock und Truhe, Häuser, Felder, Gehege, 5 Biomtypen |
+| Andere Strukturen | ✅/🟡 | **4.6**: Mine, Festung mit Endportal, Verlies, Wüsten-/Dschungeltempel, Iglu, Hexenhütte, Außenposten, Ruinenportal, Schiffswrack, Ozeanruinen, Monument, Waldanwesen, Antike Stadt, Pfadruinen, Schatz (nachgebaut) |
+| Nether | ✅/🟡 | 5 Nether-Biome; **4.6**: Netherfestungen, Bastionen, Ruinenportale |
+| End | ✅/🟡 | **4.6**: Vanilla-Inselform, Säulen, Außeninseln, Chorus, End-Städte und -Schiffe (ohne Shulker/Elytren) |
+| Portale (Nether/End) | 🟡 | Nether/End werden beim Serverstart angelegt; Ankunft im End auf der Obsidian-Plattform |
 
 ## Kreaturen
 
@@ -57,8 +57,8 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 
 ## Reihenfolge der nächsten Schritte
 
-1. Fehlende Blöcke registrieren (Moos, Tropfstein, Seegras, Seetang, Pulverschnee).
-2. Strukturen: Minen, Festung, Netherfestung, Bastion, Antike Stadt, Tempel, Monument.
+1. Fehlende Blöcke und Gegenstände registrieren (Moos, Tropfstein, Seegras, Seetang, Sculk-Sensor, Komposter, Sattel, Elytren …).
+2. Wesen in Strukturen (Wächter, Shulker, Hexen, Plünderer).
 3. Kolben, Beobachter, Werfer/Spender.
 4. Mob-Spawning nach Vanilla-Regeln + weitere feindliche Mobs.
 5. Speichern geplanter Blockticks über Neustarts.

@@ -2810,6 +2810,7 @@ class World implements ChunkManager{
 		unset($this->changedBlocks[$chunkHash]);
 		$chunk->setTerrainDirty();
 		$this->markTickingChunkForRecheck($chunkX, $chunkZ); //this replacement chunk may not meet the conditions for ticking
+		$this->createPendingGeneratorTiles($chunk);
 
 		if(!$this->isChunkInUse($chunkX, $chunkZ)){
 			$this->unloadChunkRequest($chunkX, $chunkZ);
@@ -3030,6 +3031,39 @@ class World implements ChunkManager{
 
 		//delegate tile ticking to the corresponding block
 		$this->scheduleDelayedBlockUpdate($pos->asVector3(), $tile instanceof \pocketmine\block\tile\Comparator ? 2 : 1);
+	}
+
+	/**
+	 * BetterPMMP: world generation runs on worker threads, which cannot create
+	 * Tile objects. Generators attach tile NBT (chest loot, spawner type, bed
+	 * colour, ...) to the chunk instead; it is turned into real tiles here.
+	 */
+	private function createPendingGeneratorTiles(Chunk $chunk) : void{
+		$pending = $chunk->takePendingTiles();
+		if(count($pending) === 0){
+			return;
+		}
+		$factory = TileFactory::getInstance();
+		foreach($pending as $nbt){
+			try{
+				$x = $nbt->getInt(Tile::TAG_X);
+				$y = $nbt->getInt(Tile::TAG_Y);
+				$z = $nbt->getInt(Tile::TAG_Z);
+				if(!$this->isInWorld($x, $y, $z) || $this->getTileAt($x, $y, $z) !== null){
+					continue;
+				}
+				$expected = $this->getBlockAt($x, $y, $z, addToCache: false)->getIdInfo()->getTileClass();
+				if($expected === null){
+					continue; //the block was replaced after the tile data was recorded
+				}
+				$tile = $factory->createFromData($this, $nbt);
+				if($tile instanceof $expected){
+					$this->addTile($tile);
+				}
+			}catch(\Throwable $e){
+				$this->logger->debug("Skipped invalid generator tile: " . $e->getMessage());
+			}
+		}
 	}
 
 	/**

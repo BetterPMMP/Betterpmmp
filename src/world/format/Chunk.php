@@ -29,6 +29,7 @@ namespace pocketmine\world\format;
 use pocketmine\block\Block;
 use pocketmine\block\tile\Tile;
 use pocketmine\data\bedrock\BiomeIds;
+use pocketmine\nbt\tag\CompoundTag;
 use function array_map;
 
 class Chunk{
@@ -323,12 +324,48 @@ class Chunk{
 		}
 	}
 
+	/**
+	 * Tile NBT produced by world generation (worker threads cannot create Tile
+	 * objects). The world turns these into real tiles when the chunk is set.
+	 * Keyed by chunk block hash so a later write at the same position replaces it.
+	 * @var CompoundTag[]
+	 * @phpstan-var array<int, CompoundTag>
+	 */
+	private array $pendingTiles = [];
+
+	public function addPendingTile(int $x, int $y, int $z, CompoundTag $nbt) : void{
+		$this->pendingTiles[self::blockHash($x, $y, $z)] = $nbt;
+	}
+
+	public function removePendingTile(int $x, int $y, int $z) : void{
+		unset($this->pendingTiles[self::blockHash($x, $y, $z)]);
+	}
+
+	/**
+	 * @return CompoundTag[]
+	 * @phpstan-return array<int, CompoundTag>
+	 */
+	public function getPendingTiles() : array{
+		return $this->pendingTiles;
+	}
+
+	/**
+	 * Returns and clears the pending generator tiles.
+	 * @return CompoundTag[]
+	 */
+	public function takePendingTiles() : array{
+		$tiles = $this->pendingTiles;
+		$this->pendingTiles = [];
+		return $tiles;
+	}
+
 	public function __clone(){
 		//we don't bother cloning entities or tiles since it's impractical to do so (too many dependencies)
 		$this->subChunks = \SplFixedArray::fromArray(array_map(function(SubChunk $subChunk) : SubChunk{
 			return clone $subChunk;
 		}, $this->subChunks->toArray()));
 		$this->heightMap = clone $this->heightMap;
+		$this->pendingTiles = array_map(fn(CompoundTag $tag) => clone $tag, $this->pendingTiles);
 	}
 
 	/**

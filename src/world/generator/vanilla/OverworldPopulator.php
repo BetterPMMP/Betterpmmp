@@ -19,6 +19,24 @@ use pocketmine\utils\Random;
 use pocketmine\world\ChunkManager;
 use pocketmine\world\generator\object\TreeFactory;
 use pocketmine\world\generator\object\TreeType;
+use pocketmine\world\generator\vanilla\structure\AncientCity;
+use pocketmine\world\generator\vanilla\structure\DesertPyramid;
+use pocketmine\world\generator\vanilla\structure\Igloo;
+use pocketmine\world\generator\vanilla\structure\JungleTemple;
+use pocketmine\world\generator\vanilla\structure\Mineshaft;
+use pocketmine\world\generator\vanilla\structure\OceanMonument;
+use pocketmine\world\generator\vanilla\structure\OceanRuin;
+use pocketmine\world\generator\vanilla\structure\PillagerOutpost;
+use pocketmine\world\generator\vanilla\structure\RuinedPortal;
+use pocketmine\world\generator\vanilla\structure\Shipwreck;
+use pocketmine\world\generator\vanilla\structure\StructureStart;
+use pocketmine\world\generator\vanilla\structure\SwampHut;
+use pocketmine\world\generator\vanilla\structure\TrailRuins;
+use pocketmine\world\generator\vanilla\structure\VillageStructure;
+use pocketmine\world\generator\vanilla\structure\WoodlandMansion;
+use pocketmine\world\generator\vanilla\structure\StructureContext;
+use pocketmine\world\generator\vanilla\structure\StructureManager;
+use pocketmine\world\generator\vanilla\structure\Stronghold;
 use function count;
 use function in_array;
 use function max;
@@ -48,7 +66,8 @@ final class OverworldPopulator{
 
 	/** @var int[] solid ground states plants may grow on */
 	private array $soil;
-	private VillageGenerator $villages;
+	private StructureManager $structures;
+	private UndergroundFeatures $features;
 
 	public function __construct(
 		private int $seed,
@@ -69,7 +88,41 @@ final class OverworldPopulator{
 		$this->snowLayer = VanillaBlocks::SNOW_LAYER()->getStateId();
 		$this->mud = VanillaBlocks::MUD()->getStateId();
 		$this->soil = [$this->grass, $this->dirt, $this->coarseDirt, $this->podzol, $this->mycelium, $this->mud];
-		$this->villages = new VillageGenerator($seed, $climate);
+		$ctx = new StructureContext(
+			$seed,
+			function(int $x, int $y, int $z) use ($climate) : int{
+				return OverworldBiomeBuilder::pick(...$climate->sample($x, $z));
+			},
+			function(int $x, int $z) use ($climate) : int{
+				$s = $climate->sample($x, $z);
+				return (int) $climate->terrain($x, $z, $s[2], $s[3], $s[4])[0];
+			}
+		);
+		$this->features = new UndergroundFeatures();
+		$villages = new VillageStructure();
+		$this->structures = new StructureManager($ctx, [
+			new Mineshaft(),
+			new Stronghold(),
+			$villages,
+			new DesertPyramid(),
+			new JungleTemple(),
+			new Igloo(),
+			new SwampHut(),
+			new PillagerOutpost(fn(int $chunkX, int $chunkZ) : bool => $villages->hasVillageNear($ctx, $chunkX, $chunkZ, 10)),
+			new RuinedPortal(),
+			new Shipwreck(),
+			new OceanRuin(),
+			new OceanMonument(),
+			new WoodlandMansion(),
+			new AncientCity(function(int $x, int $z) use ($climate) : bool{
+				return $climate->sample($x, $z)[3] < -0.45;
+			}),
+			new TrailRuins(),
+		]);
+	}
+
+	public function getStructureManager() : StructureManager{
+		return $this->structures;
 	}
 
 	public static function isSpawnFriendly(int $biome) : bool{
@@ -82,14 +135,14 @@ final class OverworldPopulator{
 		$baseX = $chunkX << 4;
 		$baseZ = $chunkZ << 4;
 
+		$this->features->populate($w, $baseX, $baseZ, $random);
 		$this->placeOres($w, $baseX, $baseZ, $random);
+		$starts = $this->structures->populate($w, $chunkX, $chunkZ);
 		$this->decorateCaves($w, $baseX, $baseZ, $random);
+		$surfaceY = $w->highest($baseX + 8, $baseZ + 8) ?? 64;
+		$this->features->populateSurface($w, $baseX, $baseZ, $w->getBiome($baseX + 8, $surfaceY, $baseZ + 8), $random);
 
-		$village = $this->villages->villageNear($chunkX, $chunkZ);
-		$this->decorateSurface($w, $baseX, $baseZ, $random, $village);
-		if($village !== null && $village->chunkX === $chunkX && $village->chunkZ === $chunkZ){
-			$this->villages->build($w, $village, $random);
-		}
+		$this->decorateSurface($w, $baseX, $baseZ, $random, $starts);
 	}
 
 	//---------------------------------------------------------------- ores
@@ -188,6 +241,15 @@ final class OverworldPopulator{
 
 	//---------------------------------------------------------------- caves
 
+	/** Position-based pseudo random number (independent of population order). */
+	private function posRand(int $x, int $y, int $z, int $salt) : int{
+		$h = ($x * 0x1F1F1F1F) ^ ($y * 0x2E3D4C5B) ^ ($z * 0x3B5A7C9D) ^ ($this->seed * 31) ^ ($salt * 0x6A09E667);
+		$h ^= $h >> 13;
+		$h = ($h * 0x5BD1E995) & 0x7fffffff;
+		$h ^= $h >> 15;
+		return $h & 0x7fffffff;
+	}
+
 	private function decorateCaves(BlockWriter $w, int $baseX, int $baseZ, Random $r) : void{
 		$hasCaveBiome = false;
 		for($y = -60; $y < 120 && !$hasCaveBiome; $y += 16){
@@ -210,7 +272,7 @@ final class OverworldPopulator{
 
 		for($x = 0; $x < 16; ++$x){
 			for($z = 0; $z < 16; ++$z){
-				if(!$hasCaveBiome && $r->nextBoundedInt(6) !== 0){
+				if(!$hasCaveBiome && $this->posRand($baseX + $x, 0, $baseZ + $z, 9) % 6 !== 0){
 					continue; //plain caves only get sparse glow lichen
 				}
 				$wx = $baseX + $x;
@@ -225,32 +287,32 @@ final class OverworldPopulator{
 						//floor at y-1
 						$biome = $hasCaveBiome ? $w->getBiome($wx, $y, $wz) : -1;
 						if($biome === B::LUSH_CAVES){
-							$roll = $r->nextBoundedInt(100);
+							$roll = $this->posRand($wx, $y, $wz, 1) % 100;
 							if($roll < 45){
 								$w->set($wx, $y - 1, $wz, $roll < 8 ? $clay : $rooted);
 								if($roll >= 8 && $roll < 14){
-									$w->setBlock($wx, $y, $wz, $r->nextBoolean() ? $azalea : $floweringAzalea);
+									$w->setBlock($wx, $y, $wz, $this->posRand($wx, $y, $wz, 2) % 2 === 0 ? $azalea : $floweringAzalea);
 								}elseif($roll >= 14 && $roll < 18 && $w->get($wx, $y + 1, $wz) === $this->air){
 									$w->setBlock($wx, $y, $wz, (clone $smallDripleaf)->setTop(false));
 									$w->setBlock($wx, $y + 1, $wz, (clone $smallDripleaf)->setTop(true));
 								}
 							}
 						}elseif($biome === B::DEEP_DARK){
-							if($r->nextBoundedInt(3) !== 0){
+							if($this->posRand($wx, $y, $wz, 3) % 3 !== 0){
 								$w->set($wx, $y - 1, $wz, $sculk);
 							}
 						}
 					}elseif($solidNow && $prev === $this->air){
 						//ceiling at y, air at y-1
 						$biome = $hasCaveBiome ? $w->getBiome($wx, $y - 1, $wz) : -1;
-						if($biome === B::LUSH_CAVES && $r->nextBoundedInt(5) === 0){
-							$len = 1 + $r->nextBoundedInt(6);
+						if($biome === B::LUSH_CAVES && $this->posRand($wx, $y, $wz, 4) % 5 === 0){
+							$len = 1 + $this->posRand($wx, $y, $wz, 5) % 6;
 							for($d = 1; $d <= $len && $w->get($wx, $y - $d, $wz) === $this->air; ++$d){
-								$w->setBlock($wx, $y - $d, $wz, (clone $vines)->setHead($d === $len)->setBerries($r->nextBoundedInt(4) === 0));
+								$w->setBlock($wx, $y - $d, $wz, (clone $vines)->setHead($d === $len)->setBerries($this->posRand($wx, $y - $d, $wz, 6) % 4 === 0));
 							}
-						}elseif($biome === B::DEEP_DARK && $r->nextBoundedInt(4) === 0){
+						}elseif($biome === B::DEEP_DARK && $this->posRand($wx, $y, $wz, 7) % 4 === 0){
 							$w->set($wx, $y, $wz, $sculk);
-						}elseif($r->nextBoundedInt(40) === 0){
+						}elseif($this->posRand($wx, $y, $wz, 8) % 40 === 0){
 							$w->setBlock($wx, $y - 1, $wz, (clone $glowLichen)->setFace(Facing::UP, true));
 						}
 					}
@@ -420,12 +482,23 @@ final class OverworldPopulator{
 		return $choices[0][0];
 	}
 
-	private function decorateSurface(BlockWriter $w, int $baseX, int $baseZ, Random $r, ?Village $village) : void{
+	/**
+	 * @param StructureStart[] $starts structures overlapping this chunk
+	 */
+	private function decorateSurface(BlockWriter $w, int $baseX, int $baseZ, Random $r, array $starts = []) : void{
 		$columnBiome = function(int $x, int $z) use ($w) : int{
 			$y = $w->highest($x, $z) ?? 64;
 			return $w->getBiome($x, $y, $z);
 		};
-		$inVillage = fn(int $x, int $z) : bool => $village !== null && $village->covers($x, $z);
+		$surfaceStarts = array_values(array_filter($starts, fn(StructureStart $s) => $s->surface));
+		$inVillage = function(int $x, int $z) use ($surfaceStarts) : bool{
+			foreach($surfaceStarts as $start){
+				if($start->containsColumn($x, $z, 3)){
+					return true;
+				}
+			}
+			return false;
+		};
 		$centerBiome = $columnBiome($baseX + 8, $baseZ + 8);
 		[$trees, , $grassPatches, , $flowerCount] = $this->profile($centerBiome);
 
@@ -448,7 +521,7 @@ final class OverworldPopulator{
 				VanillaFeatures::boulder($w, $x, $y + 1, $z, $r);
 			}
 		}
-		if($centerBiome === B::DESERT && $r->nextBoundedInt(500) === 0 && $village === null){
+		if($centerBiome === B::DESERT && $r->nextBoundedInt(500) === 0 && count($surfaceStarts) === 0){
 			$this->desertWell($w, $baseX + 8, $baseZ + 8);
 		}
 
