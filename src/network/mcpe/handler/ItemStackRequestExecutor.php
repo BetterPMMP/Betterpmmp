@@ -295,7 +295,8 @@ class ItemStackRequestExecutor{
 	 * @throws ItemStackRequestProcessException
 	 */
 	private function assertDoingCrafting() : void{
-		if(!$this->specialTransaction instanceof CraftingTransaction && !$this->specialTransaction instanceof EnchantingTransaction && !$this->specialTransaction instanceof \pocketmine\inventory\transaction\TradingTransaction){
+		if(!$this->specialTransaction instanceof CraftingTransaction && !$this->specialTransaction instanceof EnchantingTransaction && !$this->specialTransaction instanceof \pocketmine\inventory\transaction\TradingTransaction
+			&& !$this->specialTransaction instanceof \pocketmine\inventory\transaction\AnvilTransaction && !$this->specialTransaction instanceof \pocketmine\inventory\transaction\GrindstoneTransaction){
 			if($this->specialTransaction === null){
 				throw new ItemStackRequestProcessException("Expected CraftRecipe or CraftRecipeAuto action to precede this action");
 			}else{
@@ -370,6 +371,31 @@ class ItemStackRequestExecutor{
 			}
 		}elseif($action instanceof CraftRecipeAutoStackRequestAction){
 			$this->beginCrafting($action->getRecipeId(), $action->getRepetitions());
+		}elseif($action instanceof \pocketmine\network\mcpe\protocol\types\inventory\stackrequest\CraftRecipeOptionalStackRequestAction && ($anvil = $this->player->getCurrentWindow()) instanceof \pocketmine\block\inventory\AnvilInventory){
+			//BetterPMMP: anvil (repair / combine / enchanted book / rename)
+			if($this->specialTransaction !== null){
+				throw new ItemStackRequestProcessException("Another special transaction is already in progress");
+			}
+			$rename = $this->request->getFilterStrings()[$action->getFilterStringIndex()] ?? null;
+			$calculated = \pocketmine\block\utils\AnvilHelper::calculate($anvil->getItem(\pocketmine\block\inventory\AnvilInventory::SLOT_INPUT), $anvil->getItem(\pocketmine\block\inventory\AnvilInventory::SLOT_MATERIAL), $rename, $this->player->isCreative());
+			if($calculated === null){
+				throw new ItemStackRequestProcessException("Nothing can be done with these items at an anvil");
+			}
+			[$result, $cost, $used] = $calculated;
+			$this->specialTransaction = new \pocketmine\inventory\transaction\AnvilTransaction($this->player, $anvil, $result, $cost, $used);
+			$this->setNextCreatedItem($result);
+		}elseif($action instanceof \pocketmine\network\mcpe\protocol\types\inventory\stackrequest\GrindstoneStackRequestAction && ($grindstone = $this->player->getCurrentWindow()) instanceof \pocketmine\block\inventory\GrindstoneInventory){
+			//BetterPMMP: grindstone (remove enchantments / combine durability)
+			if($this->specialTransaction !== null){
+				throw new ItemStackRequestProcessException("Another special transaction is already in progress");
+			}
+			$calculated = \pocketmine\block\inventory\GrindstoneInventory::calculate($grindstone->getItem(0), $grindstone->getItem(1));
+			if($calculated === null){
+				throw new ItemStackRequestProcessException("Nothing can be done with these items at a grindstone");
+			}
+			[$result, $xp] = $calculated;
+			$this->specialTransaction = new \pocketmine\inventory\transaction\GrindstoneTransaction($this->player, $grindstone, $result, $xp);
+			$this->setNextCreatedItem($result);
 		}elseif($action instanceof CraftingConsumeInputStackRequestAction){
 			$this->assertDoingCrafting();
 			$this->removeItemFromSlot($action->getSource(), $action->getCount()); //output discarded - we allow CraftingTransaction to verify the balance

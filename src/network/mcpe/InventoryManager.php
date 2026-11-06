@@ -319,6 +319,7 @@ class InventoryManager{
 		//TODO: make this dynamic so plugins can add mappings for stuff not implemented by PM
 		return match(true){
 			$inventory instanceof AnvilInventory => UIInventorySlotOffset::ANVIL,
+			$inventory instanceof \pocketmine\block\inventory\GrindstoneInventory => UIInventorySlotOffset::GRINDSTONE,
 			$inventory instanceof EnchantInventory => UIInventorySlotOffset::ENCHANTING_TABLE,
 			$inventory instanceof LoomInventory => UIInventorySlotOffset::LOOM,
 			$inventory instanceof StonecutterInventory => [UIInventorySlotOffset::STONE_CUTTER_INPUT => StonecutterInventory::SLOT_INPUT],
@@ -426,6 +427,7 @@ class InventoryManager{
 				$inv instanceof EnchantInventory => WindowTypes::ENCHANTMENT,
 				$inv instanceof BrewingStandInventory => WindowTypes::BREWING_STAND,
 				$inv instanceof AnvilInventory => WindowTypes::ANVIL,
+				$inv instanceof \pocketmine\block\inventory\GrindstoneInventory => WindowTypes::GRINDSTONE,
 				$inv instanceof HopperInventory => WindowTypes::HOPPER,
 				$inv instanceof \pocketmine\block\inventory\DispenserInventory => $inv->isDropper() ? WindowTypes::DROPPER : WindowTypes::DISPENSER,
 				$inv instanceof CraftingTableInventory => WindowTypes::WORKBENCH,
