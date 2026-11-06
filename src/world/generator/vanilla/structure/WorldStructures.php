@@ -15,6 +15,7 @@ use pocketmine\world\generator\vanilla\VanillaEnd;
 use pocketmine\world\generator\vanilla\VanillaNether;
 use pocketmine\world\World;
 use function array_key_exists;
+use function strtolower;
 
 /**
  * Gives game code (eye of ender, mob spawning, ...) the same deterministic
@@ -33,7 +34,13 @@ final class WorldStructures{
 		}catch(\Throwable){
 			return null;
 		}
-		return GeneratorManager::getInstance()->getGenerator($name)?->getGeneratorClass();
+		// our own names always mean our generators, even if a plugin took a name over
+		return match(strtolower($name)){
+			"vanilla", "default", "betterpmmp_overworld" => Overworld::class,
+			"vanilla_nether", "betterpmmp_vanillanether" => VanillaNether::class,
+			"vanilla_end", "betterpmmp_vanillaend" => VanillaEnd::class,
+			default => GeneratorManager::getInstance()->getGenerator($name)?->getGeneratorClass(),
+		};
 	}
 
 	public static function get(World $world) : ?StructureManager{

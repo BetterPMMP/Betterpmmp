@@ -295,6 +295,10 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 	protected bool $blockCollision = true;
 	protected bool $flying = false;
 	protected bool $sneakPressed = false;
+	//BetterPMMP: shield blocking
+	private int $shieldRaiseTicks = 0;
+	private int $shieldDisabledTicks = 0;
+	private bool $shieldBlocking = false;
 
 	protected float $flightSpeedMultiplier = self::DEFAULT_FLIGHT_SPEED_MULTIPLIER;
 
@@ -1553,6 +1557,7 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 			$this->entityBaseTick($tickDiff);
 			Timings::$entityBaseTick->stopTiming();
 			$this->tickElytra($tickDiff);
+			$this->tickShield($tickDiff);
 
 			if($this->isCreative() && $this->fireTicks > 1){
 				$this->fireTicks = 1;
@@ -1576,6 +1581,37 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		$this->timings->stopTiming();
 
 		return true;
+	}
+
+	/** Whether the player holds up a shield (sneaking with a shield for 0.25 s). */
+	public function isBlockingWithShield() : bool{
+		return $this->shieldBlocking;
+	}
+
+	/** Lowers the shield and keeps it down (an axe hit: 5 seconds), like vanilla. */
+	public function disableShield(int $ticks) : void{
+		$this->shieldDisabledTicks = $ticks;
+		$this->shieldRaiseTicks = 0;
+		$this->shieldBlocking = false;
+		$this->networkPropertiesDirty = true;
+		$shield = \pocketmine\item\Shield::heldBy($this);
+		if($shield !== null){
+			$this->resetItemCooldown($shield, $ticks);
+		}
+	}
+
+	private function tickShield(int $tickDiff) : void{
+		if($this->shieldDisabledTicks > 0){
+			$this->shieldDisabledTicks -= $tickDiff;
+		}
+		$raising = $this->isSneaking() && $this->shieldDisabledTicks <= 0 && !$this->isSpectator() && !$this->isUsingItem()
+			&& \pocketmine\item\Shield::heldBy($this) !== null;
+		$this->shieldRaiseTicks = $raising ? $this->shieldRaiseTicks + $tickDiff : 0;
+		$blocking = $this->shieldRaiseTicks >= \pocketmine\item\Shield::RAISE_TICKS;
+		if($blocking !== $this->shieldBlocking){
+			$this->shieldBlocking = $blocking;
+			$this->networkPropertiesDirty = true;
+		}
 	}
 
 	public function canEat() : bool{
@@ -2038,6 +2074,9 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		if(!$this->isSprinting() && !$this->isFlying() && $this->fallDistance > 0 && !$this->effectManager->has(VanillaEffects::BLINDNESS()) && !$this->isUnderwater()){
 			$ev->setModifier($ev->getFinalDamage() / 2, EntityDamageEvent::MODIFIER_CRITICAL);
 		}
+		//BetterPMMP: mace smash attack
+		$smashFall = $this->fallDistance;
+		$smash = $heldItem instanceof \pocketmine\item\Mace && !$ev->isCancelled() && $heldItem->prepareSmash($this, $ev, $smashFall);
 
 		$entity->attack($ev);
 		$this->broadcastAnimation(new ArmSwingAnimation($this), $this->getViewers());
@@ -2048,6 +2087,9 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 			return false;
 		}
 		$this->getWorld()->addSound($soundPos, new EntityAttackSound());
+		if($smash && $heldItem instanceof \pocketmine\item\Mace){
+			$heldItem->finishSmash($this, $entity, $smashFall);
+		}
 
 		if($ev->getModifier(EntityDamageEvent::MODIFIER_CRITICAL) > 0 && $entity instanceof Living){
 			$entity->broadcastAnimation(new CriticalHitAnimation($entity));
@@ -2727,6 +2769,9 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		}elseif($this->allowFlight && $source->getCause() === EntityDamageEvent::CAUSE_FALL){
 			$source->cancel();
 		}
+		if($this->shieldBlocking && !$source->isCancelled() && \pocketmine\item\Shield::tryBlock($this, $source)){
+			$source->cancel();
+		}
 
 		parent::attack($source);
 	}
@@ -2736,6 +2781,7 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 
 		$properties->setGenericFlag(EntityMetadataFlags::ACTION, $this->startAction > -1);
 		$properties->setGenericFlag(EntityMetadataFlags::HAS_COLLISION, $this->hasBlockCollision());
+		$properties->setGenericFlag(EntityMetadataFlags::BLOCKING, $this->shieldBlocking);
 
 		$properties->setPlayerFlag(PlayerMetadataFlags::SLEEP, $this->sleeping !== null);
 		if($this->sleeping !== null){

@@ -139,14 +139,15 @@ final class ExtraVanillaItems{
 	private static function create(string $name, ItemIdentifier $id) : Item{
 		$display = self::displayName($name);
 		return match(true){
-			$name === "minecraft:elytra" => new Elytra($id, "Elytra", new ArmorTypeInfo(0, 432, ArmorInventory::SLOT_CHEST)),
-			$name === "minecraft:mace" => new SimpleDurableItem($id, "Mace", 500, 6, 1),
-			$name === "minecraft:shield" => new SimpleDurableItem($id, "Shield", 336, 1, 1),
-			$name === "minecraft:crossbow" => new SimpleDurableItem($id, "Crossbow", 465, 1, 1),
-			$name === "minecraft:brush" => new SimpleDurableItem($id, "Brush", 64, 1, 1),
-			$name === "minecraft:carrot_on_a_stick" => new SimpleDurableItem($id, "Carrot on a Stick", 25, 1, 1),
-			$name === "minecraft:warped_fungus_on_a_stick" => new SimpleDurableItem($id, "Warped Fungus on a Stick", 100, 1, 1),
+			$name === "minecraft:elytra" => new Elytra($id, "Elytra", new ArmorTypeInfo(0, 432, ArmorInventory::SLOT_CHEST), [enchantment\ItemEnchantmentTags::ELYTRA]),
+			$name === "minecraft:mace" => new Mace($id, "Mace", 500, 6, 1, ["mace"]),
+			$name === "minecraft:shield" => new Shield($id, "Shield", 336, 1, 1, [enchantment\ItemEnchantmentTags::SHIELD]),
+			$name === "minecraft:crossbow" => new Crossbow($id, "Crossbow", 465, 1, 1, [enchantment\ItemEnchantmentTags::CROSSBOW]),
+			$name === "minecraft:brush" => new Brush($id, "Brush", 64, 1, 1, [enchantment\ItemEnchantmentTags::BRUSH]),
+			$name === "minecraft:carrot_on_a_stick" => new SimpleDurableItem($id, "Carrot on a Stick", 25, 1, 1, [enchantment\ItemEnchantmentTags::CARROT_ON_STICK]),
+			$name === "minecraft:warped_fungus_on_a_stick" => new SimpleDurableItem($id, "Warped Fungus on a Stick", 100, 1, 1, [enchantment\ItemEnchantmentTags::CARROT_ON_STICK]),
 			str_ends_with($name, "_boat") || str_ends_with($name, "_raft") => new VehicleBoatItem($id, $display, $name, 1),
+			in_array($name, FishBucket::BUCKETS, true) => new FishBucket($id, $display, $name, 1),
 			$name === "minecraft:empty_map" => new EmptyMapItem($id, "Empty Map", $name, 64),
 			default => new GenericBedrockItem($id, $display, $name, self::stackSize($name)),
 		};

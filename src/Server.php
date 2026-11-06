@@ -1268,12 +1268,7 @@ class Server{
 	 * The portals find them by the "<world>_nether" / "<world>_the_end" names.
 	 */
 	private function ensureVanillaDimensions(World $overworld) : void{
-		try{
-			$generator = strtolower($overworld->getProvider()->getWorldData()->getGenerator());
-		}catch(\Throwable){
-			return;
-		}
-		if($generator !== "vanilla"){
+		if(\pocketmine\world\generator\vanilla\structure\WorldStructures::generatorClass($overworld) !== \pocketmine\world\generator\vanilla\Overworld::class){
 			return;
 		}
 		$name = $overworld->getFolderName();

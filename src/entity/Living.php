@@ -454,7 +454,13 @@ abstract class Living extends Entity{
 		}
 		if($source->canBeReducedByArmor()){
 			//MCPE uses the same system as PC did pre-1.9
-			$source->setModifier(-$source->getFinalDamage() * $this->getArmorPoints() * 0.04, EntityDamageEvent::MODIFIER_ARMOR);
+			$armorFactor = 1.0;
+			//BetterPMMP: the mace's Breach lowers armor effectiveness by 15 % per level
+			if($source instanceof EntityDamageByEntityEvent && ($damager = $source->getDamager()) instanceof Human
+				&& ($weapon = $damager->getInventory()->getItemInHand()) instanceof \pocketmine\item\Mace){
+				$armorFactor = max(0.0, 1 - 0.15 * $weapon->getEnchantmentLevel(\pocketmine\item\enchantment\ExtraEnchantments::get("breach")));
+			}
+			$source->setModifier(-$source->getFinalDamage() * $this->getArmorPoints() * 0.04 * $armorFactor, EntityDamageEvent::MODIFIER_ARMOR);
 		}
 
 		$cause = $source->getCause();
@@ -637,7 +643,7 @@ abstract class Living extends Entity{
 	}
 
 	protected function onDeath() : void{
-		$ev = new EntityDeathEvent($this, $this->getDrops(), $this->getXpDropAmount());
+		$ev = new EntityDeathEvent($this, $this->applyLooting($this->getDrops()), $this->getXpDropAmount());
 		$ev->call();
 		foreach($ev->getDrops() as $item){
 			$this->getWorld()->dropItem($this->location, $item);
@@ -647,6 +653,28 @@ abstract class Living extends Entity{
 		$this->getWorld()->dropExperience($this->location, $ev->getXpDropAmount());
 
 		$this->startDeathAnimation();
+	}
+
+	/**
+	 * BetterPMMP: Looting adds 0 to (level) items to each mob drop, like vanilla.
+	 * @param Item[] $drops
+	 * @return Item[]
+	 */
+	protected function applyLooting(array $drops) : array{
+		$cause = $this->lastDamageCause;
+		if($this instanceof Human || !$cause instanceof EntityDamageByEntityEvent || !($killer = $cause->getDamager()) instanceof Human){
+			return $drops;
+		}
+		$level = $killer->getInventory()->getItemInHand()->getEnchantmentLevel(\pocketmine\item\enchantment\ExtraEnchantments::get("looting"));
+		if($level <= 0){
+			return $drops;
+		}
+		foreach($drops as $item){
+			if($item->getMaxStackSize() > 1 && !$item->isNull()){
+				$item->setCount(min($item->getMaxStackSize(), $item->getCount() + mt_rand(0, $level)));
+			}
+		}
+		return $drops;
 	}
 
 	protected function onDeathUpdate(int $tickDiff) : bool{

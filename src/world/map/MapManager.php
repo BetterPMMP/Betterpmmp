@@ -78,6 +78,7 @@ final class MapManager{
 		self::$maps[$id] = ["world" => $player->getWorld()->getFolderName(), "x" => $cx, "z" => $cz, "scale" => $scale, "pixels" => str_repeat("\0", 128 * 128 * 3)];
 		self::render($id, $player->getWorld(), 0, 0, 127, 127);
 		self::save($id, $player->getWorld());
+		Server::getInstance()->getLogger()->info("BetterPMMP Karte: Karte $id für " . $player->getName() . " erstellt");
 		$tag = $item->getNamedTag();
 		$tag->setLong(self::TAG_UUID, $id);
 		$tag->setInt(self::TAG_SCALE, $scale);
@@ -305,10 +306,24 @@ final class MapManager{
 	/** The client asks for a map's contents (MapInfoRequest). */
 	public static function handleRequest(Player $player, int $id) : void{
 		if(!self::load($id)){
+			Server::getInstance()->getLogger()->info("BetterPMMP Karte: " . $player->getName() . " fragt unbekannte Karte $id an");
 			return;
 		}
+		Server::getInstance()->getLogger()->info("BetterPMMP Karte: " . $player->getName() . " fragt Karte $id an");
 		$world = Server::getInstance()->getWorldManager()->getWorldByName(self::$maps[$id]["world"]) ?? $player->getWorld();
+		$first = !isset(self::$requested[$player->getId()][$id]);
 		self::$requested[$player->getId()][$id] = true;
+		if($first){
+			// vanilla first sends the map "creation" (the map ids it is part of), then the image
+			$creation = new ClientboundMapItemDataPacket();
+			$creation->mapId = $id;
+			$creation->dimensionId = $world->getDimensionId();
+			$creation->origin = new BlockPosition(self::$maps[$id]["x"], 0, self::$maps[$id]["z"]);
+			$creation->parentMapIds = [$id];
+			$creation->scale = self::$maps[$id]["scale"];
+			$player->getNetworkSession()->sendDataPacket($creation);
+			Server::getInstance()->getLogger()->info("BetterPMMP Karte: Erstellung von Karte $id an " . $player->getName() . " gesendet");
+		}
 		$player->getNetworkSession()->sendDataPacket(self::packet($id, $world));
 	}
 

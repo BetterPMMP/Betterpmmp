@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.7-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.8-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -62,7 +62,8 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 | System | Stand |
 |---|---|
 | Kampf, Rüstung, Hunger, XP | 🟡 (PMMP-Basis) |
-| Verzauberungen | 🟡 (Verzauberungstisch aus dem Kern) |
+| Verzauberungen | ✅ **neu in 5.8**: alle Bedrock-Verzauberungen, auch die 18, die der Kern nicht kannte (Bann, Nemesis der Gliederfüßer, Plünderung, Glück des Meeres, Köder, Wasserläufer, Fluch der Bindung, Harpune, Sog, Treue, Kanalisierung, Mehrfachschuss, Durchschuss, Schnellladen, Seelenläufer, Windstoß, Dichte, Bresche). Mit Vanilla-IDs, Seltenheit, Stufen, Kosten am Verzauberungstisch, Amboss-Gegenständen, `/enchant`-Namen und gegenseitigen Ausschlüssen |
+| Werkzeuge | ✅/🟡 **neu in 5.8**: **Angel** (Auswerfen und Einholen, Biss nach 5–30 s, Köder −5 s pro Stufe, Fisch/Müll/Schätze mit Glück des Meeres, 1–6 EP, Mobs heranziehen); **Schild** (beim Schleichen nach 0,25 s erhoben, blockt Nahkampf, Pfeile und Explosionen von vorn, Haltbarkeit 1 + Schaden, Axt-Treffer sperren 5 s); **Streitkolben** (Smash-Angriff: 4/2/1 Schaden pro Fallblock, kein Fallschaden, Rückstoß rundherum, Dichte, Bresche, Windstoß); **Armbrust** (Laden 1,25 s, Schnellladen, geladener Pfeil bleibt im Gegenstand, Mehrfachschuss); **Dreizack** (Treue holt ihn zurück, Sog im Wasser, Harpune auch beim Wurf); **Pinsel** (seltsamer Sand/Kies in Wüstentempeln und Pfadruinen, 4 Stufen, Archäologie-Beute); **Fisch-Eimer** (Fische, Axolotl, Kaulquappen fangen und aussetzen); **Plünderung** bei Mob-Drops. Fehlt: Durchschuss-Effekt, Kanalisierung (es gibt kein Gewitter), Feuerwerk in der Armbrust |
 | Amboss | ✅ **neu in 5.1**: Reparieren mit Material (25 % pro Stück), zwei Gegenstände kombinieren (+12 %), verzauberte Bücher, Verzauberungen zusammenführen (gleiche Stufe +1, Maximum), Umbenennen, Arbeitsstrafe (RepairCost), „Zu teuer“ ab 40 Stufen, Amboss nutzt sich ab (12 %) |
 | Schleifstein | ✅ **neu in 5.1**: entfernt Verzauberungen (außer Fluch) mit EP-Rückgabe, verzauberte Bücher werden zu Büchern, zwei Gegenstände kombinieren (+5 %) |
 | Brauen | 🟡 (Braustand aus dem Kern) |
@@ -71,7 +72,7 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 
 ## Reihenfolge der nächsten Schritte
 
-1. ~~Fehlende Blöcke und Gegenstände registrieren~~ (4.7: 219 Blocktypen, 4.9: 152 Gegenstände – damit ist die ganze 1.26.60-Palette vorhanden). Mit Funktion: Elytren (Gleiten, Abnutzung), Streitkolben, Schild, Armbrust, Pinsel (Haltbarkeit). Ohne eigene Funktion bisher: Sattel, Leine, Boote, Loren, Bündel, Pferderüstung, Fisch-Eimer, Karten.
+1. ~~Fehlende Blöcke und Gegenstände registrieren~~ (4.7: 219 Blocktypen, 4.9: 152 Gegenstände – damit ist die ganze 1.26.60-Palette vorhanden). Mit Funktion: Elytren, Streitkolben, Schild, Armbrust, Pinsel, Angel, Fisch-Eimer, Boote, Loren, Karten (5.8). Ohne eigene Funktion bisher: Leine, Bündel.
 2. Wesen in Strukturen (Wächter, Shulker, Hexen).
 3. ~~Mob-KI und Spawning~~ (4.8). Offen: Babyzombies, Türen einschlagen, Endermen-Teleport, Hexentränke, Creeper-Ladung.
 4. Speichern geplanter Blockticks über Neustarts.
