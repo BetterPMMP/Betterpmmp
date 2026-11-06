@@ -1,0 +1,14 @@
+/plugins/
+/plugin_data/
+/worlds/
+/players/
+/crashdumps/
+/server.log
+/server.properties
+/pocketmine.yml
+/ops.txt
+/white-list.txt
+/banned-*.txt
+/*.phar
+/build/
+.idea/

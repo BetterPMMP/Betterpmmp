@@ -1,0 +1,38 @@
+{
+	"name": "axolotl-pm/pocketmine-mp",
+	"description": "BetterPMMP - a PocketMine-MP 5 based Minecraft: Bedrock Edition server aiming for vanilla gameplay parity",
+	"type": "project",
+	"license": "LGPL-3.0-or-later",
+	"require": {
+		"php": "^8.1",
+		"adhocore/json-comment": "~1.2.0",
+		"axolotl-pm/bedrock-block-upgrade-schema": "~5.5.0",
+		"axolotl-pm/bedrock-data": "~6.10.0+bedrock-1.26.60",
+		"axolotl-pm/bedrock-item-upgrade-schema": "~1.20.0",
+		"axolotl-pm/bedrock-protocol": "~64.0.0+bedrock-1.26.60",
+		"axolotl-pm/nethernet": "~0.3.1",
+		"axolotl-pm/xoroshiro128pp": "~0.1.0",
+		"brick/math": "~0.13.0",
+		"netresearch/jsonmapper": "~v6.0.0",
+		"pocketmine/binaryutils": "^0.2.1",
+		"pocketmine/callback-validator": "^1.0.2",
+		"pocketmine/color": "^0.3.0",
+		"pocketmine/errorhandler": "^0.7.0",
+		"pocketmine/log": "^0.4.0",
+		"pocketmine/math": "~1.0.0",
+		"pocketmine/nbt": "~1.2.0",
+		"pocketmine/raklib": "~1.2.0",
+		"pocketmine/raklib-ipc": "~1.0.0",
+		"pocketmine/snooze": "^0.5.0",
+		"ramsey/uuid": "~4.9.0",
+		"symfony/filesystem": "~6.4.0"
+	},
+	"autoload": {
+		"psr-4": {
+			"pocketmine\\": ["src/", "generated/"]
+		},
+		"files": [
+			"src/CoreConstants.php"
+		]
+	}
+}
