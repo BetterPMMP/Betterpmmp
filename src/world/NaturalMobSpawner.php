@@ -371,13 +371,30 @@ final class NaturalMobSpawner{
 							++$existing;
 						}
 					}
-					// Four houses are placed at the corners in current and previous
-					// village layouts, so residents still have indoor spawn points.
-					$homes = [[2, 2], [12, 2], [2, 12], [12, 12]];
-					for($i = $existing; $i < min(4, count($homes)); ++$i){
-						[$homeX, $homeZ] = $homes[$i];
-						$villager = new Villager(new Location($baseX + $homeX + 0.5, $baseY + 1.0, $baseZ + $homeZ + 0.5, $world, (float) mt_rand(0, 359), 0.0));
-						$villager->spawnToAll();
+					// Residents spawn on free, walkable spots around the meeting point
+					// (works for the legacy corner layout and the vanilla-style villages).
+					$markerX = $baseX + $localX;
+					$markerZ = $baseZ + $localZ;
+					$spawned = $existing;
+					for($attempt = 0; $attempt < 48 && $spawned < 6; ++$attempt){
+						$sx = $markerX + mt_rand(-16, 16);
+						$sz = $markerZ + mt_rand(-16, 16);
+						if(!$world->isChunkLoaded($sx >> 4, $sz >> 4)){
+							continue;
+						}
+						for($sy = $markerY + 6; $sy >= $markerY - 6; --$sy){
+							if($sy <= $world->getMinY() || $sy + 1 >= $world->getMaxY()){
+								continue;
+							}
+							$floor = $world->getBlockAt($sx, $sy - 1, $sz);
+							if($floor->isSolid() && !$world->getBlockAt($sx, $sy, $sz)->isSolid() && !$world->getBlockAt($sx, $sy + 1, $sz)->isSolid()
+								&& $world->getBlockAt($sx, $sy, $sz)->getTypeId() !== BlockTypeIds::WATER && $world->getBlockAt($sx, $sy, $sz)->getTypeId() !== BlockTypeIds::LAVA){
+								$villager = new Villager(new Location($sx + 0.5, $sy, $sz + 0.5, $world, (float) mt_rand(0, 359), 0.0));
+								$villager->spawnToAll();
+								++$spawned;
+								break;
+							}
+						}
 					}
 					return;
 				}

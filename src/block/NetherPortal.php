@@ -31,7 +31,7 @@ use pocketmine\item\Item;
 use pocketmine\math\Axis;
 use pocketmine\network\mcpe\protocol\types\DimensionIds;
 use pocketmine\world\WorldCreationOptions;
-use pocketmine\world\generator\hell\Nether;
+use pocketmine\world\generator\vanilla\VanillaNether;
 use pocketmine\world\World;
 use pocketmine\world\WorldManager;
 use function round;
@@ -120,7 +120,7 @@ class NetherPortal extends Transparent{
 				}
 			}
 			if($target === null){
-				$options = WorldCreationOptions::create()->setSeed($source->getSeed())->setGeneratorClass(Nether::class);
+				$options = WorldCreationOptions::create()->setSeed($source->getSeed())->setGeneratorClass(VanillaNether::class);
 				$manager->generateWorld($targetName, $options, false);
 				$target = $manager->getWorldByName($targetName);
 			}

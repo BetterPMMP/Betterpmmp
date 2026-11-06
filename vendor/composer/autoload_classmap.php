@@ -6,6 +6,16 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
+    'pocketmine\\world\\generator\\vanilla\\BlockWriter' => $baseDir . '/src/world/generator/vanilla/BlockWriter.php',
+    'pocketmine\\world\\generator\\vanilla\\Overworld' => $baseDir . '/src/world/generator/vanilla/Overworld.php',
+    'pocketmine\\world\\generator\\vanilla\\OverworldBiomeBuilder' => $baseDir . '/src/world/generator/vanilla/OverworldBiomeBuilder.php',
+    'pocketmine\\world\\generator\\vanilla\\OverworldClimate' => $baseDir . '/src/world/generator/vanilla/OverworldClimate.php',
+    'pocketmine\\world\\generator\\vanilla\\OverworldPopulator' => $baseDir . '/src/world/generator/vanilla/OverworldPopulator.php',
+    'pocketmine\\world\\generator\\vanilla\\StructureTemplate' => $baseDir . '/src/world/generator/vanilla/StructureTemplate.php',
+    'pocketmine\\world\\generator\\vanilla\\VanillaFeatures' => $baseDir . '/src/world/generator/vanilla/VanillaFeatures.php',
+    'pocketmine\\world\\generator\\vanilla\\VanillaNether' => $baseDir . '/src/world/generator/vanilla/VanillaNether.php',
+    'pocketmine\\world\\generator\\vanilla\\Village' => $baseDir . '/src/world/generator/vanilla/Village.php',
+    'pocketmine\\world\\generator\\vanilla\\VillageGenerator' => $baseDir . '/src/world/generator/vanilla/VillageGenerator.php',
     'Ahc\\Json\\Comment' => $vendorDir . '/adhocore/json-comment/src/Comment.php',
     'AttachableLogger' => $vendorDir . '/pocketmine/log/src/AttachableLogger.php',
     'Brick\\Math\\BigDecimal' => $vendorDir . '/brick/math/src/BigDecimal.php',

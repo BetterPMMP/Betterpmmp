@@ -29,6 +29,8 @@ use pocketmine\utils\Utils;
 use pocketmine\world\generator\hell\Nether;
 use pocketmine\world\generator\the_end\TheEnd;
 use pocketmine\world\generator\normal\Normal;
+use pocketmine\world\generator\vanilla\Overworld;
+use pocketmine\world\generator\vanilla\VanillaNether;
 use function array_keys;
 use function strtolower;
 
@@ -54,9 +56,13 @@ final class GeneratorManager{
 			}
 		}, fast: true);
 		$this->addGenerator(Normal::class, "normal", fn() => null);
-		$this->addAlias("normal", "default");
+		//BetterPMMP: vanilla-style generators. New worlds created with "default"
+		//use them; existing worlds keep the generator stored in their level.dat.
+		$this->addGenerator(Overworld::class, "vanilla", fn() => null, spawnPositionProvider: fn(int $seed) => Overworld::findSpawn($seed));
+		$this->addAlias("vanilla", "default");
 		$this->addGenerator(Nether::class, "nether", fn() => null);
 		$this->addAlias("nether", "hell");
+		$this->addGenerator(VanillaNether::class, "vanilla_nether", fn() => null, spawnPositionProvider: fn(int $seed) => new Vector3(0.5, 70, 0.5));
 		$this->addGenerator(TheEnd::class, "the_end", fn() => null, spawnPositionProvider: fn(int $seed) => new Vector3(0, 65, 0));
 		$this->addGenerator(VoidGenerator::class, "void", fn() => null, fast: true, spawnPositionProvider: fn(int $seed) => new Vector3(0, -63, 0));
 	}

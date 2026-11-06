@@ -140,6 +140,16 @@ class ComposerStaticInit01c34b5648e4177bfa963b48f7da5526
     );
 
     public static $classMap = array (
+        'pocketmine\\world\\generator\\vanilla\\BlockWriter' => __DIR__ . '/../..' . '/src/world/generator/vanilla/BlockWriter.php',
+        'pocketmine\\world\\generator\\vanilla\\Overworld' => __DIR__ . '/../..' . '/src/world/generator/vanilla/Overworld.php',
+        'pocketmine\\world\\generator\\vanilla\\OverworldBiomeBuilder' => __DIR__ . '/../..' . '/src/world/generator/vanilla/OverworldBiomeBuilder.php',
+        'pocketmine\\world\\generator\\vanilla\\OverworldClimate' => __DIR__ . '/../..' . '/src/world/generator/vanilla/OverworldClimate.php',
+        'pocketmine\\world\\generator\\vanilla\\OverworldPopulator' => __DIR__ . '/../..' . '/src/world/generator/vanilla/OverworldPopulator.php',
+        'pocketmine\\world\\generator\\vanilla\\StructureTemplate' => __DIR__ . '/../..' . '/src/world/generator/vanilla/StructureTemplate.php',
+        'pocketmine\\world\\generator\\vanilla\\VanillaFeatures' => __DIR__ . '/../..' . '/src/world/generator/vanilla/VanillaFeatures.php',
+        'pocketmine\\world\\generator\\vanilla\\VanillaNether' => __DIR__ . '/../..' . '/src/world/generator/vanilla/VanillaNether.php',
+        'pocketmine\\world\\generator\\vanilla\\Village' => __DIR__ . '/../..' . '/src/world/generator/vanilla/Village.php',
+        'pocketmine\\world\\generator\\vanilla\\VillageGenerator' => __DIR__ . '/../..' . '/src/world/generator/vanilla/VillageGenerator.php',
         'Ahc\\Json\\Comment' => __DIR__ . '/..' . '/adhocore/json-comment/src/Comment.php',
         'AttachableLogger' => __DIR__ . '/..' . '/pocketmine/log/src/AttachableLogger.php',
         'Brick\\Math\\BigDecimal' => __DIR__ . '/..' . '/brick/math/src/BigDecimal.php',
