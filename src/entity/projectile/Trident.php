@@ -148,6 +148,14 @@ class Trident extends Projectile{
 		$this->damage += $bonus;
 		parent::onHitEntity($entityHit, $hitResult);
 		$this->damage -= $bonus;
+		//BetterPMMP: Channeling calls down lightning on the target during a thunderstorm
+		$weather = $this->getWorld()->getWeather();
+		$target = $entityHit->getPosition();
+		if($this->item->getEnchantmentLevel(\pocketmine\item\enchantment\ExtraEnchantments::get("channeling")) > 0 && $weather->isThundering()
+			&& $weather->isRainingAt($target->getFloorX(), (int) ($target->y + $entityHit->getSize()->getHeight()), $target->getFloorZ())){
+			\pocketmine\world\weather\Weather::strike($this->getWorld(), $target->asVector3(), $this->getOwningEntity());
+			$this->broadcastSound(new \pocketmine\world\sound\VanillaSound(\pocketmine\network\mcpe\protocol\types\LevelSoundEvent::ITEM_TRIDENT_THUNDER));
+		}
 
 		$this->canCollide = false;
 		$this->broadcastSound(new TridentHitEntitySound());

@@ -47,11 +47,13 @@ class Trident extends Tool implements Releasable{
 			return ItemUseResult::FAIL;
 		}
 
-		//BetterPMMP: Riptide launches the player instead of throwing (only in water; there is no rain)
+		//BetterPMMP: Riptide launches the player instead of throwing (in water or rain)
 		$riptide = $this->getEnchantmentLevel(\pocketmine\item\enchantment\ExtraEnchantments::get("riptide"));
 		if($riptide > 0){
 			$feet = $player->getWorld()->getBlock($player->getPosition());
-			if(!$player->isUnderwater() && !$feet instanceof \pocketmine\block\Water){
+			$p = $player->getPosition();
+			$inRain = $player->getWorld()->getWeather()->isRainingAt($p->getFloorX(), (int) ($p->y + 1), $p->getFloorZ());
+			if(!$player->isUnderwater() && !$feet instanceof \pocketmine\block\Water && !$inRain){
 				return ItemUseResult::FAIL;
 			}
 			$player->setMotion($player->getDirectionVector()->multiply(3 * (1 + $riptide) / 4 * 1.2));

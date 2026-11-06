@@ -368,6 +368,12 @@ class World implements ChunkManager{
 	private bool $autoSave = true;
 
 	private int $sleepTicks = 0;
+	private ?\pocketmine\world\weather\Weather $weather = null;
+
+	/** BetterPMMP: rain, snow, thunderstorms and lightning. */
+	public function getWeather() : \pocketmine\world\weather\Weather{
+		return $this->weather ??= new \pocketmine\world\weather\Weather($this);
+	}
 
 	private int $chunkTickRadius;
 	private int $tickedBlocksPerSubchunkPerTick = self::DEFAULT_TICKED_BLOCKS_PER_SUBCHUNK_PER_TICK;
@@ -991,6 +997,7 @@ class World implements ChunkManager{
 			}
 		}
 
+		$this->getWeather()->tick();
 		$this->sunAnglePercentage = $this->computeSunAnglePercentage(); //Sun angle depends on the current time
 		$this->skyLightReduction = $this->computeSkyLightReduction(); //Sky light reduction depends on the sun angle
 
@@ -1129,8 +1136,12 @@ class World implements ChunkManager{
 		if($resetTime){
 			$time = $this->getTimeOfDay();
 
-			if($time >= World::TIME_NIGHT && $time < World::TIME_SUNRISE){
-				$this->setTime($this->getTime() + World::TIME_FULL - $time);
+			$storm = $this->getWeather()->isThundering();
+			if(($time >= World::TIME_NIGHT && $time < World::TIME_SUNRISE) || $storm){
+				if($time >= World::TIME_NIGHT && $time < World::TIME_SUNRISE){
+					$this->setTime($this->getTime() + World::TIME_FULL - $time);
+				}
+				$this->getWeather()->clearAfterSleep();
 
 				foreach($this->getPlayers() as $p){
 					$p->stopSleep();
@@ -1495,6 +1506,7 @@ class World implements ChunkManager{
 		$timings->startTiming();
 
 		$this->provider->getWorldData()->setTime($this->time);
+		$this->weather?->save();
 		$this->saveChunks();
 		$this->provider->getWorldData()->save();
 
@@ -1819,7 +1831,11 @@ class World implements ChunkManager{
 	public function computeSkyLightReduction() : int{
 		$percentage = max(0, min(1, -(cos($this->getSunAngleRadians()) * 2 - 0.5)));
 
-		//TODO: check rain and thunder level
+		//BetterPMMP: rain and thunder darken the sky like vanilla (thunderstorms let hostile mobs spawn by day)
+		if($this->weather !== null){
+			$brightness = (1 - $percentage) * (1 - $this->weather->getRainLevel() * 5 / 16) * (1 - $this->weather->getThunderLevel() * 5 / 16);
+			$percentage = 1 - $brightness;
+		}
 
 		return (int) ($percentage * 11);
 	}
@@ -2641,7 +2657,7 @@ class World implements ChunkManager{
 
 	public function getBiomeId(int $x, int $y, int $z) : int{
 		if(($chunk = $this->loadChunk($x >> Chunk::COORD_BIT_SIZE, $z >> Chunk::COORD_BIT_SIZE)) !== null){
-			return $chunk->getBiomeId($x & Chunk::COORD_MASK, $y & Chunk::COORD_MASK, $z & Chunk::COORD_MASK);
+			return $chunk->getBiomeId($x & Chunk::COORD_MASK, $y, $z & Chunk::COORD_MASK);
 		}
 		return BiomeIds::OCEAN; //TODO: this should probably throw instead (terrain not generated yet)
 	}
@@ -2655,7 +2671,7 @@ class World implements ChunkManager{
 		$chunkZ = $z >> Chunk::COORD_BIT_SIZE;
 		$this->unlockChunk($chunkX, $chunkZ, null);
 		if(($chunk = $this->loadChunk($chunkX, $chunkZ)) !== null){
-			$chunk->setBiomeId($x & Chunk::COORD_MASK, $y & Chunk::COORD_MASK, $z & Chunk::COORD_MASK, $biomeId);
+			$chunk->setBiomeId($x & Chunk::COORD_MASK, $y, $z & Chunk::COORD_MASK, $biomeId);
 		}else{
 			//if we allowed this, the modifications would be lost when the chunk is created
 			throw new WorldException("Cannot set biome in a non-generated chunk");
