@@ -25,6 +25,7 @@ namespace pocketmine\block;
 
 use pocketmine\block\utils\HorizontalFacing;
 use pocketmine\block\utils\HorizontalFacingTrait;
+use pocketmine\block\utils\RedstonePower;
 use pocketmine\block\utils\SupportType;
 use pocketmine\block\utils\WoodMaterial;
 use pocketmine\block\utils\WoodTypeTrait;
@@ -92,11 +93,26 @@ class FenceGate extends Transparent implements HorizontalFacing, WoodMaterial{
 	}
 
 	public function onNearbyBlockChange() : void{
+		$world = $this->position->getWorld();
+		$changed = false;
 		$inWall = $this->checkInWall();
 		if($inWall !== $this->inWall){
 			$this->inWall = $inWall;
-			$this->position->getWorld()->setBlock($this->position, $this);
+			$changed = true;
 		}
+		$powered = RedstonePower::isPowered($this);
+		if(RedstonePower::consumerEdge($this->position, $world, $powered) && $this->open !== $powered){
+			$this->open = $powered;
+			$world->addSound($this->position, new DoorSound());
+			$changed = true;
+		}
+		if($changed){
+			$world->setBlock($this->position, $this);
+		}
+	}
+
+	public function onPostPlace() : void{
+		$this->onNearbyBlockChange();
 	}
 
 	public function onInteract(Item $item, int $face, Vector3 $clickVector, ?Player $player = null, array &$returnedItems = []) : bool{

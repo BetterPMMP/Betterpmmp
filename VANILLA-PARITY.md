@@ -1,0 +1,65 @@
+# BetterPMMP – Vanilla-Parität (Stand 4.4-redstone-beta.2)
+
+Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
+„Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
+
+Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
+
+## Redstone
+
+| Komponente | Stand | Hinweis |
+|---|---|---|
+| Staub, Leitungen, Abschwächung | ✅ | seit 4.3 |
+| Hebel, Knöpfe, Druckplatten | ✅ | seit 4.3 |
+| Repeater, Komparator, Fackel, Lampe, TNT | ✅ | seit 4.3, Bedrock-Timing nicht verglichen |
+| Holz-/Kupfer-/Eisentüren | ✅ | **neu in 4.4**: Flankensteuerung, beide Hälften, Eisentür nur per Redstone |
+| Falltüren (inkl. Eisen) | ✅ | **neu in 4.4** |
+| Zauntore | ✅ | **neu in 4.4** |
+| Notenblock | ✅ | **neu in 4.4**: Stimmen, Schlagen, steigende Flanke, Instrument nach Block darunter, nur mit Luft darüber |
+| Trichter | 🟡 | **neu in 4.4**: Schieben/Ziehen, Item-Aufsammeln, 8-Tick-Cooldown, Sperre durch Redstone, Ofen-Seitenregeln, Doppeltruhen. Fehlt: Lore mit Trichter, Komposter, Braustand-Seitenregeln |
+| Kolben / Klebekolben | ❌ | braucht bewegte Blöcke (moving_block) |
+| Beobachter | ❌ | Block ist noch nicht registriert |
+| Werfer / Spender | ❌ | |
+| Schienen-Logik (Antriebs-/Aktivierungsschiene) | 🟡 | Zustände vorhanden, keine Loren-Physik |
+| Sculk-Sensor, Ziel-Block, Tageslichtsensor-Feinheiten | ❌ | |
+
+## Welt & Dimensionen
+
+| System | Stand | Hinweis |
+|---|---|---|
+| Overworld-Generator | 🟡 | klassischer PMMP-Generator (Simplex), **nicht** der Vanilla-Generator; ~15 Biome statt ~65 |
+| Strukturen (Dörfer, Festungen, Tempel, Ancient City …) | ❌ | |
+| Höhlen / Schluchten / Aquifere (1.18+) | ❌ | |
+| Nether | 🟡 | einfacher Generator, keine Nether-Biome, keine Festungen/Bastionen |
+| End | 🟡 | eigener Generator mit Bossbar (4.2), keine End-Städte |
+| Portale (Nether/End) | 🟡 | siehe vorhandene Implementierung; Vanilla-Verknüpfung 1:8 nicht verifiziert |
+
+## Kreaturen
+
+| System | Stand | Hinweis |
+|---|---|---|
+| Vorhandene Mobs | 🟡 | Huhn, Kuh, Schwein, Schaf, Tintenfisch, Zombie, Dorfbewohner, Kupfergolem |
+| Mob-KI (Pfadfindung, Ziele) | 🟡 | einfache KI, kein Vanilla-Goal-System |
+| Natürliches Spawning nach Licht/Biom/Mob-Cap | ❌/🟡 | |
+| Übrige ~70 Mobs, Bosse (Wither, Wächter …) | ❌ | |
+| Handel, Dorf-Mechaniken | ❌ | |
+
+## Survival
+
+| System | Stand |
+|---|---|
+| Kampf, Rüstung, Hunger, XP | 🟡 (PMMP-Basis) |
+| Verzauberungen | 🟡 (Teilmenge) |
+| Brauen | ❌ |
+| Loot-Tables für Truhen/Mobs | 🟡 |
+
+## Reihenfolge der nächsten Schritte
+
+1. Kolben (größter fehlender Redstone-Baustein), danach Beobachter, Werfer/Spender.
+2. Speichern geplanter Blockticks über Neustarts.
+3. Mob-Spawning nach Vanilla-Regeln + weitere feindliche Mobs.
+4. Neuer Overworld-Generator mit Vanilla-Biomen und Höhlen.
+5. Strukturen, Nether-Biome, Festungen.
+
+Jeder Punkt ist ein eigenes, großes Paket. „100 % Vanilla“ erreicht man nur Schritt
+für Schritt, mit Vergleichstests gegen den offiziellen Bedrock-Server.

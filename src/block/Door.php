@@ -25,6 +25,7 @@ namespace pocketmine\block;
 
 use pocketmine\block\utils\HorizontalFacing;
 use pocketmine\block\utils\HorizontalFacingTrait;
+use pocketmine\block\utils\RedstonePower;
 use pocketmine\block\utils\SupportType;
 use pocketmine\data\runtime\RuntimeDataDescriber;
 use pocketmine\item\Item;
@@ -108,7 +109,47 @@ class Door extends Transparent implements HorizontalFacing{
 	public function onNearbyBlockChange() : void{
 		if(!$this->canBeSupportedAt($this) && !$this->getSide(Facing::DOWN) instanceof Door){ //Replace with common break method
 			$this->position->getWorld()->useBreakOn($this->position); //this will delete both halves if they exist
+			return;
 		}
+		$this->updateRedstoneState();
+	}
+
+	public function onPostPlace() : void{
+		$this->updateRedstoneState();
+	}
+
+	/**
+	 * Iron doors can only be operated by redstone in vanilla.
+	 */
+	public function isRedstoneOnly() : bool{
+		return $this->getTypeId() === BlockTypeIds::IRON_DOOR;
+	}
+
+	/**
+	 * Vanilla: a power edge on either half sets the door open (rising) or closed
+	 * (falling). Without an edge the door keeps whatever state a player gave it.
+	 */
+	private function updateRedstoneState() : void{
+		$other = $this->getSide($this->top ? Facing::DOWN : Facing::UP);
+		$hasOther = $other instanceof Door && $other->hasSameTypeId($this);
+		$powered = RedstonePower::isPowered($this) || ($hasOther && RedstonePower::isPowered($other));
+		$bottom = $this->top && $hasOther ? $other : $this;
+		$world = $this->position->getWorld();
+		if(!RedstonePower::consumerEdge($bottom->position, $world, $powered) || $this->open === $powered){
+			return;
+		}
+		$this->setOpenWithOtherHalf($powered, $hasOther ? $other : null);
+	}
+
+	private function setOpenWithOtherHalf(bool $open, ?Door $other) : void{
+		$this->open = $open;
+		$world = $this->position->getWorld();
+		if($other !== null){
+			$other->open = $open;
+			$world->setBlock($other->position, $other);
+		}
+		$world->setBlock($this->position, $this);
+		$world->addSound($this->position, new DoorSound());
 	}
 
 	public function place(BlockTransaction $tx, Item $item, Block $blockReplace, Block $blockClicked, int $face, Vector3 $clickVector, ?Player $player = null) : bool{
@@ -140,17 +181,11 @@ class Door extends Transparent implements HorizontalFacing{
 	}
 
 	public function onInteract(Item $item, int $face, Vector3 $clickVector, ?Player $player = null, array &$returnedItems = []) : bool{
-		$this->open = !$this->open;
-
-		$other = $this->getSide($this->top ? Facing::DOWN : Facing::UP);
-		$world = $this->position->getWorld();
-		if($other instanceof Door && $other->hasSameTypeId($this)){
-			$other->open = $this->open;
-			$world->setBlock($other->position, $other);
+		if($this->isRedstoneOnly()){
+			return false;
 		}
-
-		$world->setBlock($this->position, $this);
-		$world->addSound($this->position, new DoorSound());
+		$other = $this->getSide($this->top ? Facing::DOWN : Facing::UP);
+		$this->setOpenWithOtherHalf(!$this->open, $other instanceof Door && $other->hasSameTypeId($this) ? $other : null);
 
 		return true;
 	}

@@ -107,3 +107,29 @@ LGPL-3.0-or-later. Protokollinformationen sind keine Spielmechanik-Implementieru
 
 Die Regeln und Prüfungen dieses Builds dokumentieren die implementierte Teilmenge,
 nicht eine Zusicherung vollständiger Vanilla-Kompatibilität.
+
+---
+
+# BetterPMMP 4.4 — Redstone Beta 2
+
+Neue Redstone-Verbraucher und Trichterlogik:
+
+- **Türen** (Holz, Kupfer, Eisen): öffnen bei steigender und schließen bei fallender
+  Signalflanke an einer der beiden Hälften. Ohne Flanke bleibt der von Hand gesetzte
+  Zustand erhalten. Eisentüren lassen sich nicht mehr von Hand öffnen.
+- **Falltüren** (inkl. Eisenfalltür, nur per Redstone) und **Zauntore** mit derselben Flankenlogik.
+- Ein Verbraucher, der in ein bestehendes Signal gesetzt wird, öffnet sofort.
+- **Notenblock**: Rechtsklick stimmt (0–24) und spielt, Schlagen spielt, steigende
+  Signalflanke spielt. Instrument nach dem Block darunter; nur mit Luft darüber.
+- **Trichter**: schiebt 1 Item in den Container in Blickrichtung und zieht 1 Item aus dem
+  Container darüber bzw. sammelt Item-Entities ein. Cooldown 8 Spielticks; ein leerer
+  Trichter, der ein Item erhält, wartet ebenfalls einen vollen Cooldown. Redstone-Signal
+  sperrt den Trichter (Zustand `toggle_bit`). Öfen: von oben in den Eingang, von der Seite
+  nur Brennstoff in den Brennstoffslot, unten wird das Ergebnis entnommen.
+  Trichter laufen ereignisgesteuert (Inventaränderungen, Blockupdates, Items) statt per
+  Dauerabfrage. Der Cooldown wird mit `TransferCooldown` gespeichert.
+
+Grenzen: Die Flankenzustände von Türen/Notenblöcken liegen im Speicher und gehen bei
+Neustart verloren (Bedrock-Blockzustände haben dafür kein Bit). Nach einem Neustart
+gilt ein bereits versorgter Verbraucher beim nächsten Update als „neu versorgt“.
+Kein Live-Test mit Client; nur statische Analyse (PHPStan Level 6) der geänderten Dateien.
