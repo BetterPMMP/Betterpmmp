@@ -166,6 +166,8 @@ trait AnimalBreedingTrait{
 			EntityIds::FROG => [VanillaItems::SLIMEBALL()],
 			EntityIds::PANDA => [\pocketmine\block\VanillaBlocks::BAMBOO()->asItem()],
 			EntityIds::SNIFFER => [VanillaItems::TORCHFLOWER_SEEDS()],
+			EntityIds::WOLF => [VanillaItems::RAW_BEEF(), VanillaItems::STEAK(), VanillaItems::RAW_PORKCHOP(), VanillaItems::COOKED_PORKCHOP(), VanillaItems::RAW_CHICKEN(), VanillaItems::COOKED_CHICKEN(), VanillaItems::RAW_MUTTON(), VanillaItems::COOKED_MUTTON(), VanillaItems::RAW_RABBIT(), VanillaItems::COOKED_RABBIT(), VanillaItems::ROTTEN_FLESH()],
+			EntityIds::CAT, EntityIds::OCELOT => [VanillaItems::RAW_FISH(), VanillaItems::RAW_SALMON()],
 			EntityIds::STRIDER => [\pocketmine\block\VanillaBlocks::WARPED_FUNGUS()->asItem()],
 			default => []
 		};

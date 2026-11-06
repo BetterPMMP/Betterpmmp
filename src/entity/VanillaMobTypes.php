@@ -363,8 +363,16 @@ class CamelHuskMob extends GenericHostileMob{
 	protected const WIDTH = 0.6;
 }
 
-class CatMob extends GenericAnimalMob{
+class CatMob extends GenericAnimalMob implements TameablePet{
 	protected const ENTITY_ID = EntityIds::CAT;
+	use TameableTrait;
+	protected function initEntity(CompoundTag $nbt) : void{ parent::initEntity($nbt); $this->initTameable($nbt); }
+	public function saveNBT() : CompoundTag{ return $this->saveTameable(parent::saveNBT()); }
+	protected function syncNetworkData(EntityMetadataCollection $properties) : void{ parent::syncNetworkData($properties); $this->syncTameable($properties); }
+	public function onInteract(Player $player, \pocketmine\math\Vector3 $clickPos) : bool{ return $this->tameableInteract($player) ?? parent::onInteract($player, $clickPos); }
+	protected function tickWandering(int $tickDiff) : void{ if(!$this->tickPet($tickDiff)){ parent::tickWandering($tickDiff); } }
+	protected function getTamingItems() : array{ return [VanillaItems::RAW_FISH(), VanillaItems::RAW_SALMON()]; }
+	protected function getTameChance() : int{ return 3; }
 	protected const DISPLAY_NAME = "Cat";
 	protected const SPAWN_EGG_GETTER = "CAT_SPAWN_EGG";
 	protected const HEIGHT = 0.6;
@@ -1066,8 +1074,26 @@ class ParchedMob extends GenericRangedHostileMob{
 	protected const WIDTH = 0.6;
 }
 
-class ParrotMob extends GenericFlyingAnimalMob{
+class ParrotMob extends GenericFlyingAnimalMob implements TameablePet{
 	protected const ENTITY_ID = EntityIds::PARROT;
+	use TameableTrait;
+	protected function initEntity(CompoundTag $nbt) : void{ parent::initEntity($nbt); $this->initTameable($nbt); }
+	public function saveNBT() : CompoundTag{ return $this->saveTameable(parent::saveNBT()); }
+	protected function syncNetworkData(EntityMetadataCollection $properties) : void{ parent::syncNetworkData($properties); $this->syncTameable($properties); }
+	protected function tickWandering(int $tickDiff) : void{ if(!$this->tickPet($tickDiff)){ parent::tickWandering($tickDiff); } }
+	protected function getTamingItems() : array{ return [VanillaItems::WHEAT_SEEDS(), VanillaItems::MELON_SEEDS(), VanillaItems::PUMPKIN_SEEDS(), VanillaItems::BEETROOT_SEEDS(), VanillaItems::TORCHFLOWER_SEEDS()]; }
+	protected function getTameChance() : int{ return 10; }
+	/** a cookie poisons a parrot (vanilla) */
+	public function onInteract(Player $player, \pocketmine\math\Vector3 $clickPos) : bool{
+		$held = $player->getInventory()->getItemInHand();
+		if($held->equals(VanillaItems::COOKIE(), false, false)){
+			if($player->hasFiniteResources()){ $held->pop(); $player->getInventory()->setItemInHand($held); }
+			$this->getEffects()->add(new \pocketmine\entity\effect\EffectInstance(\pocketmine\entity\effect\VanillaEffects::POISON(), 20 * 60, 0));
+			$this->attack(new \pocketmine\event\entity\EntityDamageByEntityEvent($player, $this, \pocketmine\event\entity\EntityDamageEvent::CAUSE_MAGIC, 1000));
+			return true;
+		}
+		return $this->tameableInteract($player) ?? parent::onInteract($player, $clickPos);
+	}
 	protected const DISPLAY_NAME = "Parrot";
 	protected const SPAWN_EGG_GETTER = "PARROT_SPAWN_EGG";
 	protected const HEIGHT = 0.5;
@@ -1624,8 +1650,44 @@ class WitherSkeletonMob extends GenericHostileMob{
 	}
 }
 
-class WolfMob extends GenericAnimalMob{
+class WolfMob extends GenericAnimalMob implements TameablePet{
 	protected const ENTITY_ID = EntityIds::WOLF;
+	use TameableTrait;
+	protected function initEntity(CompoundTag $nbt) : void{ parent::initEntity($nbt); $this->initTameable($nbt); }
+	public function saveNBT() : CompoundTag{ return $this->saveTameable(parent::saveNBT()); }
+	protected function syncNetworkData(EntityMetadataCollection $properties) : void{ parent::syncNetworkData($properties); $this->syncTameable($properties); }
+	public function onInteract(Player $player, \pocketmine\math\Vector3 $clickPos) : bool{ return $this->tameableInteract($player) ?? parent::onInteract($player, $clickPos); }
+	protected function getTamingItems() : array{ return [VanillaItems::BONE()]; }
+	protected function getTameChance() : int{ return 3; }
+	protected function getTamedMaxHealth() : int{ return 40; }
+	protected function petAttackDamage() : float{ return 4.0; }
+	protected function usesCollar() : bool{ return true; }
+	/** wild wolves fight back instead of fleeing */
+	protected function shouldFleeFromAttacker(\pocketmine\event\entity\EntityDamageByEntityEvent $source) : bool{ return false; }
+	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{
+		if($this->isSitting() && !$source->isCancelled() && $source instanceof \pocketmine\event\entity\EntityDamageByEntityEvent){ $this->setSitting(false); }
+		parent::attack($source);
+		if($this->isAlive() && $source instanceof \pocketmine\event\entity\EntityDamageByEntityEvent && ($damager = $source->getDamager()) instanceof Living){
+			if($this->isTamed() && $damager instanceof Player && $this->isOwnedBy($damager)){ return; }
+			$this->angryAt = $damager; $this->angryTicks = 400;
+		}
+	}
+	private ?Living $angryAt = null;
+	private int $angryTicks = 0;
+	private int $biteCooldown = 0;
+	protected function tickWandering(int $tickDiff) : void{
+		$this->biteCooldown = max(0, $this->biteCooldown - $tickDiff);
+		if($this->angryAt !== null && !$this->isSitting()){
+			$t = $this->angryAt;
+			if(($this->angryTicks -= $tickDiff) <= 0 || !$t->isAlive() || $t->isClosed() || $t->getWorld() !== $this->getWorld() || ($t instanceof Player && ($t->isCreative() || $t->isSpectator()))){ $this->angryAt = null; }
+			else{
+				if($t->getPosition()->distanceSquared($this->getPosition()) < 2.5 * 2.5 && $this->biteCooldown === 0){ $this->biteCooldown = 20; $t->attack(new \pocketmine\event\entity\EntityDamageByEntityEvent($this, $t, \pocketmine\event\entity\EntityDamageEvent::CAUSE_ENTITY_ATTACK, $this->isTamed() ? 4 : 3)); }
+				$this->getNavigator()->moveTo($t->getPosition(), $this->getWalkSpeed(true), 1.2); $this->getNavigator()->tick($tickDiff);
+				return;
+			}
+		}
+		if(!$this->tickPet($tickDiff)){ parent::tickWandering($tickDiff); }
+	}
 	protected const DISPLAY_NAME = "Wolf";
 	protected const SPAWN_EGG_GETTER = "WOLF_SPAWN_EGG";
 	protected const HEIGHT = 0.6;

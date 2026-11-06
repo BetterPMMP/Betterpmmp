@@ -67,6 +67,11 @@ abstract class Mob extends Living{
 		$this->naturalSpawned = true;
 	}
 
+	/** A tamed or named mob stays forever (vanilla persistence). */
+	public function setPersistent() : void{
+		$this->naturalSpawned = false;
+	}
+
 	public function isNaturalSpawned() : bool{
 		return $this->naturalSpawned;
 	}
