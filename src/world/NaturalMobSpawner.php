@@ -61,6 +61,8 @@ use pocketmine\entity\Zombie;
 use pocketmine\player\Player;
 use pocketmine\network\mcpe\protocol\types\DimensionIds;
 use function count;
+use function in_array;
+use function intdiv;
 use function mt_rand;
 use function min;
 use function max;
@@ -70,8 +72,6 @@ use function max;
  * loaded terrain, so this never forces chunk generation from the world tick.
  */
 final class NaturalMobSpawner{
-	/** @var array<string, true> */
-	private array $villageResidentChunks = [];
 	/** @var int[] world id => server tick of the next patrol attempt */
 	private array $nextPatrolTick = [];
 
@@ -494,71 +494,68 @@ final class NaturalMobSpawner{
 		}
 	}
 
-	/** Villagers are placed when a player first loads the village chunk. */
+	/** @var array<string, true> villages that already got their residents */
+	private array $populatedVillages = [];
+
+	/**
+	 * Vanilla villages are inhabited from the start: when a player comes within
+	 * about 48 blocks of a generated village, it gets villagers spread over
+	 * its streets (one per few buildings, 3-10). Villagers already there are
+	 * counted, so restarts do not add more.
+	 * @param Player[] $players
+	 */
 	private function ensureVillageResidentsNearPlayers(World $world, array $players) : void{
+		$manager = $this->structuresFor($world);
+		if($manager === null){
+			return;
+		}
 		foreach($players as $player){
-			$chunkX = $player->getPosition()->getFloorX() >> 4;
-			$chunkZ = $player->getPosition()->getFloorZ() >> 4;
-			$key = $world->getId() . ":" . World::chunkHash($chunkX, $chunkZ);
-			if(isset($this->villageResidentChunks[$key])){
-				continue;
-			}
-			$chunk = $world->getChunk($chunkX, $chunkZ);
-			if($chunk === null){
-				continue;
-			}
-			$this->villageResidentChunks[$key] = true;
-			$baseX = $chunkX << 4;
-			$baseZ = $chunkZ << 4;
-			for($localX = 0; $localX < 16; ++$localX){
-				for($localZ = 0; $localZ < 16; ++$localZ){
-					$surfaceY = $chunk->getHighestBlockAt($localX, $localZ);
-					if($surfaceY === null){
-						continue;
-					}
-					$markerY = null;
-					for($scanY = max($world->getMinY(), $surfaceY - 8); $scanY <= min($world->getMaxY() - 1, $surfaceY + 2); ++$scanY){
-						if($world->getBlockAt($baseX + $localX, $scanY, $baseZ + $localZ)->getTypeId() === BlockTypeIds::HAY_BALE){
-							$markerY = $scanY;
-							break;
-						}
-					}
-					if($markerY === null){
-						continue;
-					}
-					$baseY = $markerY - 1;
-					$existing = 0;
-					foreach($world->getEntities() as $entity){
-						if($entity instanceof Villager && $entity->getPosition()->distanceSquared(new \pocketmine\math\Vector3($baseX + 8, $baseY + 1, $baseZ + 8)) <= 24 * 24){
-							++$existing;
-						}
-					}
-					// Residents spawn on free, walkable spots around the meeting point
-					// (works for the legacy corner layout and the vanilla-style villages).
-					$markerX = $baseX + $localX;
-					$markerZ = $baseZ + $localZ;
-					$spawned = $existing;
-					for($attempt = 0; $attempt < 48 && $spawned < 6; ++$attempt){
-						$sx = $markerX + mt_rand(-16, 16);
-						$sz = $markerZ + mt_rand(-16, 16);
-						if(!$world->isChunkLoaded($sx >> 4, $sz >> 4)){
+			$cx = $player->getPosition()->getFloorX() >> 4;
+			$cz = $player->getPosition()->getFloorZ() >> 4;
+			for($dx = -3; $dx <= 3; ++$dx){
+				for($dz = -3; $dz <= 3; ++$dz){
+					foreach($manager->startsIn($cx + $dx, $cz + $dz) as $start){
+						if($start->type !== "village"){
 							continue;
 						}
-						for($sy = $markerY + 6; $sy >= $markerY - 6; --$sy){
-							if($sy <= $world->getMinY() || $sy + 1 >= $world->getMaxY()){
-								continue;
-							}
-							$floor = $world->getBlockAt($sx, $sy - 1, $sz);
-							if($floor->isSolid() && !$world->getBlockAt($sx, $sy, $sz)->isSolid() && !$world->getBlockAt($sx, $sy + 1, $sz)->isSolid()
-								&& $world->getBlockAt($sx, $sy, $sz)->getTypeId() !== BlockTypeIds::WATER && $world->getBlockAt($sx, $sy, $sz)->getTypeId() !== BlockTypeIds::LAVA){
-								$villager = new Villager(new Location($sx + 0.5, $sy, $sz + 0.5, $world, (float) mt_rand(0, 359), 0.0));
-								$villager->spawnToAll();
-								++$spawned;
-								break;
+						$key = $world->getId() . ":" . $start->chunkX . ":" . $start->chunkZ;
+						if(isset($this->populatedVillages[$key])){
+							continue;
+						}
+						$mx = intdiv($start->minX + $start->maxX, 2);
+						$mz = intdiv($start->minZ + $start->maxZ, 2);
+						// wait until the village centre and its surroundings are loaded
+						if(!$world->isChunkLoaded($mx >> 4, $mz >> 4) || !$world->isChunkPopulated($mx >> 4, $mz >> 4)){
+							continue;
+						}
+						$this->populatedVillages[$key] = true;
+						$wanted = max(3, min(10, intdiv(count($start->pieces), 3)));
+						$existing = 0;
+						foreach($world->getEntities() as $entity){
+							$p = $entity->getPosition();
+							if($entity instanceof Villager && $p->x >= $start->minX - 8 && $p->x <= $start->maxX + 8 && $p->z >= $start->minZ - 8 && $p->z <= $start->maxZ + 8){
+								++$existing;
 							}
 						}
+						for($attempt = 0, $spawned = $existing; $attempt < 80 && $spawned < $wanted; ++$attempt){
+							$sx = mt_rand($start->minX, $start->maxX);
+							$sz = mt_rand($start->minZ, $start->maxZ);
+							if(!$world->isChunkLoaded($sx >> 4, $sz >> 4) || !$world->isChunkPopulated($sx >> 4, $sz >> 4)){
+								continue;
+							}
+							$location = $this->surfaceSpawnPoint($world, $sx, $sz);
+							if($location === null){
+								continue;
+							}
+							// streets and open ground only, not roofs or fields
+							$floor = $world->getBlockAt($location->getFloorX(), $location->getFloorY() - 1, $location->getFloorZ())->getTypeId();
+							if(!in_array($floor, [BlockTypeIds::GRASS, BlockTypeIds::GRASS_PATH, BlockTypeIds::DIRT, BlockTypeIds::GRAVEL, BlockTypeIds::SAND, BlockTypeIds::RED_SAND, BlockTypeIds::PODZOL, BlockTypeIds::SNOW, BlockTypeIds::COBBLESTONE], true)){
+								continue;
+							}
+							(new Villager($location))->spawnToAll();
+							++$spawned;
+						}
 					}
-					return;
 				}
 			}
 		}

@@ -26,6 +26,16 @@ final class TradeInventory extends SimpleInventory implements TemporaryInventory
 		parent::__construct(2);
 	}
 
+	public function onOpen(\pocketmine\player\Player $who) : void{
+		parent::onOpen($who);
+		$this->villager->setTradingPlayer($who);
+	}
+
+	public function onClose(\pocketmine\player\Player $who) : void{
+		parent::onClose($who);
+		$this->villager->setTradingPlayer(null);
+	}
+
 	public function getVillager() : Villager{
 		return $this->villager;
 	}

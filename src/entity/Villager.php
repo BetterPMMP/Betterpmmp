@@ -48,6 +48,7 @@ use pocketmine\player\Player;
 use pocketmine\utils\Random;
 use pocketmine\world\format\io\GlobalBlockStateHandlers;
 use pocketmine\world\World;
+use function array_key_exists;
 use function array_slice;
 use function atan2;
 use function max;
@@ -73,8 +74,8 @@ class Villager extends Mob implements Ageable{
 	private const TAG_PROFESSION = "Profession"; //TAG_Int (legacy)
 	private const TAG_DATA = "BetterPMMPVillager";
 
-	private const JOB_SEARCH_INTERVAL = 100;
-	private const JOB_SEARCH_RADIUS = 8;
+	private const JOB_SEARCH_INTERVAL = 200;
+	private const JOB_SEARCH_RADIUS = 32; // vanilla villagers find job sites up to 48 blocks away
 	private const RESTOCK_INTERVAL = 6000; //twice per Minecraft day
 
 	/**
@@ -234,6 +235,19 @@ class Villager extends Mob implements Ageable{
 		return VanillaItems::VILLAGER_SPAWN_EGG();
 	}
 
+	private ?Player $tradingPlayer = null;
+
+	/** Bedrock opens the trade screen only when the villager knows who trades with it. */
+	public function setTradingPlayer(?Player $player) : void{
+		$this->tradingPlayer = $player;
+		$this->networkPropertiesDirty = true;
+		$this->sendData(null);
+	}
+
+	public function getTradingPlayer() : ?Player{
+		return $this->tradingPlayer !== null && $this->tradingPlayer->isConnected() ? $this->tradingPlayer : null;
+	}
+
 	public function onInteract(Player $player, Vector3 $clickPos) : bool{
 		if($this->baby || !$this->isAlive() || !VillagerTrades::isTradingProfession($this->profession)){
 			return false;
@@ -244,6 +258,13 @@ class Villager extends Mob implements Ageable{
 		if(count($this->offers) === 0){
 			return false;
 		}
+		if($this->getTradingPlayer() !== null && $this->getTradingPlayer() !== $player){
+			return false; // already trading with someone else
+		}
+		$this->getNavigator()->stop();
+		$this->tradingPlayer = $player;
+		$this->networkPropertiesDirty = true;
+		$this->sendData(null);
 		$player->setCurrentWindow(new TradeInventory($this));
 		return true;
 	}
@@ -302,6 +323,21 @@ class Villager extends Mob implements Ageable{
 		return $result;
 	}
 
+	/** @var array<int, int|null> state id => profession of that job site block */
+	private static array $professionByState = [];
+
+	private static function professionOfState(int $stateId) : ?int{
+		if(array_key_exists($stateId, self::$professionByState)){
+			return self::$professionByState[$stateId];
+		}
+		try{
+			$name = GlobalBlockStateHandlers::getSerializer()->serialize($stateId)->getName();
+		}catch(\Throwable){
+			$name = "";
+		}
+		return self::$professionByState[$stateId] = VillagerTrades::JOB_SITES[$name] ?? null;
+	}
+
 	private function jobSiteProfession(World $world, int $x, int $y, int $z) : ?int{
 		if(!$world->isInWorld($x, $y, $z) || !$world->isChunkLoaded($x >> 4, $z >> 4)){
 			return null;
@@ -342,20 +378,19 @@ class Villager extends Mob implements Ageable{
 		if($this->profession === VillagerTrades::NITWIT){
 			return;
 		}
+		// vanilla: villagers look for an unclaimed job site in a wide area and walk there to work
 		$base = $this->location->floor();
 		$r = self::JOB_SEARCH_RADIUS;
-		for($dy = -2; $dy <= 3; ++$dy){
-			for($dx = -$r; $dx <= $r; ++$dx){
-				for($dz = -$r; $dz <= $r; ++$dz){
-					$x = $base->getFloorX() + $dx;
-					$y = $base->getFloorY() + $dy;
-					$z = $base->getFloorZ() + $dz;
-					$hash = World::blockHash($x, $y, $z);
-					$claimant = self::$claimedJobSites[$worldId][$hash] ?? null;
-					if($claimant !== null && $claimant !== $this->getId() && $world->getEntity($claimant) !== null){
-						continue;
-					}
-					$profession = $this->jobSiteProfession($world, $x, $y, $z);
+		$best = null;
+		$bestDistance = PHP_INT_MAX;
+		for($x = $base->getFloorX() - $r; $x <= $base->getFloorX() + $r; ++$x){
+			for($z = $base->getFloorZ() - $r; $z <= $base->getFloorZ() + $r; ++$z){
+				$chunk = $world->getChunk($x >> 4, $z >> 4);
+				if($chunk === null){
+					continue;
+				}
+				for($y = max($world->getMinY(), $base->getFloorY() - 4); $y <= min($world->getMaxY() - 1, $base->getFloorY() + 6); ++$y){
+					$profession = self::professionOfState($chunk->getBlockStateId($x & 15, $y, $z & 15));
 					if($profession === null){
 						continue;
 					}
@@ -363,13 +398,25 @@ class Villager extends Mob implements Ageable{
 					if($this->profession !== VillagerTrades::UNEMPLOYED && $profession !== $this->profession){
 						continue;
 					}
-					self::$claimedJobSites[$worldId][$hash] = $this->getId();
-					$this->jobSite = new Vector3($x, $y, $z);
-					if($this->profession === VillagerTrades::UNEMPLOYED){
-						$this->setProfession($profession);
+					$hash = World::blockHash($x, $y, $z);
+					$claimant = self::$claimedJobSites[$worldId][$hash] ?? null;
+					if($claimant !== null && $claimant !== $this->getId() && $world->getEntity($claimant) !== null){
+						continue;
 					}
-					return;
+					$d = ($x - $base->x) ** 2 + ($y - $base->y) ** 2 + ($z - $base->z) ** 2;
+					if($d < $bestDistance){
+						$bestDistance = $d;
+						$best = [$x, $y, $z, $profession];
+					}
 				}
+			}
+		}
+		if($best !== null){
+			[$x, $y, $z, $profession] = $best;
+			self::$claimedJobSites[$worldId][World::blockHash($x, $y, $z)] = $this->getId();
+			$this->jobSite = new Vector3($x, $y, $z);
+			if($this->profession === VillagerTrades::UNEMPLOYED){
+				$this->setProfession($profession);
 			}
 		}
 	}
@@ -418,6 +465,15 @@ class Villager extends Mob implements Ageable{
 	}
 
 	protected function tickWandering(int $tickDiff) : void{
+		if(($trader = $this->getTradingPlayer()) !== null){
+			// stand still and look at the customer
+			$this->getNavigator()->stop();
+			$this->setMotion(new Vector3(0, $this->getMotion()->y, 0));
+			$dx = $trader->getPosition()->x - $this->getPosition()->x;
+			$dz = $trader->getPosition()->z - $this->getPosition()->z;
+			$this->setRotation(rad2deg(atan2(-$dx, $dz)), 0.0);
+			return;
+		}
 		if($this->isPanicking()){
 			$this->wakeUp();
 			parent::tickWandering($tickDiff);
@@ -722,6 +778,7 @@ class Villager extends Mob implements Ageable{
 	protected function syncNetworkData(EntityMetadataCollection $properties) : void{
 		parent::syncNetworkData($properties);
 		$properties->setGenericFlag(EntityMetadataFlags::SLEEPING, $this->sleeping);
+		$properties->setLong(EntityMetadataProperties::TRADING_PLAYER_EID, $this->getTradingPlayer()?->getId() ?? -1);
 		$properties->setGenericFlag(EntityMetadataFlags::BABY, $this->baby);
 		$properties->setInt(EntityMetadataProperties::VARIANT, $this->profession);
 		$properties->setInt(EntityMetadataProperties::MARK_VARIANT, $this->skin);
