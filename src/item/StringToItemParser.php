@@ -68,6 +68,8 @@ final class StringToItemParser extends StringToTParser{
 		}
 		self::registerDynamicItems($result);
 		self::registerItems($result);
+		//BetterPMMP: palette items without a dedicated core class (elytra, shield, saddle, ...)
+		ExtraVanillaItems::registerAliases($result);
 		foreach(VanillaMobTypes::additional() as $definition){
 			$getter = $definition['getter'];
 			$result->register($definition['egg'], static fn() => Items::$getter());

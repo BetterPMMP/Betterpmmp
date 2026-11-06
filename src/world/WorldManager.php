@@ -374,6 +374,13 @@ class WorldManager{
 			$this->naturalMobSpawnTicker = 0;
 			foreach($this->worlds as $world){
 				$this->naturalMobSpawner->tick($world);
+				if(EndDragonFight::isEndWorld($world)){
+					try{
+						EndDragonFight::get($world)->tick();
+					}catch(\Throwable $e){
+						$world->getLogger()->logException($e);
+					}
+				}
 			}
 		}
 

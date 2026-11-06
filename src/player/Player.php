@@ -1490,7 +1490,7 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 	}
 
 	protected function calculateFallDamage(float $fallDistance) : float{
-		return $this->flying ? 0 : parent::calculateFallDamage($fallDistance);
+		return $this->flying || $this->gliding ? 0 : parent::calculateFallDamage($fallDistance);
 	}
 
 	public function jump() : void{
@@ -1552,6 +1552,7 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 			Timings::$entityBaseTick->startTiming();
 			$this->entityBaseTick($tickDiff);
 			Timings::$entityBaseTick->stopTiming();
+			$this->tickElytra($tickDiff);
 
 			if($this->isCreative() && $this->fireTicks > 1){
 				$this->fireTicks = 1;
@@ -2013,7 +2014,9 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 			}
 			$heldItem->applyKineticAttack($ev, $relativeSpeed, $speed);
 		}
-		if(!$this->canInteract($entity->getLocation(), self::MAX_REACH_DISTANCE_ENTITY_INTERACTION)){
+		// large mobs (ender dragon, ghast, ravager) can be hit anywhere on their body, not only near their centre
+		$bodyReach = max(0.0, $entity->getSize()->getWidth() / 2 - 0.5);
+		if(!$this->canInteract($entity->getLocation()->add(0, $entity->getSize()->getHeight() / 2, 0), self::MAX_REACH_DISTANCE_ENTITY_INTERACTION + $bodyReach, M_SQRT3 / 2 + $bodyReach)){
 			$this->logger->debug("Cancelled attack of entity " . $entity->getId() . " due to not currently being interactable");
 			$ev->cancel();
 		}elseif($this->isSpectator() || ($entity instanceof Player && !$this->server->getConfigGroup()->getConfigBool(ServerProperties::PVP))){
@@ -2166,6 +2169,12 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		if($glide === $this->gliding){
 			return true;
 		}
+		// vanilla: gliding needs a working elytra in the chest slot
+		$chest = $this->armorInventory->getChestplate();
+		if($glide && !($chest instanceof \pocketmine\item\Elytra && $chest->isUsable())){
+			$this->setGliding(false);
+			return false;
+		}
 		$ev = new PlayerToggleGlideEvent($this, $glide);
 		$ev->call();
 		if($ev->isCancelled()){
@@ -2173,6 +2182,30 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		}
 		$this->setGliding($glide);
 		return true;
+	}
+
+	private int $elytraTicks = 0;
+
+	/** Gliding wears the elytra down by one point per second and resets fall distance. */
+	private function tickElytra(int $tickDiff) : void{
+		if(!$this->gliding){
+			$this->elytraTicks = 0;
+			return;
+		}
+		$this->fallDistance = 0.0;
+		$chest = $this->armorInventory->getChestplate();
+		if(!$chest instanceof \pocketmine\item\Elytra || !$chest->isUsable()){
+			$this->setGliding(false);
+			return;
+		}
+		$this->elytraTicks += $tickDiff;
+		if($this->elytraTicks >= 20){
+			$this->elytraTicks = 0;
+			if($this->hasFiniteResources()){
+				$chest->applyDamage(1);
+				$this->armorInventory->setChestplate($chest);
+			}
+		}
 	}
 
 	public function toggleSwim(bool $swim) : bool{

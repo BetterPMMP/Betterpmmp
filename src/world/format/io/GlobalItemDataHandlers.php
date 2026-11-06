@@ -44,11 +44,19 @@ final class GlobalItemDataHandlers{
 	private static ?ItemDataUpgrader $itemDataUpgrader = null;
 
 	public static function getSerializer() : ItemSerializer{
-		return self::$itemSerializer ??= new ItemSerializer(GlobalBlockStateHandlers::getSerializer());
+		if(self::$itemSerializer === null){
+			self::$itemSerializer = new ItemSerializer(GlobalBlockStateHandlers::getSerializer());
+			\pocketmine\item\ExtraVanillaItems::registerSerializers(self::$itemSerializer);
+		}
+		return self::$itemSerializer;
 	}
 
 	public static function getDeserializer() : ItemDeserializer{
-		return self::$itemDeserializer ??= new ItemDeserializer(GlobalBlockStateHandlers::getDeserializer());
+		if(self::$itemDeserializer === null){
+			self::$itemDeserializer = new ItemDeserializer(GlobalBlockStateHandlers::getDeserializer());
+			\pocketmine\item\ExtraVanillaItems::registerDeserializers(self::$itemDeserializer);
+		}
+		return self::$itemDeserializer;
 	}
 
 	public static function getUpgrader() : ItemDataUpgrader{

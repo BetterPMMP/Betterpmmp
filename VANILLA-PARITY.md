@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 4.8-ai-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 4.9-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -34,8 +34,9 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 | Dörfer | ✅/🟡 | **4.6**: verzweigte Straßen, 12 Berufsgebäude mit Arbeitsblock und Truhe, Häuser, Felder, Gehege, 5 Biomtypen |
 | Andere Strukturen | ✅/🟡 | **4.6**: Mine, Festung mit Endportal, Verlies, Wüsten-/Dschungeltempel, Iglu, Hexenhütte, Außenposten, Ruinenportal, Schiffswrack, Ozeanruinen, Monument, Waldanwesen, Antike Stadt, Pfadruinen, Schatz (nachgebaut) |
 | Nether | ✅/🟡 | 5 Nether-Biome; **4.6**: Netherfestungen, Bastionen, Ruinenportale |
-| End | ✅/🟡 | **4.6**: Vanilla-Inselform, Säulen, Außeninseln, Chorus, End-Städte und -Schiffe (ohne Shulker/Elytren) |
-| Portale (Nether/End) | 🟡 | Nether/End werden beim Serverstart angelegt; Ankunft im End auf der Obsidian-Plattform |
+| End | ✅/🟡 | **4.6**: Vanilla-Inselform, Säulen, Außeninseln, Chorus, End-Städte und -Schiffe (ohne Shulker) |
+| Drachenkampf | ✅/🟡 | **neu in 4.9**: Kampf-Manager wie Vanilla (Zustand im Weltordner), 10 Kristalle einmalig, genau ein Drache, Bossbar für alle im Kampfgebiet, Flugphasen (Kreisen, Sturzflug, Feuerball-Wolke, Landung auf dem Portal mit Atem-Angriff, Abheben), Heilung durch Kristalle, Flügel-Rückstoß, 10 s Todesanimation mit 12000/500 EP, Ausgangsportal, Drachenei beim ersten Sieg, End-Gateways zu den Außeninseln (mit Rück-Gateway) |
+| Portale (Nether/End) | ✅/🟡 | Nether/End werden beim Serverstart angelegt; Ankunft im End auf der Obsidian-Plattform; **4.9**: Enderauge fliegt zur nächsten Festung |
 
 ## Kreaturen
 
@@ -61,7 +62,7 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 
 ## Reihenfolge der nächsten Schritte
 
-1. ~~Fehlende Blöcke registrieren~~ (4.7: alle 219 Blocktypen aus der Bedrock-1.26.60-Palette, die dem Kern fehlten; Verhalten bisher nur für die Redstone-Blöcke). Fehlende Gegenstände (Sattel, Elytren, Armbrust, Schild …) folgen.
+1. ~~Fehlende Blöcke und Gegenstände registrieren~~ (4.7: 219 Blocktypen, 4.9: 152 Gegenstände – damit ist die ganze 1.26.60-Palette vorhanden). Mit Funktion: Elytren (Gleiten, Abnutzung), Streitkolben, Schild, Armbrust, Pinsel (Haltbarkeit). Ohne eigene Funktion bisher: Sattel, Leine, Boote, Loren, Bündel, Pferderüstung, Fisch-Eimer, Karten.
 2. Wesen in Strukturen (Wächter, Shulker, Hexen).
 3. ~~Mob-KI und Spawning~~ (4.8). Offen: Babyzombies, Türen einschlagen, Endermen-Teleport, Hexentränke, Creeper-Ladung.
 4. Speichern geplanter Blockticks über Neustarts.
