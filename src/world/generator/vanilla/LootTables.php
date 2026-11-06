@@ -213,6 +213,14 @@ final class LootTables{
 				["redstone", 1, 4, 15], ["coal", 1, 4, 15], ["melon_seeds", 2, 4, 10], ["pumpkin_seeds", 2, 4, 10], ["beetroot_seeds", 2, 4, 10]]],
 			[3, 3, [["bone", 1, 8, 10], ["gunpowder", 1, 8, 10], ["rotten_flesh", 1, 8, 10], ["string", 1, 8, 10]]],
 		],
+		"trial_chambers_corridor" => [
+			[1, 3, [["iron_axe", 1, 1, 1], ["honeycomb", 1, 8, 1], ["stone_axe", 1, 1, 2], ["stone_pickaxe", 1, 1, 2], ["ender_pearl", 1, 2, 2],
+				["bamboo_hanging_sign", 1, 4, 2], ["bamboo_planks", 3, 6, 2], ["scaffolding", 2, 10, 2], ["torch", 3, 6, 2], ["tuff", 8, 20, 3]]],
+		],
+		"trial_chambers_supply" => [
+			[3, 5, [["arrow", 4, 14, 2], ["baked_potato", 2, 4, 2], ["glow_berries", 2, 10, 2], ["acacia_planks", 3, 6, 1], ["moss_block", 2, 5, 1],
+				["bread", 1, 3, 1], ["tuff", 5, 10, 1], ["torch", 3, 6, 1], ["ladder", 5, 10, 1], ["stone_pickaxe", 1, 1, 1], ["milk_bucket", 1, 1, 1]]],
+		],
 		"trail_ruins" => [
 			[2, 5, [["emerald", 1, 2, 2], ["wheat", 2, 3, 2], ["wooden_hoe", 1, 1, 2], ["clay_ball", 1, 3, 2], ["brick", 1, 3, 2],
 				["yellow_dye", 1, 1, 2], ["blue_dye", 1, 1, 2], ["light_blue_dye", 1, 1, 2], ["candle", 1, 1, 2], ["beetroot_seeds", 1, 1, 2]]],

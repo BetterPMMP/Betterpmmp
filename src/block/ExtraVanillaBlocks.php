@@ -67,6 +67,8 @@ final class ExtraVanillaBlocks{
 		"minecraft:grindstone" => [VanillaGrindstone::class, null],
 		"minecraft:suspicious_sand" => [VanillaSuspiciousBlock::class, null],
 		"minecraft:suspicious_gravel" => [VanillaSuspiciousBlock::class, null],
+		"minecraft:trial_spawner" => [VanillaTrialSpawner::class, null],
+		"minecraft:vault" => [VanillaVault::class, null],
 	];
 
 	public static function getAll() : array{

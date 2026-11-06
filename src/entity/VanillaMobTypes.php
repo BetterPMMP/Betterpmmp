@@ -337,12 +337,69 @@ class BoggedMob extends GenericRangedHostileMob{
 	protected const WIDTH = 0.6;
 }
 
+/**
+ * BetterPMMP: vanilla breeze - hops around (up to ~3 blocks) and shoots wind
+ * charges at players within 16 blocks every 2 s; projectiles bounce off it
+ * (only wind charges and melee hurt), no fall damage, drops 1-2 breeze rods.
+ */
 class BreezeMob extends GenericHostileMob{
 	protected const ENTITY_ID = EntityIds::BREEZE;
 	protected const DISPLAY_NAME = "Breeze";
 	protected const SPAWN_EGG_GETTER = "BREEZE_SPAWN_EGG";
-	protected const HEIGHT = 1.8;
+	protected const HEIGHT = 1.77;
 	protected const WIDTH = 0.6;
+	private int $shootCooldown = 40;
+	private int $hopCooldown = 20;
+	protected function initEntity(CompoundTag $nbt) : void{ parent::initEntity($nbt); $this->setMaxHealth(30); if($this->getHealth() > 30){ $this->setHealth(30); } }
+	protected function calculateFallDamage(float $fallDistance) : float{ return 0.0; }
+	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{
+		if($source->getCause() === \pocketmine\event\entity\EntityDamageEvent::CAUSE_PROJECTILE && $source instanceof \pocketmine\event\entity\EntityDamageByChildEntityEvent
+			&& !$source->getChild() instanceof \pocketmine\entity\projectile\WindCharge){
+			$source->cancel(); // arrows, tridents and snowballs are deflected
+			$child = $source->getChild();
+			if($child !== null){ $m = $child->getMotion(); $child->setMotion(new \pocketmine\math\Vector3(-$m->x * 0.5, 0.3, -$m->z * 0.5)); }
+		}
+		parent::attack($source);
+	}
+	public function getDrops() : array{ return ($rod = \pocketmine\item\ExtraVanillaItems::get("minecraft:breeze_rod")) !== null ? [$rod->setCount(mt_rand(1, 2))] : []; }
+	public function getXpDropAmount() : int{ return 10; }
+	protected function tickWandering(int $tickDiff) : void{
+		$target = $this->findTarget($tickDiff);
+		$this->shootCooldown = max(0, $this->shootCooldown - $tickDiff);
+		$this->hopCooldown = max(0, $this->hopCooldown - $tickDiff);
+		if($target === null || $target->getPosition()->distanceSquared($this->getPosition()) > 16 * 16){
+			if($this->hopCooldown === 0 && $this->isOnGround() && mt_rand(0, 3) === 0){ $this->hop(null); }
+			return;
+		}
+		$d = $target->getPosition()->subtractVector($this->getPosition());
+		$this->setRotation(rad2deg(atan2(-$d->x, $d->z)), 0);
+		if($this->hopCooldown === 0 && $this->isOnGround()){ $this->hop($target->getPosition()); }
+		if($this->shootCooldown === 0 && $this->canSeeEntity($target)){
+			$this->shootCooldown = 40;
+			$eye = $this->getPosition()->add(0, 1.2, 0);
+			$aim = $target->getPosition()->add(0, $target->getSize()->getHeight() * 0.5, 0)->subtractVector($eye);
+			$charge = new \pocketmine\entity\projectile\BreezeWindCharge(Location::fromObject($eye->addVector($aim->normalize()->multiply(0.8)), $this->getWorld()), $this);
+			$charge->setMotion($aim->normalize()->multiply(0.7));
+			$charge->spawnToAll();
+			$this->mobSound(\pocketmine\network\mcpe\protocol\types\LevelSoundEvent::SHOOT);
+		}
+	}
+	/** jumps up to ~3 blocks, sideways around or toward the target */
+	private function hop(?\pocketmine\math\Vector3 $toward) : void{
+		$this->hopCooldown = 20 + mt_rand(0, 30);
+		$angle = deg2rad(mt_rand(0, 359));
+		$x = cos($angle) * 0.3; $z = sin($angle) * 0.3;
+		if($toward !== null){
+			$d = $toward->subtractVector($this->getPosition()); $len = max(0.1, sqrt($d->x * $d->x + $d->z * $d->z));
+			$dist = $len; $sign = $dist > 8 ? 1 : ($dist < 4 ? -1 : 0);
+			$x = $x * 0.5 + $d->x / $len * 0.3 * $sign; $z = $z * 0.5 + $d->z / $len * 0.3 * $sign;
+		}
+		$this->setMotion(new \pocketmine\math\Vector3($x, 0.7 + mt_rand(0, 3) / 10, $z));
+		$this->mobSound(\pocketmine\network\mcpe\protocol\types\LevelSoundEvent::JUMP);
+	}
+	private function mobSound(string $sound) : void{
+		$this->getWorld()->broadcastPacketToViewers($this->getPosition(), \pocketmine\network\mcpe\protocol\LevelSoundEventPacket::create($sound, $this->getPosition(), -1, EntityIds::BREEZE, false, false, $this->getId(), null));
+	}
 }
 
 class CamelMob extends GenericAnimalMob implements \pocketmine\entity\riding\Rideable{
