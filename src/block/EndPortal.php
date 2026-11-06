@@ -231,7 +231,10 @@ class EndPortal extends Transparent{
 	private static function loadExistingDimensionWorld(WorldManager $manager, string $name, int $dimensionId) : ?\pocketmine\world\World{
 		$world = $manager->getWorldByName($name);
 		if($world === null && $manager->isWorldGenerated($name)){
-			$manager->loadWorld($name);
+			try{
+				$manager->loadWorld($name, true);
+			}catch(\Throwable){
+			}
 			$world = $manager->getWorldByName($name);
 		}
 		return $world !== null && $world->getDimensionId() === $dimensionId ? $world : null;

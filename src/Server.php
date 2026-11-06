@@ -1283,15 +1283,12 @@ class Server{
 		];
 		foreach($dimensions as [$dimensionName, $class, $spawn]){
 			try{
-				if(!$this->worldManager->isWorldGenerated($dimensionName)){
-					$this->worldManager->generateWorld($dimensionName, WorldCreationOptions::create()
-						->setSeed($overworld->getSeed())
-						->setGeneratorClass($class)
-						->setSpawnPosition($spawn)
-						->setDifficulty($this->getDifficulty()));
+				$created = !$this->worldManager->isWorldGenerated($dimensionName);
+				$world = $this->worldManager->loadOrCreateDimensionWorld($dimensionName, $class, $spawn, $overworld->getSeed());
+				if($world === null){
+					$this->logger->warning("BetterPMMP: could not prepare dimension world \"$dimensionName\"");
+				}elseif($created){
 					$this->logger->info("BetterPMMP: created vanilla dimension world \"$dimensionName\"");
-				}elseif(!$this->worldManager->isWorldLoaded($dimensionName)){
-					$this->worldManager->loadWorld($dimensionName);
 				}
 			}catch(\Throwable $e){
 				$this->logger->warning("BetterPMMP: could not prepare dimension world \"$dimensionName\": " . $e->getMessage());

@@ -136,9 +136,7 @@ class NetherPortal extends Transparent{
 				}
 			}
 			if($target === null){
-				$options = WorldCreationOptions::create()->setSeed($source->getSeed())->setGeneratorClass(VanillaNether::class);
-				$manager->generateWorld($targetName, $options, false);
-				$target = $manager->getWorldByName($targetName);
+				$target = $manager->loadOrCreateDimensionWorld($targetName, VanillaNether::class, new \pocketmine\math\Vector3(0.5, 70, 0.5), $source->getSeed());
 			}
 		}
 		if($target === null){
@@ -265,8 +263,16 @@ class NetherPortal extends Transparent{
 	private static function loadExistingDimensionWorld(WorldManager $manager, string $name, int $dimensionId) : ?World{
 		$world = $manager->getWorldByName($name);
 		if($world === null && $manager->isWorldGenerated($name)){
-			$manager->loadWorld($name);
-			$world = $manager->getWorldByName($name);
+			if($dimensionId === DimensionIds::NETHER){
+				// upgrades old formats, replaces unloadable worlds (kept as a backup)
+				$world = $manager->loadOrCreateDimensionWorld($name, VanillaNether::class, new \pocketmine\math\Vector3(0.5, 70, 0.5), $manager->getDefaultWorld()?->getSeed() ?? 0);
+			}else{
+				try{
+					$manager->loadWorld($name, true);
+				}catch(\Throwable){
+				}
+				$world = $manager->getWorldByName($name);
+			}
 		}
 		return $world !== null && $world->getDimensionId() === $dimensionId ? $world : null;
 	}
