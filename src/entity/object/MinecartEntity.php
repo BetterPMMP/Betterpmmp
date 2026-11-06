@@ -29,6 +29,7 @@ use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 use pocketmine\player\Player;
 use pocketmine\world\World;
 use function atan2;
+use function count;
 use function cos;
 use function deg2rad;
 use function floor;
@@ -62,6 +63,10 @@ class MinecartEntity extends Entity implements Rideable{
 	public function getSeatPosition(int $seat) : Vector3{ return new Vector3(0, 1.02, 0); }
 	public function isControlledByDriver() : bool{ return false; } // minecarts are moved by the server
 	public function canBeCollidedWith() : bool{ return true; }
+
+	public function getInteractButtonText(Player $player) : string{
+		return count(RidingManager::getRiders($this)) < $this->getMaxRiders() && RidingManager::getVehicle($player) !== $this ? "action.interact.ride.minecart" : "";
+	}
 
 	public function onInteract(Player $player, Vector3 $clickPos) : bool{
 		if($player->isSneaking() || RidingManager::getVehicle($player) === $this){

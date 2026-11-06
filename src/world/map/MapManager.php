@@ -61,6 +61,8 @@ final class MapManager{
 	/** @var array<int, int> state id => rgb */
 	private static array $colorCache = [];
 	private static int $ticker = 0;
+	/** @var array<int, array<int, true>> player entity id => map ids the client asked for */
+	private static array $requested = [];
 
 	public static function createFilledMap(Player $player, int $scale = 0) : ?Item{
 		$item = ExtraVanillaItems::get("minecraft:filled_map");
@@ -276,7 +278,7 @@ final class MapManager{
 				continue;
 			}
 			$rotation = ((int) floor($player->getLocation()->getYaw() * 16 / 360 + 0.5)) & 0x0f;
-			$result[] = new MapDecoration(0, $rotation, ((int) ($dx * 2)) & 0xff, ((int) ($dz * 2)) & 0xff, $player->getName(), new Color(255, 255, 255));
+			$result[] = new MapDecoration(0, $rotation, ((int) ($dx * 2)) & 0xff, ((int) ($dz * 2)) & 0xff, "", new Color(255, 255, 255));
 		}
 		return $result;
 	}
@@ -302,12 +304,13 @@ final class MapManager{
 			return;
 		}
 		$world = Server::getInstance()->getWorldManager()->getWorldByName(self::$maps[$id]["world"]) ?? $player->getWorld();
+		self::$requested[$player->getId()][$id] = true;
 		$player->getNetworkSession()->sendDataPacket(self::packet($id, $world));
 	}
 
 	/** Keeps drawing maps held by players and moves their markers (every 20 ticks). */
 	public static function tick() : void{
-		if(++self::$ticker < 2){
+		if(++self::$ticker < 4){
 			return;
 		}
 		self::$ticker = 0;
@@ -325,19 +328,22 @@ final class MapManager{
 				if($world->getFolderName() !== $map["world"]){
 					continue;
 				}
+				// vanilla servers only send map data for maps the client has asked for
+				if(!isset(self::$requested[$player->getId()][$id])){
+					continue;
+				}
 				$step = 1 << $map["scale"];
 				$px = (int) floor(($player->getPosition()->x - $map["x"]) / $step) + 64;
 				$py = (int) floor(($player->getPosition()->z - $map["z"]) / $step) + 64;
-				$region = [max(0, $px - 16), max(0, $py - 16), min(127, $px + 16), min(127, $py + 16)];
-				if($px >= -16 && $px < 144 && $py >= -16 && $py < 144 && $region[0] <= $region[2] && $region[1] <= $region[3]){
-					if(self::render($id, $world, ...$region)){
+				$changed = false;
+				if($px >= -16 && $px < 144 && $py >= -16 && $py < 144){
+					$changed = self::render($id, $world, max(0, $px - 16), max(0, $py - 16), min(127, $px + 16), min(127, $py + 16));
+					if($changed){
 						self::save($id, $world);
 					}
-					$player->getNetworkSession()->sendDataPacket(self::packet($id, $world, $region));
-				}else{
-					// outside the map: only update the markers
-					$player->getNetworkSession()->sendDataPacket(self::packet($id, $world, [0, 0, 0, 0]));
 				}
+				// full image (markers move every update)
+				$player->getNetworkSession()->sendDataPacket(self::packet($id, $world));
 			}
 		}
 	}

@@ -323,7 +323,7 @@ abstract class Mob extends Living{
 			}
 
 			$motion = $this->getMotion();
-			$verticalMotion = $jump ? max(0.42, $motion->y) : $motion->y;
+			$verticalMotion = $jump ? max(\pocketmine\entity\ai\Navigator::JUMP_VELOCITY, $motion->y) : $motion->y;
 			$this->setMotion(new Vector3($dx * $speed, $verticalMotion, $dz * $speed));
 			$this->setRotation(rad2deg(atan2(-$dx, $dz)), 0.0);
 			return true;

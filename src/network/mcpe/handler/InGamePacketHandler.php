@@ -671,11 +671,11 @@ class InGamePacketHandler extends PacketHandler{
 
 	public function handleInteract(InteractPacket $packet) : bool{
 		if($packet->action === InteractPacket::ACTION_MOUSEOVER){
-			//TODO HACK: silence useless spam (MCPE 1.8)
-			//due to some messy Mojang hacks, it sends this when changing the held item now, which causes us to think
-			//the inventory was closed when it wasn't.
-			//this is also sent whenever entity metadata updates, which can get really spammy.
-			//TODO: implement handling for this where it matters
+			//BetterPMMP: touch-screen players only get an interact button ("Trade", "Ride", ...) if the server
+			//sets its text on the player when they look at an entity (vanilla behaviour)
+			$looked = $packet->targetActorRuntimeId !== 0 ? $this->player->getWorld()->getEntity($packet->targetActorRuntimeId) : null;
+			$text = $looked !== null && method_exists($looked, "getInteractButtonText") ? (string) $looked->getInteractButtonText($this->player) : "";
+			$this->player->setInteractButtonText($text);
 			return true;
 		}
 		$target = $this->player->getWorld()->getEntity($packet->targetActorRuntimeId);

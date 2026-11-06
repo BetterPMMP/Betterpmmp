@@ -2184,6 +2184,18 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		return true;
 	}
 
+	private string $interactButtonText = "";
+
+	/** Text of the touch-screen interact button for the entity the player looks at ("" hides it). */
+	public function setInteractButtonText(string $text) : void{
+		if($text === $this->interactButtonText){
+			return;
+		}
+		$this->interactButtonText = $text;
+		$this->getNetworkProperties()->setString(\pocketmine\network\mcpe\protocol\types\entity\EntityMetadataProperties::INTERACTIVE_TAG, $text);
+		$this->sendData([$this]);
+	}
+
 	private int $elytraTicks = 0;
 
 	/** Gliding wears the elytra down by one point per second and resets fall distance. */

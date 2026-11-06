@@ -99,6 +99,20 @@ trait MountableAnimalTrait{
 		return $item->getTypeId() === ExtraVanillaItems::get("minecraft:saddle")?->getTypeId();
 	}
 
+	public function getInteractButtonText(Player $player) : string{
+		if($this->isBaby() || RidingManager::getVehicle($player) === $this){
+			return "";
+		}
+		$held = $player->getInventory()->getItemInHand();
+		if(!$this->saddled && self::isSaddle($held) && ($this->tamed || in_array($this->mountKind(), ["pig", "strider", "camel"], true))){
+			return "action.interact.saddle";
+		}
+		if(in_array($this->mountKind(), ["pig", "strider", "camel"], true) && !$this->saddled){
+			return "";
+		}
+		return in_array($this->mountKind(), ["horse", "skeleton_horse"], true) ? "action.interact.ride.horse" : "action.interact.mount";
+	}
+
 	public function onInteract(Player $player, Vector3 $clickPos) : bool{
 		$held = $player->getInventory()->getItemInHand();
 		$baby = $this->isBaby();
