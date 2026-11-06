@@ -27,6 +27,45 @@ use pocketmine\world\World;
  */
 final class RedstonePower{
 
+	/**
+	 * Last observed powered state of consumers whose Bedrock block state has no
+	 * "powered" bit (doors, trapdoors, fence gates, note blocks). Needed for
+	 * vanilla edge behaviour: only a change of the input toggles the block, so a
+	 * hand-opened door is not slammed shut by an unrelated neighbour update.
+	 * Keyed by world id, then block hash. Only powered entries are stored.
+	 * @var bool[][]
+	 * @phpstan-var array<int, array<int, true>>
+	 */
+	private static array $poweredConsumers = [];
+
+	/**
+	 * Records the current input state of a consumer and returns whether it
+	 * differs from the previously observed state (i.e. a rising or falling edge).
+	 */
+	public static function consumerEdge(Vector3 $pos, World $world, bool $powered) : bool{
+		$worldId = $world->getId();
+		$hash = World::blockHash($pos->getFloorX(), $pos->getFloorY(), $pos->getFloorZ());
+		$was = isset(self::$poweredConsumers[$worldId][$hash]);
+		if($powered){
+			self::$poweredConsumers[$worldId][$hash] = true;
+		}else{
+			unset(self::$poweredConsumers[$worldId][$hash]);
+		}
+		return $was !== $powered;
+	}
+
+	public static function forgetConsumer(Vector3 $pos, World $world) : void{
+		unset(self::$poweredConsumers[$world->getId()][World::blockHash($pos->getFloorX(), $pos->getFloorY(), $pos->getFloorZ())]);
+	}
+
+	public static function forgetWorld(World $world) : void{
+		unset(self::$poweredConsumers[$world->getId()]);
+	}
+
+	public static function isPowered(Block $receiver) : bool{
+		return self::input($receiver) > 0;
+	}
+
 	public static function isConductor(Block $block) : bool{
 		// This matches this core's wire geometry. Per-block Bedrock exceptions
 		// (some transparent / special full cubes) still need a conformance pass.

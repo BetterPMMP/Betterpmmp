@@ -23,6 +23,7 @@ declare(strict_types=1);
 
 namespace pocketmine\entity\object;
 
+use pocketmine\block\Hopper;
 use pocketmine\entity\animation\ItemEntityStackSizeChangeAnimation;
 use pocketmine\entity\Entity;
 use pocketmine\entity\EntitySizeInfo;
@@ -41,6 +42,7 @@ use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 use pocketmine\network\mcpe\protocol\types\inventory\ItemStackWrapper;
 use pocketmine\player\Player;
 use pocketmine\timings\Timings;
+use function floor;
 use function max;
 
 class ItemEntity extends Entity{
@@ -145,6 +147,10 @@ class ItemEntity extends Entity{
 				}
 			}
 
+			if(!$this->isFlaggedForDespawn()){
+				$this->wakeHopperBelow();
+			}
+
 			if(!$this->isFlaggedForDespawn() && $this->despawnDelay !== self::NEVER_DESPAWN){
 				$hasUpdate = true;
 				$this->despawnDelay -= $tickDiff;
@@ -162,6 +168,26 @@ class ItemEntity extends Entity{
 			return $hasUpdate;
 		}finally{
 			Timings::$itemEntityBaseTick->stopTiming();
+		}
+	}
+
+	/**
+	 * Item entities inside a hopper bowl or resting on top of it wake the hopper,
+	 * which then picks them up on its own transfer schedule.
+	 */
+	private function wakeHopperBelow() : void{
+		$world = $this->getWorld();
+		$x = (int) floor($this->location->x);
+		$y = (int) floor($this->location->y);
+		$z = (int) floor($this->location->z);
+		foreach([$y, $y - 1] as $hy){
+			if($world->isInWorld($x, $hy, $z)){
+				$block = $world->getBlockAt($x, $hy, $z);
+				if($block instanceof Hopper){
+					$block->wake();
+					return;
+				}
+			}
 		}
 	}
 

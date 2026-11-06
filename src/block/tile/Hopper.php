@@ -27,6 +27,7 @@ use pocketmine\block\inventory\HopperInventory;
 use pocketmine\math\Vector3;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\world\World;
+use function max;
 
 class Hopper extends Spawnable implements Container, Nameable{
 
@@ -35,8 +36,12 @@ class Hopper extends Spawnable implements Container, Nameable{
 
 	private const TAG_TRANSFER_COOLDOWN = "TransferCooldown";
 
+	/** Vanilla transfer cooldown: 8 game ticks (4 redstone ticks). */
+	public const TRANSFER_COOLDOWN_TICKS = 8;
+
 	private HopperInventory $inventory;
-	private int $transferCooldown = 0;
+	/** Absolute server tick at which the next transfer may happen. */
+	private int $nextTransferTick = 0;
 
 	public function __construct(World $world, Vector3 $pos){
 		parent::__construct($world, $pos);
@@ -47,14 +52,27 @@ class Hopper extends Spawnable implements Container, Nameable{
 		$this->loadItems($nbt);
 		$this->loadName($nbt);
 
-		$this->transferCooldown = $nbt->getInt(self::TAG_TRANSFER_COOLDOWN, 0);
+		$this->setTransferCooldown($nbt->getInt(self::TAG_TRANSFER_COOLDOWN, 0));
 	}
 
 	protected function writeSaveData(CompoundTag $nbt) : void{
 		$this->saveItems($nbt);
 		$this->saveName($nbt);
 
-		$nbt->setInt(self::TAG_TRANSFER_COOLDOWN, $this->transferCooldown);
+		$nbt->setInt(self::TAG_TRANSFER_COOLDOWN, $this->getTransferCooldown());
+	}
+
+	private function currentTick() : int{
+		return $this->position->getWorld()->getServer()->getTick();
+	}
+
+	/** Remaining ticks until this hopper may move an item again. */
+	public function getTransferCooldown() : int{
+		return max(0, $this->nextTransferTick - $this->currentTick());
+	}
+
+	public function setTransferCooldown(int $ticks) : void{
+		$this->nextTransferTick = $this->currentTick() + max(0, $ticks);
 	}
 
 	public function close() : void{

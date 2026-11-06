@@ -25,6 +25,7 @@ namespace pocketmine\block;
 
 use pocketmine\block\utils\HorizontalFacing;
 use pocketmine\block\utils\HorizontalFacingTrait;
+use pocketmine\block\utils\RedstonePower;
 use pocketmine\block\utils\SupportType;
 use pocketmine\data\runtime\RuntimeDataDescriber;
 use pocketmine\item\Item;
@@ -84,10 +85,39 @@ class Trapdoor extends Transparent implements HorizontalFacing{
 	}
 
 	public function onInteract(Item $item, int $face, Vector3 $clickVector, ?Player $player = null, array &$returnedItems = []) : bool{
-		$this->open = !$this->open;
+		if($this->isRedstoneOnly()){
+			return false;
+		}
+		$this->toggle(!$this->open);
+		return true;
+	}
+
+	/**
+	 * Iron trapdoors can only be operated by redstone in vanilla.
+	 */
+	public function isRedstoneOnly() : bool{
+		return $this->getTypeId() === BlockTypeIds::IRON_TRAPDOOR;
+	}
+
+	public function onNearbyBlockChange() : void{
+		$this->updateRedstoneState();
+	}
+
+	public function onPostPlace() : void{
+		$this->updateRedstoneState();
+	}
+
+	private function updateRedstoneState() : void{
+		$powered = RedstonePower::isPowered($this);
+		if(RedstonePower::consumerEdge($this->position, $this->position->getWorld(), $powered) && $this->open !== $powered){
+			$this->toggle($powered);
+		}
+	}
+
+	private function toggle(bool $open) : void{
+		$this->open = $open;
 		$world = $this->position->getWorld();
 		$world->setBlock($this->position, $this);
 		$world->addSound($this->position, new DoorSound());
-		return true;
 	}
 }
