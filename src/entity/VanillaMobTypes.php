@@ -213,6 +213,12 @@ abstract class GenericSpiderMob extends GenericHostileMob{
 }
 
 abstract class GenericCreeperMob extends GenericHostileMob{
+	/** BetterPMMP: struck by lightning - charged creeper, double explosion radius */
+	protected bool $powered = false;
+	public function isPowered() : bool{ return $this->powered; }
+	public function setPowered(bool $powered = true) : void{ $this->powered = $powered; $this->networkPropertiesDirty = true; }
+	protected function initEntity(CompoundTag $nbt) : void{ parent::initEntity($nbt); $this->powered = $nbt->getByte("powered", 0) === 1; }
+	public function saveNBT() : CompoundTag{ $nbt = parent::saveNBT(); $nbt->setByte("powered", $this->powered ? 1 : 0); return $nbt; }
 	private const FUSE_DURATION_TICKS = 30;
 	private int $fuseTicks = -1;
 	protected function tickWandering(int $tickDiff) : void{
@@ -223,10 +229,10 @@ abstract class GenericCreeperMob extends GenericHostileMob{
 		parent::tickWandering($tickDiff);
 	}
 	private function detonate() : void{
-		$event = new \pocketmine\event\entity\EntityPreExplodeEvent($this, 3.0); $event->call(); if($event->isCancelled()){ $this->fuseTicks = -1; $this->networkPropertiesDirty = true; return; }
+		$event = new \pocketmine\event\entity\EntityPreExplodeEvent($this, $this->powered ? 6.0 : 3.0); $event->call(); if($event->isCancelled()){ $this->fuseTicks = -1; $this->networkPropertiesDirty = true; return; }
 		$this->flagForDespawn(); $explosion = new \pocketmine\world\Explosion(\pocketmine\world\Position::fromObject($this->getPosition()->add(0, 0.85, 0), $this->getWorld()), $event->getRadius(), $this, $event->getFireChance()); if($event->isBlockBreaking()){ $explosion->explodeA(); } $explosion->explodeB();
 	}
-	protected function syncNetworkData(EntityMetadataCollection $properties) : void{ parent::syncNetworkData($properties); $properties->setGenericFlag(EntityMetadataFlags::IGNITED, $this->fuseTicks >= 0); $properties->setInt(EntityMetadataProperties::FUSE_LENGTH, $this->fuseTicks < 0 ? 0 : max(0, self::FUSE_DURATION_TICKS - $this->fuseTicks)); }
+	protected function syncNetworkData(EntityMetadataCollection $properties) : void{ parent::syncNetworkData($properties); $properties->setGenericFlag(EntityMetadataFlags::POWERED, $this->powered); $properties->setGenericFlag(EntityMetadataFlags::IGNITED, $this->fuseTicks >= 0); $properties->setInt(EntityMetadataProperties::FUSE_LENGTH, $this->fuseTicks < 0 ? 0 : max(0, self::FUSE_DURATION_TICKS - $this->fuseTicks)); }
 }
 
 abstract class GenericRangedHostileMob extends GenericHostileMob{

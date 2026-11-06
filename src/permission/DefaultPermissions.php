@@ -130,6 +130,7 @@ abstract class DefaultPermissions{
 			Names::COMMAND_WHITELIST_REMOVE,
 			Names::COMMAND_XP_OTHER,
 			Names::COMMAND_XP_SELF,
+			Names::COMMAND_WEATHER,
 		] as $permission){
 			self::registerNoArgsDesc($permission, [$operatorRoot]);
 		}

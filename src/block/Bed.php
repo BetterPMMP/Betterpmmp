@@ -134,7 +134,7 @@ class Bed extends Transparent implements Colored, HorizontalFacing{
 
 			$time = $this->position->getWorld()->getTimeOfDay();
 
-			$isNight = ($time >= World::TIME_NIGHT && $time < World::TIME_SUNRISE);
+			$isNight = ($time >= World::TIME_NIGHT && $time < World::TIME_SUNRISE) || $this->position->getWorld()->getWeather()->isThundering(); //BetterPMMP: sleep in thunderstorms
 
 			if(!$isNight){
 				$player->sendMessage(KnownTranslationFactory::tile_bed_noSleep()->prefix(TextFormat::GRAY));

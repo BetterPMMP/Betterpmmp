@@ -130,8 +130,12 @@ class Fire extends BaseFire implements Ageable, HorizontalConnectable{
 		$canSpread = true;
 
 		if(!$down->burnsForever()){
-			//TODO: check rain
-			if($this->age === self::MAX_AGE){
+			//BetterPMMP: rain puts fire out (vanilla: 20 % + 3 % per age per random tick when exposed)
+			$p = $this->position;
+			if($p->getWorld()->getWeather()->isRainingAt($p->getFloorX(), $p->getFloorY() + 1, $p->getFloorZ()) && mt_rand(0, 99) < 20 + $this->age * 3){
+				$canSpread = false;
+				$result = VanillaBlocks::AIR();
+			}elseif($this->age === self::MAX_AGE){
 				if(!$down->isFlammable() && mt_rand(0, 3) === 3){ //1/4 chance to extinguish
 					$canSpread = false;
 					$result = VanillaBlocks::AIR();

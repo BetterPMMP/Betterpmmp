@@ -123,7 +123,9 @@ class Farmland extends Transparent{
 		$oldWaterPositionIndex = $this->waterPositionIndex;
 		$changed = false;
 
-		if(!$this->canHydrate()){
+		$p = $this->position;
+		$rained = $world->getWeather()->isRainingAt($p->getFloorX(), $p->getFloorY() + 2, $p->getFloorZ()); //BetterPMMP: rain waters farmland (also with a crop on it)
+		if(!$rained && !$this->canHydrate()){
 			if($this->wetness > 0){
 				$event = new FarmlandHydrationChangeEvent($this, $this->wetness, $this->wetness - 1);
 				$event->call();

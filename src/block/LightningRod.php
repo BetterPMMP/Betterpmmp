@@ -33,10 +33,11 @@ use pocketmine\math\Axis;
 use pocketmine\math\AxisAlignedBB;
 use pocketmine\math\Facing;
 use pocketmine\math\Vector3;
+use pocketmine\world\World;
 use pocketmine\player\Player;
 use pocketmine\world\BlockTransaction;
 
-final class LightningRod extends Transparent implements AnyFacing, CopperMaterial, RedstoneSignalEmitter{
+final class LightningRod extends Transparent implements AnyFacing, CopperMaterial, RedstoneSignalEmitter, \pocketmine\block\utils\DirectionalRedstoneSource{
 	use CopperTrait;
 	use AnyFacingTrait;
 
@@ -56,5 +57,43 @@ final class LightningRod extends Transparent implements AnyFacing, CopperMateria
 	public function place(BlockTransaction $tx, Item $item, Block $blockReplace, Block $blockClicked, int $face, Vector3 $clickVector, ?Player $player = null) : bool{
 		$this->facing = $face;
 		return parent::place($tx, $item, $blockReplace, $blockClicked, $face, $clickVector, $player);
+	}
+
+	/**
+	 * BetterPMMP: struck by lightning the rod gives a signal of 15 for 8 ticks
+	 * (strong into the block it is attached to). Kept in memory, Bedrock has no state for it.
+	 * @var int[][] world id => block hash => 1
+	 */
+	private static array $powered = [];
+
+	private function poweredKey() : int{
+		return World::blockHash($this->position->getFloorX(), $this->position->getFloorY(), $this->position->getFloorZ());
+	}
+
+	public function isStruck() : bool{
+		return $this->position->isValid() && isset(self::$powered[$this->position->getWorld()->getId()][$this->poweredKey()]);
+	}
+
+	public function onLightningStrike() : void{
+		$world = $this->position->getWorld();
+		self::$powered[$world->getId()][$this->poweredKey()] = 1;
+		$world->notifyRedstoneChange($this->position);
+		$world->scheduleDelayedBlockUpdate($this->position, 8);
+	}
+
+	public function onScheduledUpdate() : void{
+		$world = $this->position->getWorld();
+		if(isset(self::$powered[$world->getId()][$this->poweredKey()])){
+			unset(self::$powered[$world->getId()][$this->poweredKey()]);
+			$world->notifyRedstoneChange($this->position);
+		}
+	}
+
+	public function getWeakPowerTowards(int $towards) : int{
+		return $this->isStruck() ? 15 : 0;
+	}
+
+	public function getStrongPowerTowards(int $towards) : int{
+		return $this->isStruck() && $towards === Facing::opposite($this->facing) ? 15 : 0;
 	}
 }

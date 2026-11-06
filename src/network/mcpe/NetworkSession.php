@@ -1352,7 +1352,7 @@ class NetworkSession{
 			$this->syncWorldTime($world->getTime());
 			$this->syncWorldDifficulty($world->getDifficulty());
 			$this->syncWorldSpawnPoint($world->getSpawnLocation());
-			//TODO: weather needs to be synced here (when implemented)
+			$world->getWeather()->sendTo($this->player);
 		}
 	}
 
