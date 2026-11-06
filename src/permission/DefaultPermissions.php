@@ -72,6 +72,8 @@ abstract class DefaultPermissions{
 		$consoleRoot = self::registerNoArgsDesc(self::ROOT_CONSOLE, []);
 		$operatorRoot = self::registerNoArgsDesc(self::ROOT_OPERATOR, [$consoleRoot]);
 		$everyoneRoot = self::registerNoArgsDesc(self::ROOT_USER, [$operatorRoot]);
+		//BetterPMMP: permissions without a core translation key get a plain description
+		self::registerPermission(new Permission(Names::COMMAND_WEATHER, "Allows the user to change the weather"), [$operatorRoot]);
 
 		self::registerNoArgsDesc(Names::COMMAND_DUMPMEMORY, [$consoleRoot]);
 
@@ -130,7 +132,6 @@ abstract class DefaultPermissions{
 			Names::COMMAND_WHITELIST_REMOVE,
 			Names::COMMAND_XP_OTHER,
 			Names::COMMAND_XP_SELF,
-			Names::COMMAND_WEATHER,
 		] as $permission){
 			self::registerNoArgsDesc($permission, [$operatorRoot]);
 		}
