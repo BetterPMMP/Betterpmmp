@@ -32,7 +32,15 @@ abstract class GenericVanillaMob extends Mob{
 	protected const WIDTH = 0.6;
 	protected const HEIGHT = 1.8;
 	public static function getNetworkTypeId() : string{ return static::ENTITY_ID; }
-	protected function getInitialSizeInfo() : EntitySizeInfo{ return new EntitySizeInfo(static::HEIGHT, static::WIDTH); }
+	protected function getInitialSizeInfo() : EntitySizeInfo{ $stats = \pocketmine\entity\ai\MobStats::get(static::ENTITY_ID); return $stats !== null ? new EntitySizeInfo($stats[5], $stats[4]) : new EntitySizeInfo(static::HEIGHT, static::WIDTH); }
+	protected function initEntity(CompoundTag $nbt) : void{
+		$stats = \pocketmine\entity\ai\MobStats::get(static::ENTITY_ID);
+		if($stats !== null){
+			$this->setMaxHealth($stats[0]);
+			$this->setMovementSpeed($stats[1]);
+		}
+		parent::initEntity($nbt);
+	}
 	protected function getInitialGravity() : float{ return static::GRAVITY; }
 	protected const GRAVITY = 0.08;
 	public function getName() : string{ return static::DISPLAY_NAME; }
@@ -111,6 +119,7 @@ abstract class GenericAnimalMob extends GenericVanillaMob implements BreedableAn
 	protected function entityBaseTick(int $tickDiff = 1) : bool{ $hasUpdate = parent::entityBaseTick($tickDiff); if($this->isAlive()){ $this->tickBreedingState($tickDiff); } return $hasUpdate; }
 	protected function syncNetworkData(EntityMetadataCollection $properties) : void{ parent::syncNetworkData($properties); $this->syncBreedingNetworkData($properties); }
 	protected function shouldFleeFromAttacker(\pocketmine\event\entity\EntityDamageByEntityEvent $source) : bool{ return true; }
+	protected function tickWandering(int $tickDiff) : void{ if($this->isPanicking() || !$this->tickAnimalGoals($tickDiff)){ parent::tickWandering($tickDiff); } }
 }
 
 abstract class GenericFreeMotionMob extends GenericVanillaMob{
@@ -161,18 +170,25 @@ abstract class GenericHostileFlyingMob extends GenericFreeMotionMob{
 abstract class GenericHostileSwimmingMob extends GenericHostileFlyingMob{ protected function tickWandering(int $tickDiff) : void{ parent::tickWandering($tickDiff); $this->constrainToWater(); } public function canBreathe() : bool{ return $this->isUnderwater(); } }
 
 abstract class GenericHostileMob extends GenericVanillaMob{
-	protected function findTarget() : ?\pocketmine\player\Player{ $target = null; $targetDistanceSquared = 14 * 14; foreach($this->getWorld()->getPlayers() as $player){ if(!$player->isAlive() || $player->isCreative() || $player->isSpectator()){ continue; } $distanceSquared = $this->getPosition()->distanceSquared($player->getPosition()); if($distanceSquared < $targetDistanceSquared){ $target = $player; $targetDistanceSquared = $distanceSquared; } } return $target; }
+	use \pocketmine\entity\ai\CombatAI;
+	protected function findTarget(int $tickDiff = 1) : ?Living{ return $this->updateCombatTarget($tickDiff); }
 	protected function hasLineOfSight(\pocketmine\math\Vector3 $start, \pocketmine\math\Vector3 $end) : bool{ $world = $this->getWorld(); $startBlock = $start->floor(); $endBlock = $end->floor(); foreach(\pocketmine\math\VoxelRayTrace::betweenPoints($start, $end) as $blockPos){ if($blockPos->equals($startBlock) || $blockPos->equals($endBlock)){ continue; } $x = $blockPos->getFloorX(); $z = $blockPos->getFloorZ(); if(!$world->isChunkLoaded($x >> 4, $z >> 4) || $world->getBlockAt($x, $blockPos->getFloorY(), $z)->isSolid()){ return false; } } return true; }
-	protected function tickWandering(int $tickDiff) : void{ $target = $this->findTarget(); if($target === null){ parent::tickWandering($tickDiff); return; } $dx = $target->getPosition()->x - $this->getPosition()->x; $dz = $target->getPosition()->z - $this->getPosition()->z; $distanceSquared = ($dx * $dx) + ($dz * $dz); if($distanceSquared <= 2.25 && $this->attackTime <= 0){ $this->attackTime = 20; $target->attack(new \pocketmine\event\entity\EntityDamageByEntityEvent($this, $target, \pocketmine\event\entity\EntityDamageEvent::CAUSE_ENTITY_ATTACK, 3)); return; } if($distanceSquared > 0.0001 && $this->isOnGround()){ $distance = sqrt($distanceSquared); $speed = min(0.25, max(0.02, $this->getMovementSpeed())); $this->moveGroundToward($dx / $distance, $dz / $distance, $speed); } }
+	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{ parent::attack($source); if($this->isAlive()){ $this->onCombatHurt($source); } }
+	protected function tickWandering(int $tickDiff) : void{
+		$target = $this->findTarget($tickDiff);
+		if($target === null){ parent::tickWandering($tickDiff); return; }
+		$this->tickMelee($target, $tickDiff);
+	}
 }
 
 abstract class GenericSpiderMob extends GenericHostileMob{
 	protected function tickWandering(int $tickDiff) : void{
-		if(!$this->canClimbWalls()){ $this->setCanClimbWalls(true); } $target = $this->findTarget(); if($target === null){ parent::tickWandering($tickDiff); return; }
-		$dx = $target->getPosition()->x - $this->getPosition()->x; $dz = $target->getPosition()->z - $this->getPosition()->z; $distanceSquared = ($dx * $dx) + ($dz * $dz); if($distanceSquared <= 2.25 && $this->attackTime <= 0){ $this->attackTime = 20; $attack = new \pocketmine\event\entity\EntityDamageByEntityEvent($this, $target, \pocketmine\event\entity\EntityDamageEvent::CAUSE_ENTITY_ATTACK, 3); $target->attack($attack); if(static::ENTITY_ID === EntityIds::CAVE_SPIDER && !$attack->isCancelled()){ $target->getEffects()->add(new \pocketmine\entity\effect\EffectInstance(\pocketmine\entity\effect\VanillaEffects::POISON(), 140)); } return; }
-		if($distanceSquared <= 0.0001){ return; } $distance = sqrt($distanceSquared); $directionX = $dx / $distance; $directionZ = $dz / $distance; $world = $this->getWorld(); $sampleX = $this->getPosition()->getFloorX() + (int) round($directionX); $sampleZ = $this->getPosition()->getFloorZ() + (int) round($directionZ); $feetY = $this->getPosition()->getFloorY();
-		if($world->isChunkLoaded($sampleX >> 4, $sampleZ >> 4)){ $feet = $world->getBlockAt($sampleX, $feetY, $sampleZ); $head = $world->getBlockAt($sampleX, $feetY + 1, $sampleZ); $above = $world->getBlockAt($sampleX, $feetY + 2, $sampleZ); if(($feet->isSolid() || $head->isSolid()) && !$above->isSolid()){ $speed = min(0.22, max(0.05, $this->getMovementSpeed())); $motion = $this->getMotion(); $this->setMotion(new \pocketmine\math\Vector3($directionX * $speed, 0.22, $directionZ * $speed)); $this->setRotation(rad2deg(atan2(-$directionX, $directionZ)), 0.0); return; } }
-		$speed = min(0.25, max(0.02, $this->getMovementSpeed())); if($this->isOnGround()){ $this->moveGroundToward($directionX, $directionZ, $speed); }else{ $motion = $this->getMotion(); $this->setMotion(new \pocketmine\math\Vector3($directionX * $speed, $motion->y, $directionZ * $speed)); }
+		if(!$this->canClimbWalls()){ $this->setCanClimbWalls(true); }
+		$target = $this->findTarget($tickDiff);
+		if($target === null){ parent::tickWandering($tickDiff); return; }
+		$this->tickMelee($target, $tickDiff);
+		// spiders climb straight up walls that block their way
+		if($this->isCollidedHorizontally){ $motion = $this->getMotion(); $this->setMotion(new \pocketmine\math\Vector3($motion->x, 0.2, $motion->z)); }
 	}
 }
 
@@ -180,7 +196,7 @@ abstract class GenericCreeperMob extends GenericHostileMob{
 	private const FUSE_DURATION_TICKS = 30;
 	private int $fuseTicks = -1;
 	protected function tickWandering(int $tickDiff) : void{
-		$target = $this->findTarget(); if($target === null){ if($this->fuseTicks !== -1){ $this->fuseTicks = -1; $this->networkPropertiesDirty = true; } parent::tickWandering($tickDiff); return; }
+		$target = $this->findTarget($tickDiff); if($target === null){ if($this->fuseTicks !== -1){ $this->fuseTicks = -1; $this->networkPropertiesDirty = true; } parent::tickWandering($tickDiff); return; }
 		$distanceSquared = $this->getPosition()->distanceSquared($target->getPosition()); $visible = $this->hasLineOfSight($this->getEyePos(), $target->getEyePos());
 		if($this->fuseTicks >= 0){ if($distanceSquared > 49 || !$visible){ $this->fuseTicks = -1; $this->networkPropertiesDirty = true; }else{ $this->fuseTicks += $tickDiff; $this->networkPropertiesDirty = true; if($this->fuseTicks >= self::FUSE_DURATION_TICKS){ $this->detonate(); return; } $motion = $this->getMotion(); $this->setMotion(new \pocketmine\math\Vector3(0, $motion->y, 0)); return; } }
 		if($distanceSquared <= 9 && $visible){ $this->fuseTicks = 0; $this->networkPropertiesDirty = true; $motion = $this->getMotion(); $this->setMotion(new \pocketmine\math\Vector3(0, $motion->y, 0)); return; }
@@ -194,6 +210,8 @@ abstract class GenericCreeperMob extends GenericHostileMob{
 }
 
 abstract class GenericRangedHostileMob extends GenericHostileMob{
+	private int $strafeTicks = 0;
+	private int $strafeDirection = 1;
 	public function spawnTo(Player $player) : void{
 		if(!$player->isConnected()){
 			return;
@@ -213,10 +231,13 @@ abstract class GenericRangedHostileMob extends GenericHostileMob{
 	}
 
 	protected function tickWandering(int $tickDiff) : void{
-		$target = $this->findTarget(); if($target === null){ parent::tickWandering($tickDiff); return; }
+		$target = $this->findTarget($tickDiff); if($target === null){ parent::tickWandering($tickDiff); return; }
 		$dx = $target->getPosition()->x - $this->getPosition()->x; $dz = $target->getPosition()->z - $this->getPosition()->z; $horizontal = sqrt(($dx * $dx) + ($dz * $dz));
 		if($horizontal > 0.001){ $this->setRotation(rad2deg(atan2(-$dx, $dz)), 0.0); } $lineOfSight = $this->hasLineOfSight($this->getEyePos(), $target->getEyePos());
-		if(!$lineOfSight && $this->isOnGround()){ if($horizontal > 4.0){ $this->moveGroundToward($dx, $dz, min(0.20, max(0.05, $this->getMovementSpeed() * 0.75))); } else { $this->moveGroundToward(-$dz, $dx, 0.12); } } elseif($horizontal < 5.0 && $this->isOnGround()){ $this->moveGroundToward(-$dx, -$dz, min(0.28, max(0.08, $this->getMovementSpeed()))); } elseif($horizontal > 11.0 && $this->isOnGround()){ $this->moveGroundToward($dx, $dz, min(0.20, max(0.05, $this->getMovementSpeed() * 0.75))); }
+		// RangedBowAttackGoal: close in until within 15 blocks with sight, back off when too close, strafe otherwise
+		$navigator = $this->getNavigator();
+		if(!$lineOfSight || $horizontal > 12.0){ $navigator->moveTo($target->getPosition(), $this->getWalkSpeed(true), 2.0); $navigator->tick($tickDiff); }
+		else{ $navigator->stop(); if($horizontal < 5.0 && $this->isOnGround()){ $this->moveGroundToward(-$dx, -$dz, $this->getWalkSpeed(true)); } elseif($this->isOnGround()){ $this->strafeTicks += $tickDiff; if($this->strafeTicks >= 20){ $this->strafeTicks = 0; if(mt_rand(0, 9) < 3){ $this->strafeDirection = -$this->strafeDirection; } } $this->moveGroundToward(-$dz * $this->strafeDirection, $dx * $this->strafeDirection, $this->getWalkSpeed() * 0.6); } }
 		if($lineOfSight && $horizontal >= 5.0 && $horizontal <= 14.0 && $this->attackTime <= 0){
 			$origin = $this->getEyePos(); $targetEye = $target->getEyePos(); $aimX = $targetEye->x - $origin->x; $aimY = $targetEye->y - $origin->y + ($horizontal * 0.04); $aimZ = $targetEye->z - $origin->z; $yaw = rad2deg(atan2(-$aimX, $aimZ)); $pitch = rad2deg(-atan2($aimY, $horizontal));
 			$arrow = new \pocketmine\entity\projectile\Arrow(new \pocketmine\entity\Location($origin->x, $origin->y, $origin->z, $this->getWorld(), $yaw, $pitch), $this, false); $arrow->setBaseDamage(1.5); $arrow->setMotion((new \pocketmine\math\Vector3($aimX, $aimY, $aimZ))->normalize()->multiply(1.65)); $arrow->spawnToAll(); $this->attackTime = mt_rand(30, 45);
@@ -638,7 +659,53 @@ class IronGolemMob extends GenericAnimalMob{
 	protected const SPAWN_EGG_GETTER = "IRON_GOLEM_SPAWN_EGG";
 	protected const HEIGHT = 1.8;
 	protected const WIDTH = 0.6;
-	protected function tickWandering(int $tickDiff) : void{ $target = null; $closestDistance = 144.0; foreach($this->getWorld()->getEntities() as $entity){ if(!$entity instanceof GenericHostileMob || !$entity->isAlive()){ continue; } $distance = $this->getPosition()->distanceSquared($entity->getPosition()); if($distance < $closestDistance){ $target = $entity; $closestDistance = $distance; } } if($target === null){ parent::tickWandering($tickDiff); return; } if($closestDistance <= 2.25 && $this->attackTime <= 0){ $this->attackTime = 20; $target->attack(new \pocketmine\event\entity\EntityDamageByEntityEvent($this, $target, \pocketmine\event\entity\EntityDamageEvent::CAUSE_ENTITY_ATTACK, 7)); $target->addMotion(0, 0.4, 0); return; } $dx = $target->getPosition()->x - $this->getPosition()->x; $dz = $target->getPosition()->z - $this->getPosition()->z; $distance = sqrt(($dx * $dx) + ($dz * $dz)); if($distance > 0.001 && $this->isOnGround()){ $speed = min(0.18, max(0.03, $this->getMovementSpeed())); $this->setMotion(new \pocketmine\math\Vector3($dx / $distance * $speed, $this->getMotion()->y, $dz / $distance * $speed)); } }
+	private ?Living $golemTarget = null;
+	private int $golemScan = 0;
+	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{
+		parent::attack($source);
+		if($this->isAlive() && $source instanceof \pocketmine\event\entity\EntityDamageByEntityEvent && ($damager = $source->getDamager()) instanceof Living && !($damager instanceof Player && ($damager->isCreative() || $damager->isSpectator()))){
+			$this->golemTarget = $damager;
+		}
+	}
+	protected function shouldFleeFromAttacker(\pocketmine\event\entity\EntityDamageByEntityEvent $source) : bool{ return false; }
+	protected function tickWandering(int $tickDiff) : void{
+		// vanilla: iron golems attack every hostile mob except creepers within 16 blocks, and whoever hurts them
+		$this->golemScan -= $tickDiff;
+		if($this->golemTarget !== null && (!$this->golemTarget->isAlive() || $this->golemTarget->isClosed() || $this->golemTarget->getWorld() !== $this->getWorld() || $this->golemTarget->getPosition()->distanceSquared($this->getPosition()) > 32 * 32)){
+			$this->golemTarget = null;
+		}
+		if($this->golemTarget === null && $this->golemScan <= 0){
+			$this->golemScan = 10;
+			$closest = 16.0 * 16.0;
+			foreach($this->getWorld()->getNearbyEntities($this->getBoundingBox()->expandedCopy(16, 8, 16), $this) as $entity){
+				if(!($entity instanceof GenericHostileMob || $entity instanceof Zombie) || $entity instanceof CreeperMob || !$entity->isAlive()){
+					continue;
+				}
+				$distance = $this->getPosition()->distanceSquared($entity->getPosition());
+				if($distance < $closest){
+					$this->golemTarget = $entity;
+					$closest = $distance;
+				}
+			}
+		}
+		$target = $this->golemTarget;
+		if($target === null){ parent::tickWandering($tickDiff); return; }
+		$navigator = $this->getNavigator();
+		$navigator->moveTo($target->getPosition(), $this->getWalkSpeed(true), 1.0);
+		$navigator->tick($tickDiff);
+		$reach = \pocketmine\entity\ai\MobStats::reachSq($this->getSize()->getWidth(), $target->getSize()->getWidth());
+		if($this->getPosition()->distanceSquared($target->getPosition()) <= $reach && $this->attackTime <= 0){
+			$this->attackTime = 20;
+			$this->broadcastAnimation(new \pocketmine\entity\animation\ArmSwingAnimation($this));
+			$damage = 7 + mt_rand(0, 14);
+			if($target instanceof Player){
+				$damage = \pocketmine\entity\ai\MobStats::scaleDamage($damage, $this->getWorld()->getDifficulty());
+			}
+			$event = new \pocketmine\event\entity\EntityDamageByEntityEvent($this, $target, \pocketmine\event\entity\EntityDamageEvent::CAUSE_ENTITY_ATTACK, $damage);
+			$target->attack($event);
+			if(!$event->isCancelled()){ $target->addMotion(0, 0.4, 0); }
+		}
+	}
 }
 
 class LlamaMob extends GenericAnimalMob{

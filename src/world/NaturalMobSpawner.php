@@ -45,6 +45,7 @@ use pocketmine\entity\PufferfishMob;
 use pocketmine\entity\RabbitMob;
 use pocketmine\entity\SalmonMob;
 use pocketmine\entity\SkeletonMob;
+use pocketmine\entity\SlimeMob;
 use pocketmine\entity\Sheep;
 use pocketmine\entity\SpiderMob;
 use pocketmine\entity\StrayMob;
@@ -89,9 +90,16 @@ final class NaturalMobSpawner{
 		}
 		$this->ensureVillageResidentsNearPlayers($world, $eligiblePlayers);
 		$this->tickPillagers($world, $eligiblePlayers);
+		if($world->getDimensionId() === DimensionIds::OVERWORLD){
+			$this->spawnOverworldCategories($world, $eligiblePlayers);
+		}
 
 		$mobCount = 0;
+		$overworld = $world->getDimensionId() === DimensionIds::OVERWORLD;
 		foreach($world->getEntities() as $entity){
+			if($overworld && self::categoryOf($entity) !== null){
+				continue; // land mobs have their own vanilla caps
+			}
 			if(($entity instanceof Mob && $entity->isNaturalSpawned()) || $entity instanceof Squid){
 				++$mobCount;
 			}
@@ -205,136 +213,194 @@ final class NaturalMobSpawner{
 				return;
 			}
 
-			// Sample a low-light underground pocket separately from surface spawns.
-			if($surfaceY - $world->getMinY() > 12 && mt_rand(1, 4) === 1){
-				$caveY = mt_rand($world->getMinY() + 1, $surfaceY - 4);
-				$caveFloor = $world->getBlockAt($x, $caveY, $z);
-				$caveFeet = $world->getBlockAt($x, $caveY + 1, $z);
-				$caveHead = $world->getBlockAt($x, $caveY + 2, $z);
-				$caveLight = $world->getFullLightAt($x, $caveY + 1, $z);
-				if($caveFloor->isSolid() && !$caveFeet->isSolid() && !$caveHead->isSolid() && $caveFeet->getTypeId() !== BlockTypeIds::WATER && $caveFeet->getTypeId() !== BlockTypeIds::LAVA && $caveHead->getTypeId() !== BlockTypeIds::WATER && $caveHead->getTypeId() !== BlockTypeIds::LAVA && $caveLight === 0){
-					// Vanilla: cave spiders belong to monster spawners, and wardens are summoned
-					// by sculk shriekers, not by the ordinary hostile-spawn table.
-					$caveClasses = [Zombie::class, SkeletonMob::class, CreeperMob::class, SpiderMob::class];
-					if($caveY < 63){
-						$caveClasses[] = BatMob::class;
-					}
-					$class = $caveClasses[mt_rand(0, count($caveClasses) - 1)];
-					$mob = new $class(new Location($x + 0.5, $caveY + 1.0, $z + 0.5, $world, (float) mt_rand(0, 359), 0.0));
-					if($mob instanceof Entity){
-						if($mob instanceof Mob || $mob instanceof Squid){
-							$mob->markNaturalSpawned();
-						}
-						$mob->spawnToAll();
-					}
-					return;
-				}
-			}
+			// land spawning in the overworld is handled by spawnOverworldCategories()
+			continue;
+		}
+	}
 
-			$ground = $world->getBlockAt($x, $surfaceY, $z);
-			$feet = $world->getBlockAt($x, $surfaceY + 1, $z);
-			$head = $world->getBlockAt($x, $surfaceY + 2, $z);
-			$time = $world->getTimeOfDay();
-			$isNight = $time >= World::TIME_NIGHT && $time < World::TIME_SUNRISE;
-			$biome = $world->getBiomeId($x, $surfaceY + 1, $z);
-			$spawnY = $surfaceY + 1.0;
-			$isFishSpawn = false;
-			if($ground->getTypeId() === BlockTypeIds::WATER && !$feet->isSolid() && !$head->isSolid()){
-				$oceanBiomes = [BiomeIds::OCEAN, BiomeIds::DEEP_OCEAN, BiomeIds::WARM_OCEAN, BiomeIds::DEEP_WARM_OCEAN, BiomeIds::LUKEWARM_OCEAN, BiomeIds::DEEP_LUKEWARM_OCEAN, BiomeIds::COLD_OCEAN, BiomeIds::DEEP_COLD_OCEAN];
-				$coldOceanBiomes = [BiomeIds::COLD_OCEAN, BiomeIds::DEEP_COLD_OCEAN, BiomeIds::FROZEN_OCEAN, BiomeIds::DEEP_FROZEN_OCEAN, BiomeIds::FROZEN_RIVER];
-				$warmOceanBiomes = [BiomeIds::WARM_OCEAN, BiomeIds::DEEP_WARM_OCEAN, BiomeIds::LUKEWARM_OCEAN, BiomeIds::DEEP_LUKEWARM_OCEAN];
-				$aquaticClasses = [];
-				if(in_array($biome, [...$oceanBiomes, BiomeIds::RIVER, BiomeIds::FROZEN_RIVER], true)){
-					$aquaticClasses[] = CodMob::class;
-					$aquaticClasses[] = CodMob::class;
-					$aquaticClasses[] = CodMob::class;
-					$aquaticClasses[] = CodMob::class;
-					$aquaticClasses[] = Squid::class;
-				}
-				if(in_array($biome, $coldOceanBiomes, true)){
-					$aquaticClasses[] = SalmonMob::class;
-					$aquaticClasses[] = SalmonMob::class;
-					$aquaticClasses[] = SalmonMob::class;
-				}
-				if(in_array($biome, $warmOceanBiomes, true)){
-					$aquaticClasses[] = TropicalFishMob::class;
-					$aquaticClasses[] = TropicalFishMob::class;
-					$aquaticClasses[] = TropicalFishMob::class;
-					$aquaticClasses[] = PufferfishMob::class;
-				}
-				if(in_array($biome, $oceanBiomes, true)){
-					$aquaticClasses[] = DolphinMob::class;
-				}
-				$submergedOne = $surfaceY - 1 >= $world->getMinY() && $world->getBlockAt($x, $surfaceY - 1, $z)->getTypeId() === BlockTypeIds::WATER;
-				$submergedTwo = $surfaceY - 2 >= $world->getMinY() && $world->getBlockAt($x, $surfaceY - 2, $z)->getTypeId() === BlockTypeIds::WATER;
-				if($submergedOne && $submergedTwo && $world->getFullLightAt($x, $surfaceY - 1, $z) <= 7 && in_array($biome, [...$oceanBiomes, BiomeIds::RIVER, BiomeIds::FROZEN_RIVER], true)){
-					$aquaticClasses[] = DrownedMob::class;
-				}
-				if($aquaticClasses === []){
-					continue;
-				}
-				$class = $aquaticClasses[mt_rand(0, count($aquaticClasses) - 1)];
-				$isFishSpawn = in_array($class, [CodMob::class, SalmonMob::class, TropicalFishMob::class, PufferfishMob::class], true);
-				$spawnY = $class === DrownedMob::class ? $surfaceY - 1.0 : (float) $surfaceY;
-			}elseif(!$ground->isSolid() || $feet->isSolid() || $head->isSolid() || $feet->getTypeId() === BlockTypeIds::WATER || $head->getTypeId() === BlockTypeIds::WATER){
-				continue;
-			}elseif($isNight){
-				// Modern Bedrock-style hostile spawning requires total light level zero.
-				if($world->getFullLightAt($x, $surfaceY + 1, $z) !== 0){
-					continue;
-				}
-				$hostileClasses = [Zombie::class, SkeletonMob::class, CreeperMob::class, SpiderMob::class, EndermanMob::class];
-				if(in_array($biome, [BiomeIds::SWAMPLAND, BiomeIds::SWAMPLAND_MUTATED, BiomeIds::MANGROVE_SWAMP], true)){
-					$hostileClasses[] = BoggedMob::class;
-					$hostileClasses[] = \pocketmine\entity\WitchMob::class;
-				}
-				if(in_array($biome, [BiomeIds::DESERT, BiomeIds::DESERT_HILLS, BiomeIds::DESERT_MUTATED, BiomeIds::MESA, BiomeIds::MESA_PLATEAU, BiomeIds::MESA_PLATEAU_STONE, BiomeIds::MESA_BRYCE], true)){
-					$hostileClasses[] = ParchedMob::class;
-				}
-				if(in_array($biome, [BiomeIds::ICE_PLAINS, BiomeIds::ICE_MOUNTAINS, BiomeIds::COLD_TAIGA, BiomeIds::COLD_TAIGA_HILLS, BiomeIds::COLD_TAIGA_MUTATED, BiomeIds::FROZEN_PEAKS, BiomeIds::SNOWY_SLOPES, BiomeIds::GROVE, BiomeIds::ICE_CAVES], true)){
-					$hostileClasses[] = StrayMob::class;
-				}
-				$class = $hostileClasses[mt_rand(0, count($hostileClasses) - 1)];
-			}elseif($ground->getTypeId() === BlockTypeIds::GRASS){
-				if(mt_rand(1, 3) !== 1){
-					continue;
-				}
-				$passiveClasses = [Chicken::class, Cow::class, Pig::class, Sheep::class];
-				if(in_array($biome, [BiomeIds::SWAMPLAND, BiomeIds::SWAMPLAND_MUTATED, BiomeIds::MANGROVE_SWAMP], true)){
-					$passiveClasses[] = FrogMob::class;
-				}
-				if(in_array($biome, [BiomeIds::PLAINS, BiomeIds::SUNFLOWER_PLAINS, BiomeIds::SAVANNA, BiomeIds::SAVANNA_PLATEAU, BiomeIds::MEADOW], true)){
-					$passiveClasses[] = HorseMob::class;
-				}
-				if(in_array($biome, [BiomeIds::PLAINS, BiomeIds::DESERT, BiomeIds::TAIGA, BiomeIds::COLD_TAIGA, BiomeIds::ICE_PLAINS, BiomeIds::SAVANNA, BiomeIds::MEADOW], true)){
-					$passiveClasses[] = RabbitMob::class;
-				}
-				if(in_array($biome, [BiomeIds::TAIGA, BiomeIds::TAIGA_HILLS, BiomeIds::COLD_TAIGA, BiomeIds::COLD_TAIGA_HILLS, BiomeIds::MEGA_TAIGA, BiomeIds::GROVE, BiomeIds::CHERRY_GROVE], true)){
-					$passiveClasses[] = FoxMob::class;
-				}
-				if(in_array($biome, [BiomeIds::FOREST, BiomeIds::FOREST_HILLS, BiomeIds::TAIGA, BiomeIds::TAIGA_HILLS, BiomeIds::COLD_TAIGA, BiomeIds::COLD_TAIGA_HILLS, BiomeIds::MEADOW, BiomeIds::GROVE], true)){
-					$passiveClasses[] = WolfMob::class;
-				}
-				if(in_array($biome, [BiomeIds::EXTREME_HILLS, BiomeIds::EXTREME_HILLS_EDGE, BiomeIds::EXTREME_HILLS_PLUS_TREES, BiomeIds::MEADOW, BiomeIds::JAGGED_PEAKS, BiomeIds::FROZEN_PEAKS, BiomeIds::SNOWY_SLOPES], true)){
-					$passiveClasses[] = GoatMob::class;
-				}
-				$class = $passiveClasses[mt_rand(0, count($passiveClasses) - 1)];
-			}elseif($ground->getTypeId() === BlockTypeIds::MYCELIUM && in_array($biome, [BiomeIds::MUSHROOM_ISLAND, BiomeIds::MUSHROOM_ISLAND_SHORE], true)){
-				$class = MooshroomMob::class;
-			}elseif(in_array($ground->getTypeId(), [BlockTypeIds::SAND, BlockTypeIds::RED_SAND], true) && in_array($biome, [BiomeIds::DESERT, BiomeIds::DESERT_HILLS, BiomeIds::DESERT_MUTATED], true)){
-				$class = CamelMob::class;
-			}elseif(in_array($ground->getTypeId(), [BlockTypeIds::SAND, BlockTypeIds::GRASS], true) && in_array($biome, [BiomeIds::BEACH, BiomeIds::COLD_BEACH, BiomeIds::STONE_BEACH], true)){
-				$class = TurtleMob::class;
-			}else{
+	/** Vanilla mob category of an entity, or null for mobs without a land cap (water mobs, bosses, ...). */
+	private static function categoryOf(Entity $entity) : ?int{
+		if($entity instanceof \pocketmine\entity\BatMob){
+			return VanillaSpawnTables::CATEGORY_AMBIENT;
+		}
+		if($entity instanceof \pocketmine\entity\GenericHostileMob || $entity instanceof Zombie){
+			return VanillaSpawnTables::CATEGORY_MONSTER;
+		}
+		if($entity instanceof \pocketmine\entity\Animal || ($entity instanceof \pocketmine\entity\GenericAnimalMob && !$entity instanceof \pocketmine\entity\IronGolemMob && !$entity instanceof \pocketmine\entity\SnowGolemMob)){
+			return VanillaSpawnTables::CATEGORY_CREATURE;
+		}
+		return null;
+	}
+
+	/**
+	 * Vanilla-style natural spawning for monsters, animals and bats: each
+	 * category has its own per-player cap, mobs come in groups picked from the
+	 * biome's weighted spawn list, monsters need darkness (block light 0, sky
+	 * light 7 or less), animals need daylight on grass, bats need dark caves.
+	 * Mobs never spawn within 24 blocks of a player.
+	 *
+	 * @param Player[] $players
+	 */
+	private function spawnOverworldCategories(World $world, array $players) : void{
+		$counts = [VanillaSpawnTables::CATEGORY_MONSTER => 0, VanillaSpawnTables::CATEGORY_CREATURE => 0, VanillaSpawnTables::CATEGORY_AMBIENT => 0];
+		foreach($world->getEntities() as $entity){
+			$category = self::categoryOf($entity);
+			if($category === null || !$entity->isAlive()){
 				continue;
 			}
-			$location = new Location($x + 0.5, $spawnY, $z + 0.5, $world, (float) mt_rand(0, 359), 0.0);
-			if($isFishSpawn){
-				$this->spawnFishSchool($class, $location);
-			}else{
-				$this->spawnNaturalMob($class, $location);
+			foreach($players as $player){
+				if($player->getPosition()->distanceSquared($entity->getPosition()) <= 128 * 128){
+					++$counts[$category];
+					break;
+				}
 			}
-			return;
+		}
+		$peaceful = $world->getDifficulty() === World::DIFFICULTY_PEACEFUL;
+		foreach($players as $player){
+			foreach(VanillaSpawnTables::CAPS as $category => $cap){
+				if($counts[$category] >= $cap * count($players)){
+					continue;
+				}
+				if($category === VanillaSpawnTables::CATEGORY_MONSTER && $peaceful){
+					continue;
+				}
+				// vanilla tries monsters every tick, animals every 400 ticks; this runs every 10 ticks
+				$packs = match($category){
+					VanillaSpawnTables::CATEGORY_MONSTER => 3,
+					VanillaSpawnTables::CATEGORY_CREATURE => mt_rand(0, 39) === 0 ? 1 : 0,
+					default => mt_rand(0, 3) === 0 ? 1 : 0,
+				};
+				for($i = 0; $i < $packs; ++$i){
+					$counts[$category] += $this->spawnPack($world, $player, $category, $players);
+				}
+			}
+		}
+	}
+
+	/**
+	 * @param Player[] $players
+	 * @return int number of mobs spawned
+	 */
+	private function spawnPack(World $world, Player $player, int $category, array $players) : int{
+		$center = $player->getPosition();
+		$x = $center->getFloorX() + mt_rand(-64, 64);
+		$z = $center->getFloorZ() + mt_rand(-64, 64);
+		if(!$world->isChunkLoaded($x >> 4, $z >> 4)){
+			return 0;
+		}
+		$top = $world->getHighestBlockAt($x, $z);
+		if($top === null){
+			return 0;
+		}
+		$y = $category === VanillaSpawnTables::CATEGORY_CREATURE ? $top + 1 : mt_rand($world->getMinY() + 1, $top + 1);
+		$y = $this->findFloor($world, $x, $y, $z, 16);
+		if($y === null){
+			return 0;
+		}
+		$biome = $world->getBiomeId($x, $y, $z);
+		$entries = match($category){
+			VanillaSpawnTables::CATEGORY_MONSTER => VanillaSpawnTables::monsters($biome),
+			VanillaSpawnTables::CATEGORY_CREATURE => VanillaSpawnTables::creatures($biome),
+			default => VanillaSpawnTables::ambient($biome),
+		};
+		$entry = VanillaSpawnTables::pick($entries);
+		if($entry === null){
+			return 0;
+		}
+		[$class, , $min, $max] = $entry;
+		$groupSize = mt_rand($min, $max);
+		$spawned = 0;
+		for($attempt = 0; $attempt < 4 * $groupSize && $spawned < $groupSize; ++$attempt){
+			$sx = $x + mt_rand(-5, 5);
+			$sz = $z + mt_rand(-5, 5);
+			if(!$world->isChunkLoaded($sx >> 4, $sz >> 4)){
+				continue;
+			}
+			$sy = $this->findFloor($world, $sx, $y + 1, $sz, 3);
+			if($sy === null || !$this->farFromPlayers($players, $sx + 0.5, $sy, $sz + 0.5)){
+				continue;
+			}
+			if(!$this->canSpawnHere($world, $class, $category, $sx, $sy, $sz)){
+				continue;
+			}
+			$this->spawnNaturalMob($class, new Location($sx + 0.5, $sy, $sz + 0.5, $world, (float) mt_rand(0, 359), 0.0));
+			++$spawned;
+		}
+		return $spawned;
+	}
+
+	/** First standable feet position at or below $y (within $depth blocks). */
+	private function findFloor(World $world, int $x, int $y, int $z, int $depth) : ?int{
+		$min = max($world->getMinY() + 1, $y - $depth);
+		for($fy = min($y, $world->getMaxY() - 2); $fy >= $min; --$fy){
+			$floor = $world->getBlockAt($x, $fy - 1, $z);
+			if(!$floor->isSolid()){
+				continue;
+			}
+			$feet = $world->getBlockAt($x, $fy, $z);
+			$head = $world->getBlockAt($x, $fy + 1, $z);
+			if($feet->isSolid() || $head->isSolid() || $feet instanceof \pocketmine\block\Liquid || $head instanceof \pocketmine\block\Liquid){
+				return null;
+			}
+			return $fy;
+		}
+		return null;
+	}
+
+	/** @param Player[] $players */
+	private function farFromPlayers(array $players, float $x, float $y, float $z) : bool{
+		foreach($players as $player){
+			$pos = $player->getPosition();
+			if(($pos->x - $x) ** 2 + ($pos->y - $y) ** 2 + ($pos->z - $z) ** 2 < 24 * 24){
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/** @param class-string $class */
+	private function canSpawnHere(World $world, string $class, int $category, int $x, int $y, int $z) : bool{
+		$floor = $world->getBlockAt($x, $y - 1, $z);
+		$floorId = $floor->getTypeId();
+		if($floorId === BlockTypeIds::BEDROCK || $floorId === BlockTypeIds::BARRIER || $floor->isTransparent()){
+			return false;
+		}
+		$blockLight = $world->getBlockLightAt($x, $y, $z);
+		$skyLight = $world->getRealBlockSkyLightAt($x, $y, $z);
+		switch($category){
+			case VanillaSpawnTables::CATEGORY_MONSTER:
+				if($blockLight > 0 || $skyLight > mt_rand(0, 7)){
+					return false;
+				}
+				if($class === SlimeMob::class){
+					// swamps at night near sea level, or slime chunks deep underground
+					$swamp = VanillaSpawnTables::isSwamp($world->getBiomeId($x, $y, $z)) && $y > 50 && $y < 70 && mt_rand(0, 1) === 0;
+					$slimeChunk = $y < 40 && VanillaSpawnTables::isSlimeChunk($world->getSeed(), $x >> 4, $z >> 4) && mt_rand(0, 9) === 0;
+					if(!$swamp && !$slimeChunk){
+						return false;
+					}
+				}
+				if($class === \pocketmine\entity\EndermanMob::class && $world->getBlockAt($x, $y + 2, $z)->isSolid()){
+					return false; // endermen are 3 blocks tall
+				}
+				return true;
+			case VanillaSpawnTables::CATEGORY_CREATURE:
+				if(max($blockLight, $skyLight) < 9){
+					return false;
+				}
+				return match($class){
+					TurtleMob::class, CamelMob::class => in_array($floorId, [BlockTypeIds::SAND, BlockTypeIds::RED_SAND], true),
+					MooshroomMob::class => $floorId === BlockTypeIds::MYCELIUM,
+					GoatMob::class => in_array($floorId, [BlockTypeIds::STONE, BlockTypeIds::SNOW, BlockTypeIds::GRASS, BlockTypeIds::PACKED_ICE, BlockTypeIds::GRAVEL], true),
+					\pocketmine\entity\RabbitMob::class, \pocketmine\entity\PolarBearMob::class => in_array($floorId, [BlockTypeIds::GRASS, BlockTypeIds::SAND, BlockTypeIds::SNOW, BlockTypeIds::ICE, BlockTypeIds::PACKED_ICE], true),
+					FrogMob::class => in_array($floorId, [BlockTypeIds::GRASS, BlockTypeIds::MUD], true),
+					\pocketmine\entity\ArmadilloMob::class => in_array($floorId, [BlockTypeIds::GRASS, BlockTypeIds::RED_SAND, BlockTypeIds::HARDENED_CLAY, BlockTypeIds::STAINED_CLAY, BlockTypeIds::DIRT], true),
+					\pocketmine\entity\ParrotMob::class, \pocketmine\entity\OcelotMob::class => $floorId === BlockTypeIds::GRASS || $floor instanceof \pocketmine\block\Leaves,
+					default => $floorId === BlockTypeIds::GRASS,
+				};
+			default:
+				// bats: dark caves below sea level
+				return $y < 63 && max($blockLight, $skyLight) <= mt_rand(0, 3);
 		}
 	}
 

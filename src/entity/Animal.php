@@ -44,4 +44,10 @@ abstract class Animal extends Mob implements BreedableAnimal{
 	protected function shouldFleeFromAttacker(EntityDamageByEntityEvent $source) : bool{
 		return true;
 	}
+
+	protected function tickWandering(int $tickDiff) : void{
+		if($this->isPanicking() || !$this->tickAnimalGoals($tickDiff)){
+			parent::tickWandering($tickDiff);
+		}
+	}
 }

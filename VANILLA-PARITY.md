@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 4.7-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 4.8-ai-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -42,8 +42,9 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 | System | Stand | Hinweis |
 |---|---|---|
 | Vorhandene Mobs | 🟡 | Huhn, Kuh, Schwein, Schaf, Tintenfisch, Zombie, Dorfbewohner, Kupfergolem |
-| Mob-KI (Pfadfindung, Ziele) | 🟡 | einfache KI, kein Vanilla-Goal-System |
-| Natürliches Spawning nach Licht/Biom/Mob-Cap | ❌/🟡 | |
+| Mob-KI (Pfadfindung, Ziele) | ✅/🟡 | **neu in 4.8**: A*-Wegfindung (Stufen springen, bis 3 Blöcke fallen, Lava/Feuer/Kaktus meiden, geschlossene Türen und Zäune als Hindernis, schwimmen), Ziele wie Vanilla (Sichtlinie, Folgereichweite, Rache, Zombies jagen Dorfbewohner, Endermen bei Blickkontakt, Spinnen tagsüber neutral, Zombie-Piglins rufen Hilfe), Nahkampf mit Schaden nach Schwierigkeit, Skelette halten Abstand und weichen seitlich aus, Eisengolems verteidigen, Tiere folgen Futter und laufen zur Paarung, Panik bei Schaden |
+| Mob-Werte | ✅ | **neu in 4.8**: Vanilla-Leben, -Tempo, -Schaden, -Reichweite und -Größe für 75 Mobs |
+| Natürliches Spawning nach Licht/Biom/Mob-Cap | ✅/🟡 | **neu in 4.8**: Kategorien mit Vanilla-Limits (70 Monster, 10 Tiere, 15 Fledermäuse pro Spieler), Gruppen-Spawning, gewichtete Biomtabellen (Wüste: Husks, Schnee: Eiswanderer, Sumpf: Bogged/Frösche/Schleime, Pilzinseln und Tiefes Dunkel: keine Monster), Monster bei Blocklicht 0, Schleimchunks, Tiere bleiben dauerhaft, Friedlich entfernt Monster |
 | Wither | ✅/🟡 | **4.6**: Beschwörung, Aufladen + Explosion, Bossbar, 600 HP, Fernangriff (ohne Projektil) |
 | Übrige Mobs, Wächter-Boss | ❌/🟡 | |
 | Handel, Berufe, Level | ✅/🟡 | **neu in 4.7**: 13 Berufe über Arbeitsblöcke, 5 Level (Novize–Meister) mit Vanilla-EP-Grenzen, Bedrock-Handelsfenster, Nachschub am Arbeitsblock, EP für Spieler |
@@ -62,7 +63,7 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 
 1. ~~Fehlende Blöcke registrieren~~ (4.7: alle 219 Blocktypen aus der Bedrock-1.26.60-Palette, die dem Kern fehlten; Verhalten bisher nur für die Redstone-Blöcke). Fehlende Gegenstände (Sattel, Elytren, Armbrust, Schild …) folgen.
 2. Wesen in Strukturen (Wächter, Shulker, Hexen).
-3. Mob-Spawning nach Vanilla-Regeln + weitere feindliche Mobs.
+3. ~~Mob-KI und Spawning~~ (4.8). Offen: Babyzombies, Türen einschlagen, Endermen-Teleport, Hexentränke, Creeper-Ladung.
 4. Speichern geplanter Blockticks über Neustarts.
 5. Verhalten der übrigen neuen Blöcke (Sculk-Sensor, Crafter, Tropfstein-Schaden …).
 
