@@ -370,6 +370,13 @@ class World implements ChunkManager{
 	private int $sleepTicks = 0;
 	private ?\pocketmine\world\weather\Weather $weather = null;
 
+	private ?\pocketmine\world\trial\TrialManager $trialManager = null;
+
+	/** BetterPMMP: trial spawners and vaults. */
+	public function getTrialManager() : \pocketmine\world\trial\TrialManager{
+		return $this->trialManager ??= new \pocketmine\world\trial\TrialManager($this);
+	}
+
 	/** BetterPMMP: rain, snow, thunderstorms and lightning. */
 	public function getWeather() : \pocketmine\world\weather\Weather{
 		return $this->weather ??= new \pocketmine\world\weather\Weather($this);
@@ -998,6 +1005,7 @@ class World implements ChunkManager{
 		}
 
 		$this->getWeather()->tick();
+		$this->getTrialManager()->tick();
 		$this->sunAnglePercentage = $this->computeSunAnglePercentage(); //Sun angle depends on the current time
 		$this->skyLightReduction = $this->computeSkyLightReduction(); //Sky light reduction depends on the sun angle
 
@@ -1507,6 +1515,7 @@ class World implements ChunkManager{
 
 		$this->provider->getWorldData()->setTime($this->time);
 		$this->weather?->save();
+		$this->trialManager?->save();
 		$this->saveChunks();
 		$this->provider->getWorldData()->save();
 

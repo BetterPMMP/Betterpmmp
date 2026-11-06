@@ -20,6 +20,7 @@ use pocketmine\world\ChunkManager;
 use pocketmine\world\generator\object\TreeFactory;
 use pocketmine\world\generator\object\TreeType;
 use pocketmine\world\generator\vanilla\structure\AncientCity;
+use pocketmine\world\generator\vanilla\structure\TrialChamber;
 use pocketmine\world\generator\vanilla\structure\DesertPyramid;
 use pocketmine\world\generator\vanilla\structure\Igloo;
 use pocketmine\world\generator\vanilla\structure\JungleTemple;
@@ -118,6 +119,7 @@ final class OverworldPopulator{
 				return $climate->sample($x, $z)[3] < -0.45;
 			}),
 			new TrailRuins(),
+			new TrialChamber(),
 		]);
 	}
 

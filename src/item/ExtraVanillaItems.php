@@ -148,6 +148,7 @@ final class ExtraVanillaItems{
 			$name === "minecraft:warped_fungus_on_a_stick" => new SimpleDurableItem($id, "Warped Fungus on a Stick", 100, 1, 1, [enchantment\ItemEnchantmentTags::CARROT_ON_STICK]),
 			str_ends_with($name, "_boat") || str_ends_with($name, "_raft") => new VehicleBoatItem($id, $display, $name, 1),
 			in_array($name, FishBucket::BUCKETS, true) => new FishBucket($id, $display, $name, 1),
+			$name === "minecraft:wind_charge" => new WindChargeItem($id, "Wind Charge"),
 			$name === "minecraft:lead" => new LeadItem($id, "Lead", $name, 64),
 			$name === "minecraft:empty_map" => new EmptyMapItem($id, "Empty Map", $name, 64),
 			default => new GenericBedrockItem($id, $display, $name, self::stackSize($name)),
