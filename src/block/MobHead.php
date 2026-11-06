@@ -116,6 +116,58 @@ class MobHead extends Flowable{
 		return [$collisionBox];
 	}
 
+	/**
+	 * Vanilla Wither summoning: three wither skeleton skulls on top of a T made
+	 * of four soul sand / soul soil blocks (the two lower corners must be empty).
+	 */
+	public function onPostPlace() : void{
+		if($this->mobHeadType !== MobHeadType::WITHER_SKELETON){
+			return;
+		}
+		$world = $this->position->getWorld();
+		$x = $this->position->getFloorX();
+		$y = $this->position->getFloorY();
+		$z = $this->position->getFloorZ();
+		$isSoul = fn(Block $b) : bool => $b->getTypeId() === BlockTypeIds::SOUL_SAND || $b->getTypeId() === BlockTypeIds::SOUL_SOIL;
+		$isSkull = fn(Block $b) : bool => $b instanceof MobHead && $b->getMobHeadType() === MobHeadType::WITHER_SKELETON;
+		foreach([[1, 0], [0, 1]] as [$ax, $az]){
+			for($offset = -2; $offset <= 0; ++$offset){
+				$ok = true;
+				for($i = 0; $i < 3 && $ok; ++$i){
+					$px = $x + $ax * ($offset + $i);
+					$pz = $z + $az * ($offset + $i);
+					$ok = $isSkull($world->getBlockAt($px, $y, $pz)) && $isSoul($world->getBlockAt($px, $y - 1, $pz));
+				}
+				if(!$ok){
+					continue;
+				}
+				$mx = $x + $ax * ($offset + 1);
+				$mz = $z + $az * ($offset + 1);
+				if(!$isSoul($world->getBlockAt($mx, $y - 2, $mz))){
+					continue;
+				}
+				foreach([-1, 1] as $side){
+					if($world->getBlockAt($mx + $ax * $side, $y - 2, $mz + $az * $side)->isSolid()){
+						$ok = false;
+					}
+				}
+				if(!$ok){
+					continue;
+				}
+				$air = VanillaBlocks::AIR();
+				for($i = -1; $i <= 1; ++$i){
+					$world->setBlockAt($mx + $ax * $i, $y, $mz + $az * $i, $air);
+					$world->setBlockAt($mx + $ax * $i, $y - 1, $mz + $az * $i, $air);
+				}
+				$world->setBlockAt($mx, $y - 2, $mz, $air);
+				$wither = new \pocketmine\entity\WitherMob(new \pocketmine\entity\Location($mx + 0.5, $y - 2, $mz + 0.5, $world, 0.0, 0.0));
+				$wither->startCharging();
+				$wither->spawnToAll();
+				return;
+			}
+		}
+	}
+
 	public function place(BlockTransaction $tx, Item $item, Block $blockReplace, Block $blockClicked, int $face, Vector3 $clickVector, ?Player $player = null) : bool{
 		if($face === Facing::DOWN){
 			return false;

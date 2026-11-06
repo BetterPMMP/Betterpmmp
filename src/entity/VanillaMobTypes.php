@@ -46,7 +46,7 @@ abstract class GenericVanillaMob extends Mob{
 			case EntityIds::PARCHED:
 			case EntityIds::SKELETON:
 			case EntityIds::STRAY:
-			case EntityIds::WITHER_SKELETON: self::appendRandomDrop($drops, VanillaItems::BONE(), 0, 2); self::appendRandomDrop($drops, VanillaItems::ARROW(), 0, 2); break;
+			case EntityIds::WITHER_SKELETON: self::appendRandomDrop($drops, VanillaItems::BONE(), 0, 2); self::appendRandomDrop($drops, VanillaItems::ARROW(), 0, 2); if(static::ENTITY_ID === EntityIds::WITHER_SKELETON && mt_rand(1, 1000) <= 25){ $drops[] = VanillaBlocks::MOB_HEAD()->setMobHeadType(\pocketmine\block\utils\MobHeadType::WITHER_SKELETON)->asItem(); } break;
 			case EntityIds::CREEPER: self::appendRandomDrop($drops, VanillaItems::GUNPOWDER(), 0, 2); break;
 			case EntityIds::COD:
 			case EntityIds::DOLPHIN:
@@ -984,8 +984,128 @@ class WitherMob extends GenericHostileFlyingMob{
 	protected const ENTITY_ID = EntityIds::WITHER;
 	protected const DISPLAY_NAME = "Wither";
 	protected const SPAWN_EGG_GETTER = "WITHER_SPAWN_EGG";
-	protected const HEIGHT = 1.8;
-	protected const WIDTH = 0.6;
+	protected const HEIGHT = 3.5;
+	protected const WIDTH = 0.9;
+
+	/** Bedrock: the Wither charges for about 10 seconds after being summoned. */
+	public const SUMMON_CHARGE_TICKS = 220;
+	private const TAG_CHARGE = "BetterPMMPWitherCharge";
+
+	private int $chargeTicks = 0;
+	private int $regenTicks = 0;
+	private int $shootTicks = 0;
+	private int $bossBarTicks = 0;
+	private ?BossBarTracker $bossBar = null;
+
+	protected function initEntity(CompoundTag $nbt) : void{
+		parent::initEntity($nbt);
+		$this->setMaxHealth(600); //Bedrock Edition value
+		$this->chargeTicks = $nbt->getInt(self::TAG_CHARGE, 0);
+		if($this->chargeTicks <= 0 && $nbt->getTag("Health") === null){
+			$this->setHealth(600);
+		}
+		$this->bossBar = new BossBarTracker($this, "Wither", BossBarColor::PURPLE, BossBarOverlay::PROGRESS, 64);
+	}
+
+	public function saveNBT() : CompoundTag{
+		$nbt = parent::saveNBT();
+		$nbt->setInt(self::TAG_CHARGE, $this->chargeTicks);
+		return $nbt;
+	}
+
+	/** Starts the summoning charge: invulnerable, health fills up, then a big explosion. */
+	public function startCharging() : void{
+		$this->chargeTicks = self::SUMMON_CHARGE_TICKS;
+		$this->setHealth(1);
+	}
+
+	public function isCharging() : bool{
+		return $this->chargeTicks > 0;
+	}
+
+	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{
+		if($this->chargeTicks > 0 && $source->getCause() !== \pocketmine\event\entity\EntityDamageEvent::CAUSE_VOID){
+			$source->cancel();
+		}
+		parent::attack($source);
+	}
+
+	protected function entityBaseTick(int $tickDiff = 1) : bool{
+		$result = parent::entityBaseTick($tickDiff);
+		if(($this->bossBarTicks += $tickDiff) >= 10){
+			$this->bossBarTicks = 0;
+			$this->bossBar?->sync();
+		}
+		if(!$this->isAlive()){
+			return $result;
+		}
+		if($this->chargeTicks > 0){
+			$this->chargeTicks -= $tickDiff;
+			$this->setMotion(new \pocketmine\math\Vector3(0, 0, 0));
+			$this->setHealth(min($this->getMaxHealth(), $this->getMaxHealth() * (1 - max(0, $this->chargeTicks) / self::SUMMON_CHARGE_TICKS)));
+			if($this->chargeTicks <= 0){
+				$this->chargeTicks = 0;
+				$this->setHealth($this->getMaxHealth());
+				$explosion = new Explosion(Position::fromObject($this->getPosition()->add(0, 1.5, 0), $this->getWorld()), 7, $this);
+				$explosion->explodeA();
+				$explosion->explodeB();
+			}
+			return true;
+		}
+		//natural regeneration: 1 health per second
+		if(($this->regenTicks += $tickDiff) >= 20){
+			$this->regenTicks = 0;
+			if($this->getHealth() < $this->getMaxHealth()){
+				$this->setHealth(min($this->getMaxHealth(), $this->getHealth() + 1));
+			}
+		}
+		//ranged attack: wither skulls hit for 8 damage and inflict the Wither effect
+		if(($this->shootTicks += $tickDiff) >= 40){
+			$this->shootTicks = 0;
+			$target = $this->findTarget();
+			if($target !== null && $target->getPosition()->distanceSquared($this->getPosition()) <= 20 * 20){
+				$event = new \pocketmine\event\entity\EntityDamageByEntityEvent($this, $target, \pocketmine\event\entity\EntityDamageEvent::CAUSE_PROJECTILE, 8);
+				$target->attack($event);
+				if(!$event->isCancelled()){
+					$target->getEffects()->add(new \pocketmine\entity\effect\EffectInstance(\pocketmine\entity\effect\VanillaEffects::WITHER(), 200, 1));
+				}
+			}
+		}
+		return true;
+	}
+
+	protected function findTarget() : ?Player{
+		$target = null;
+		$closest = 32 * 32;
+		foreach($this->getWorld()->getPlayers() as $player){
+			if(!$player->isAlive() || $player->isCreative() || $player->isSpectator()){
+				continue;
+			}
+			$distance = $this->getPosition()->distanceSquared($player->getPosition());
+			if($distance < $closest){
+				$target = $player;
+				$closest = $distance;
+			}
+		}
+		return $target;
+	}
+
+	protected function tickWandering(int $tickDiff) : void{
+		if($this->chargeTicks > 0){
+			return;
+		}
+		parent::tickWandering($tickDiff);
+	}
+
+	protected function onDeath() : void{
+		$this->bossBar?->hideAll();
+		parent::onDeath();
+	}
+
+	protected function onDispose() : void{
+		$this->bossBar?->hideAll();
+		parent::onDispose();
+	}
 }
 
 class WitherSkeletonMob extends GenericHostileMob{
