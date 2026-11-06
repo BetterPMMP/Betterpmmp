@@ -27,6 +27,7 @@ use pocketmine\item\enchantment\IncompatibleEnchantmentGroups as Groups;
 use pocketmine\item\enchantment\VanillaEnchantments as Enchantments;
 use pocketmine\utils\SingletonTrait;
 use function array_intersect_key;
+use function array_map;
 use function count;
 use function spl_object_id;
 
@@ -47,6 +48,12 @@ final class IncompatibleEnchantmentRegistry{
 		$this->register(Groups::PROTECTION, [Enchantments::PROTECTION(), Enchantments::FIRE_PROTECTION(), Enchantments::BLAST_PROTECTION(), Enchantments::PROJECTILE_PROTECTION()]);
 		$this->register(Groups::BOW_INFINITE, [Enchantments::INFINITY(), Enchantments::MENDING()]);
 		$this->register(Groups::BLOCK_DROPS, [Enchantments::FORTUNE(), Enchantments::SILK_TOUCH()]);
+		//BetterPMMP: groups of the extra enchantments
+		foreach(ExtraEnchantments::incompatibilities() as $group => $names){
+			$this->register($group, array_map(fn(string $n) => ExtraEnchantments::get($n), $names));
+		}
+		$this->register("betterpmmp_damage", [Enchantments::SHARPNESS()]);
+		$this->register("betterpmmp_boots", [Enchantments::FROST_WALKER()]);
 	}
 
 	/**

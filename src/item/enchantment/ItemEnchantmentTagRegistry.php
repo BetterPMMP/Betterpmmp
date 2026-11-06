@@ -51,6 +51,7 @@ final class ItemEnchantmentTagRegistry{
 	private function __construct(){
 		$this->register(Tags::ARMOR, [Tags::HELMET, Tags::CHESTPLATE, Tags::LEGGINGS, Tags::BOOTS]);
 		$this->register(Tags::SHIELD);
+		$this->register("mace"); //BetterPMMP
 		$this->register(Tags::SWORD);
 		$this->register(Tags::TRIDENT);
 		$this->register(Tags::BOW);

@@ -243,7 +243,7 @@ class EndPortal extends Transparent{
 	/** Whether an End world uses the BetterPMMP vanilla-style generator. */
 	private static function isVanillaEnd(\pocketmine\world\World $world) : bool{
 		try{
-			return strtolower($world->getProvider()->getWorldData()->getGenerator()) === "vanilla_end";
+			return \pocketmine\world\generator\vanilla\structure\WorldStructures::generatorClass($world) === VanillaEnd::class;
 		}catch(\Throwable){
 			return false;
 		}

@@ -23,6 +23,13 @@ declare(strict_types=1);
 
 namespace pocketmine\item;
 
+use pocketmine\entity\object\FishingHook;
+use pocketmine\math\Vector3;
+use pocketmine\network\mcpe\protocol\types\LevelSoundEvent;
+use pocketmine\player\Player;
+use pocketmine\world\sound\VanillaSound;
+
+/** BetterPMMP: casts and reels in a bobber like vanilla. */
 class FishingRod extends Durable{
 
 	public function getMaxStackSize() : int{
@@ -33,5 +40,18 @@ class FishingRod extends Durable{
 		return 384;
 	}
 
-	//TODO
+	public function onClickAir(Player $player, Vector3 $directionVector, array &$returnedItems) : ItemUseResult{
+		$hook = FishingHook::getHookOf($player);
+		if($hook !== null){
+			$damage = $hook->reel();
+			$player->getWorld()->addSound($player->getPosition(), new VanillaSound(LevelSoundEvent::THROW));
+			if($damage > 0 && $player->hasFiniteResources()){
+				$this->applyDamage($damage);
+			}
+			return ItemUseResult::SUCCESS;
+		}
+		FishingHook::cast($player, $this);
+		$player->getWorld()->addSound($player->getPosition(), new VanillaSound(LevelSoundEvent::THROW));
+		return ItemUseResult::SUCCESS;
+	}
 }

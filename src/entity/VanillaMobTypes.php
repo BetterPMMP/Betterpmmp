@@ -155,6 +155,26 @@ abstract class GenericFlyingAnimalMob extends GenericFreeMotionMob{
 }
 
 abstract class GenericSwimmingAnimalMob extends GenericFreeMotionMob{
+	/** BetterPMMP: a water bucket used on a fish, axolotl or tadpole catches it (cod_bucket etc.). */
+	public function onInteract(Player $player, \pocketmine\math\Vector3 $clickPos) : bool{
+		$hand = $player->getInventory()->getItemInHand();
+		$bucket = \pocketmine\item\FishBucket::bucketFor($this);
+		if($bucket === null || !$hand->equals(VanillaItems::WATER_BUCKET(), true, false)){
+			return parent::onInteract($player, $clickPos);
+		}
+		if($player->hasFiniteResources()){
+			$hand->pop();
+			$player->getInventory()->setItemInHand($hand->isNull() ? $bucket : $hand);
+			if(!$hand->isNull()){
+				$player->getInventory()->addItem($bucket);
+			}
+		}else{
+			$player->getInventory()->addItem($bucket);
+		}
+		$this->getWorld()->addSound($this->location, new \pocketmine\world\sound\VanillaSound(\pocketmine\network\mcpe\protocol\types\LevelSoundEvent::BUCKET_FILL_FISH));
+		$this->flagForDespawn();
+		return true;
+	}
 	protected function shouldFleeFromAttacker(\pocketmine\event\entity\EntityDamageByEntityEvent $source) : bool{ return true; }
 	protected function tickWandering(int $tickDiff) : void{ parent::tickWandering($tickDiff); $this->constrainToWater(); }
 	public function canBreathe() : bool{ return $this->isUnderwater(); }

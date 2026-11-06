@@ -65,6 +65,8 @@ final class ExtraVanillaBlocks{
 		"minecraft:end_gateway" => [VanillaEndGateway::class, null],
 		"minecraft:sculk_shrieker" => [VanillaSculkShrieker::class, null],
 		"minecraft:grindstone" => [VanillaGrindstone::class, null],
+		"minecraft:suspicious_sand" => [VanillaSuspiciousBlock::class, null],
+		"minecraft:suspicious_gravel" => [VanillaSuspiciousBlock::class, null],
 	];
 
 	public static function getAll() : array{

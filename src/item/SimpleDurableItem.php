@@ -13,8 +13,9 @@ use pocketmine\entity\Entity;
 
 class SimpleDurableItem extends Durable{
 
-	public function __construct(ItemIdentifier $identifier, string $name, private int $maxDurability, private int $attackPoints = 1, private int $maxStackSize = 1){
-		parent::__construct($identifier, $name);
+	/** @param string[] $enchantmentTags */
+	public function __construct(ItemIdentifier $identifier, string $name, private int $maxDurability, private int $attackPoints = 1, private int $maxStackSize = 1, array $enchantmentTags = []){
+		parent::__construct($identifier, $name, $enchantmentTags);
 	}
 
 	public function getMaxDurability() : int{

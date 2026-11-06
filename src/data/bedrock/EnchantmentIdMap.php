@@ -68,5 +68,9 @@ final class EnchantmentIdMap{
 		$this->register(EnchantmentIds::SWIFT_SNEAK, VanillaEnchantments::SWIFT_SNEAK());
 
 		$this->register(EnchantmentIds::FROST_WALKER, VanillaEnchantments::FROST_WALKER());
+		//BetterPMMP: enchantments the core does not ship
+		foreach(\pocketmine\item\enchantment\ExtraEnchantments::ids() as $name => $id){
+			$this->register($id, \pocketmine\item\enchantment\ExtraEnchantments::get($name));
+		}
 	}
 }

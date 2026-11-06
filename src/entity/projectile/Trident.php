@@ -99,9 +99,41 @@ class Trident extends Projectile{
 		if($this->closed){
 			return false;
 		}
-		//TODO: Loyalty enchantment.
+		//BetterPMMP: Loyalty - after hitting something (or falling into the void) the trident flies back to its thrower
+		$loyalty = $this->item->getEnchantmentLevel(\pocketmine\item\enchantment\ExtraEnchantments::get("loyalty"));
+		$owner = $this->getOwningEntity();
+		if($loyalty > 0 && $owner instanceof Player && $owner->isAlive() && $owner->getWorld() === $this->getWorld()
+			&& ($this->returning || $this->blockHit !== null || !$this->canCollide || $this->location->y < $this->getWorld()->getMinY())){
+			if(!$this->returning){
+				$this->returning = true;
+				$this->blockHit = null;
+				$this->gravityEnabled = false;
+				$this->broadcastSound(new \pocketmine\world\sound\VanillaSound(\pocketmine\network\mcpe\protocol\types\LevelSoundEvent::ITEM_TRIDENT_RETURN));
+			}
+			$to = $owner->getEyePos()->subtractVector($this->location);
+			if($to->lengthSquared() < 2.25){
+				$this->pickup($owner);
+				return true;
+			}
+			$this->setMotion($this->motion->multiply(0.95)->addVector($to->normalize()->multiply(0.05 * $loyalty * 3)));
+		}elseif($this->returning){
+			$this->returning = false;
+			$this->gravityEnabled = true;
+		}
 
 		return parent::entityBaseTick($tickDiff);
+	}
+
+	private bool $returning = false;
+
+	/** A returning trident flies through blocks. */
+	protected function move(float $dx, float $dy, float $dz) : void{
+		if(!$this->returning){
+			parent::move($dx, $dy, $dz);
+			return;
+		}
+		$this->location = \pocketmine\entity\Location::fromObject($this->location->add($dx, $dy, $dz), $this->location->world, $this->location->yaw, $this->location->pitch);
+		$this->recalculateBoundingBox();
 	}
 
 	protected function despawnsOnEntityHit() : bool{
@@ -109,7 +141,13 @@ class Trident extends Projectile{
 	}
 
 	protected function onHitEntity(Entity $entityHit, RayTraceResult $hitResult) : void{
+		//BetterPMMP: Impaling also counts for a thrown trident
+		$impaling = \pocketmine\item\enchantment\ExtraEnchantments::get("impaling");
+		$bonus = $impaling instanceof \pocketmine\item\enchantment\MobTypeDamageEnchantment && $impaling->isApplicableTo($entityHit)
+			? $impaling->getDamageBonus($this->item->getEnchantmentLevel($impaling)) : 0.0;
+		$this->damage += $bonus;
 		parent::onHitEntity($entityHit, $hitResult);
+		$this->damage -= $bonus;
 
 		$this->canCollide = false;
 		$this->broadcastSound(new TridentHitEntitySound());
@@ -141,7 +179,7 @@ class Trident extends Projectile{
 	}
 
 	public function onCollideWithPlayer(Player $player) : void{
-		if($this->blockHit !== null){
+		if($this->blockHit !== null || ($this->returning && $player->getId() === $this->ownerId)){
 			$this->pickup($player);
 		}
 	}

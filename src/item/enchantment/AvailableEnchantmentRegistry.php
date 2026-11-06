@@ -82,6 +82,14 @@ final class AvailableEnchantmentRegistry{
 		);
 		$this->register(Enchantments::VANISHING(), [], [Tags::ALL]);
 		$this->register(Enchantments::SWIFT_SNEAK(), [], [Tags::LEGGINGS]);
+		//BetterPMMP: enchantments the core does not ship
+		foreach(ExtraEnchantments::itemTags() as $name => [$primary, $secondary]){
+			$this->register(ExtraEnchantments::get($name), $primary, $secondary);
+		}
+		// unbreaking and mending also go on the mace, crossbow, trident and brush
+		$this->setSecondaryItemTags(Enchantments::UNBREAKING(), [...$this->getSecondaryItemTags(Enchantments::UNBREAKING()), "mace", Tags::CROSSBOW, Tags::TRIDENT]);
+		$this->setSecondaryItemTags(Enchantments::MENDING(), [...$this->getSecondaryItemTags(Enchantments::MENDING()), "mace", Tags::CROSSBOW, Tags::TRIDENT]);
+		$this->setSecondaryItemTags(Enchantments::FIRE_ASPECT(), [...$this->getSecondaryItemTags(Enchantments::FIRE_ASPECT()), "mace"]);
 	}
 
 	/**

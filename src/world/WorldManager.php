@@ -155,6 +155,21 @@ class WorldManager{
 				return null;
 			}
 		}
+		// a plugin (for example a multi-world plugin) may have replaced our generator's name:
+		// register it again under a BetterPMMP-specific name so the world can be created
+		$generators = \pocketmine\world\generator\GeneratorManager::getInstance();
+		try{
+			$generators->getGeneratorName($generatorClass);
+		}catch(\InvalidArgumentException){
+			$fallbackName = "betterpmmp_" . strtolower((new \ReflectionClass($generatorClass))->getShortName());
+			$holder = $generators->getGenerator(match($generatorClass){
+				\pocketmine\world\generator\vanilla\VanillaNether::class => "vanilla_nether",
+				\pocketmine\world\generator\vanilla\VanillaEnd::class => "vanilla_end",
+				default => "vanilla",
+			});
+			$this->server->getLogger()->warning("BetterPMMP: generator $generatorClass was not registered (name now used by " . ($holder?->getGeneratorClass() ?? "nothing") . "), registering it as \"$fallbackName\"");
+			$generators->addGenerator($generatorClass, $fallbackName, fn() => null, true, false, fn(int $seed) => $spawn);
+		}
 		$this->generateWorld($name, WorldCreationOptions::create()
 			->setSeed($seed)
 			->setGeneratorClass($generatorClass)

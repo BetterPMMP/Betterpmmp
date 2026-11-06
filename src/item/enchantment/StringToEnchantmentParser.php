@@ -55,6 +55,10 @@ final class StringToEnchantmentParser extends StringToTParser{
 		$result->register("respiration", fn() => VanillaEnchantments::RESPIRATION());
 		$result->register("aqua_affinity", fn() => VanillaEnchantments::AQUA_AFFINITY());
 		$result->register("sharpness", fn() => VanillaEnchantments::SHARPNESS());
+		//BetterPMMP: enchantments the core does not ship
+		foreach(ExtraEnchantments::all() as $name => $enchantment){
+			$result->register($name, fn() => $enchantment);
+		}
 		$result->register("silk_touch", fn() => VanillaEnchantments::SILK_TOUCH());
 		$result->register("swift_sneak", fn() => VanillaEnchantments::SWIFT_SNEAK());
 		$result->register("thorns", fn() => VanillaEnchantments::THORNS());

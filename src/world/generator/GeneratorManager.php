@@ -67,6 +67,11 @@ final class GeneratorManager{
 		$this->addGenerator(TheEnd::class, "the_end", fn() => null, spawnPositionProvider: fn(int $seed) => new Vector3(0, 65, 0));
 		$this->addGenerator(VanillaEnd::class, "vanilla_end", fn() => null, spawnPositionProvider: fn(int $seed) => new Vector3(100.5, 49, 0.5));
 		$this->addGenerator(VoidGenerator::class, "void", fn() => null, fast: true, spawnPositionProvider: fn(int $seed) => new Vector3(0, -63, 0));
+		//BetterPMMP: second, plugin-proof names. Plugins (e.g. multi-world plugins) may take over
+		//"vanilla_nether" & co.; the class lookup then still finds these names.
+		$this->addGenerator(Overworld::class, "betterpmmp_overworld", fn() => null, spawnPositionProvider: fn(int $seed) => Overworld::findSpawn($seed));
+		$this->addGenerator(VanillaNether::class, "betterpmmp_vanillanether", fn() => null, spawnPositionProvider: fn(int $seed) => new Vector3(0.5, 70, 0.5));
+		$this->addGenerator(VanillaEnd::class, "betterpmmp_vanillaend", fn() => null, spawnPositionProvider: fn(int $seed) => new Vector3(100.5, 49, 0.5));
 	}
 
 	/**

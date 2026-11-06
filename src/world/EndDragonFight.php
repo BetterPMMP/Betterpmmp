@@ -131,7 +131,7 @@ final class EndDragonFight implements ChunkLoader{
 		$pillars = [];
 		$vanilla = false;
 		try{
-			$vanilla = strtolower($this->world->getProvider()->getWorldData()->getGenerator()) === "vanilla_end";
+			$vanilla = \pocketmine\world\generator\vanilla\structure\WorldStructures::generatorClass($this->world) === VanillaEnd::class;
 		}catch(\Throwable){
 		}
 		foreach($vanilla ? VanillaEnd::getPillars() : TheEnd::getPillars() as $pillar){

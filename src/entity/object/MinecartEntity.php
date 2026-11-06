@@ -115,18 +115,26 @@ class MinecartEntity extends Entity implements Rideable{
 	protected function entityBaseTick(int $tickDiff = 1) : bool{
 		$hasUpdate = parent::entityBaseTick($tickDiff);
 		$this->hitDamage = max(0.0, $this->hitDamage - $tickDiff);
+		$this->tickRails();
+		return true;
+	}
+
+	/** Rail physics for one tick (public for tests). */
+	public function tickRails() : void{
 		$rail = $this->railAt();
 		if($rail === null){
 			$this->keepMovement = false;
+			$this->gravityEnabled = true;
 			$motion = $this->getMotion();
 			if($this->isOnGround()){
 				$this->setMotion(new Vector3($motion->x * 0.5, $motion->y, $motion->z * 0.5));
 			}
-			return true;
+			return;
 		}
+		// on rails the cart is held at rail height: no gravity (it would pull the cart into the rail)
 		$this->keepMovement = true;
+		$this->gravityEnabled = false;
 		$this->followRail($rail);
-		return true;
 	}
 
 	private function followRail(BaseRail $rail) : void{
