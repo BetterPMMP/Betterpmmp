@@ -168,49 +168,7 @@ class EndPortal extends Transparent{
 				if($isEnd){
 					unset(self::$returnLocations[$returnKey]);
 				}
-				if($source->getDimensionId() !== DimensionIds::THE_END){
-					$exitPortalId = VanillaBlocks::END_PORTAL()->getTypeId();
-					for($portalX = -1; $portalX <= 1; ++$portalX){
-						for($portalZ = -1; $portalZ <= 1; ++$portalZ){
-							if($target->getBlockAt($portalX, 65, $portalZ)->getTypeId() === $exitPortalId){
-								return;
-							}
-						}
-					}
-					foreach(($vanillaEnd ? VanillaEnd::getPillars() : TheEnd::getPillars()) as [$pillarX, $pillarZ, $height]){
-						$target->requestChunkPopulation($pillarX >> 4, $pillarZ >> 4, null)->onCompletion(
-							static function() use ($target, $pillarX, $pillarZ, $height) : void{
-								if(!$target->isLoaded()){
-									return;
-								}
-								foreach($target->getEntities() as $existing){
-									if($existing instanceof EndCrystalEntity && $existing->getPosition()->distanceSquared(new Vector3($pillarX + 0.5, 66 + $height, $pillarZ + 0.5)) < 4){
-										return;
-										}
-								}
-								$crystal = new EndCrystalEntity(new Location($pillarX + 0.5, 66 + $height, $pillarZ + 0.5, $target, 0.0, 0.0));
-								$crystal->setShowBase(true);
-								$crystal->setBeamTarget(new Vector3(0, 82, 0));
-								$crystal->spawnToAll();
-							},
-							static function() : void{}
-						);
-					}
-					// Server has no global task scheduler API. Spawn after the player's
-					// dimension-change packet was queued by teleport(), in this callback.
-					$dragonExists = false;
-					foreach($target->getEntities() as $existing){
-						if($existing instanceof EnderDragonMob && !$existing->isClosed() && $existing->isAlive()){
-							// Bossbar is synchronized by dragon ticks, not during teleport.
-							$dragonExists = true;
-							break;
-						}
-					}
-					if(!$dragonExists){
-						$dragon = new EnderDragonMob(new Location(0.5, 82.0, 0.5, $target, 0.0, 0.0));
-						$dragon->spawnToAll();
-					}
-				}
+				// crystals, dragon and boss bar are managed by EndDragonFight (world tick)
 			},
 			static function() use ($entity) : void{
 				if(!$entity->isClosed()){

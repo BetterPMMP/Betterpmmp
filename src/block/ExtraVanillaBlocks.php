@@ -62,6 +62,7 @@ final class ExtraVanillaBlocks{
 		"minecraft:dispenser" => [VanillaDispenser::class, \pocketmine\block\tile\Dispenser::class],
 		"minecraft:dropper" => [VanillaDispenser::class, \pocketmine\block\tile\Dropper::class],
 		"minecraft:target" => [VanillaTarget::class, null],
+		"minecraft:end_gateway" => [VanillaEndGateway::class, null],
 	];
 
 	public static function getAll() : array{

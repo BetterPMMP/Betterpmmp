@@ -411,133 +411,292 @@ class EnderDragonMob extends GenericHostileFlyingMob{
 	protected const SPAWN_EGG_GETTER = "ENDER_DRAGON_SPAWN_EGG";
 	protected const HEIGHT = 8.0;
 	protected const WIDTH = 16.0;
-	private array $bossBarPlayers = [];
-	private int $bossBarRefreshTicks = 0;
-	private int $bossBarWarmupTicks = 0;
-	private array $viewerWarmup = [];
+
+	private const PHASE_HOLDING = 0;
+	private const PHASE_STRAFE = 1;
+	private const PHASE_CHARGE = 2;
+	private const PHASE_LANDING = 3;
+	private const PHASE_PERCHED = 4;
+	private const PHASE_TAKEOFF = 5;
+
+	private int $phase = self::PHASE_HOLDING;
+	private int $phaseTicks = 0;
+	private int $waypoint = 0;
+	private float $waypointY = 80.0;
+	private ?Player $chargeTarget = null;
+	private float $perchDamage = 0.0;
+	private int $healTicks = 0;
+	private int $contactTicks = 0;
+	private int $dragonBreathTicks = 0;
+	private int $dyingTicks = 0;
+	private float $velX = 0.0;
+	private float $velY = 0.0;
+	private float $velZ = 0.0;
 
 	protected function initEntity(CompoundTag $nbt) : void{
 		parent::initEntity($nbt);
 		$this->setMaxHealth(200);
-		$this->setHealth(200);
+		if(!$nbt->getTag("Health")){
+			$this->setHealth(200);
+		}
+		$this->keepMovement = true; // flies through the pillars like vanilla
+		$this->waypoint = mt_rand(0, 11);
 	}
 
-	public function spawnToAll() : void{
-		parent::spawnToAll();
-		// Wait for dimension chunks and the entity spawn to reach the client.
-	}
+	public function canSaveWithChunk() : bool{ return true; }
+	public function getXpDropAmount() : int{ return 0; }
+	public function isFireProof() : bool{ return true; }
+	public function canBreathe() : bool{ return true; }
+	protected function shouldFleeFromAttacker(\pocketmine\event\entity\EntityDamageByEntityEvent $source) : bool{ return false; }
 
-	public function spawnTo(Player $player) : void{
-		if(!$player->isConnected()){
+	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{
+		$cause = $source->getCause();
+		if(in_array($cause, [\pocketmine\event\entity\EntityDamageEvent::CAUSE_FALL, \pocketmine\event\entity\EntityDamageEvent::CAUSE_SUFFOCATION, \pocketmine\event\entity\EntityDamageEvent::CAUSE_DROWNING, \pocketmine\event\entity\EntityDamageEvent::CAUSE_FIRE, \pocketmine\event\entity\EntityDamageEvent::CAUSE_FIRE_TICK, \pocketmine\event\entity\EntityDamageEvent::CAUSE_LAVA], true)){
+			$source->cancel();
 			return;
 		}
-		parent::spawnTo($player);
-		$viewers = $this->getViewers();
-		// Bossbar is sent by the regular tick after the dimension has settled.
-	}
-
-	public function refreshBossBar() : void{
-		// Wait for safe tick.
-	}
-
-	public function setHealth(float $amount) : void{
-		parent::setHealth($amount);
-	}
-
-	protected function entityBaseTick(int $tickDiff = 1) : bool{
-		$result = parent::entityBaseTick($tickDiff);
-		$this->bossBarWarmupTicks += $tickDiff;
-		$this->bossBarRefreshTicks += $tickDiff;
-		if($this->bossBarRefreshTicks >= 20){
-			$this->bossBarRefreshTicks %= 20;
-			$this->syncBossBar();
+		// vanilla: explosions only hurt the dragon when they come from players' beds/crystals near it; ignore stray TNT
+		if(($cause === \pocketmine\event\entity\EntityDamageEvent::CAUSE_BLOCK_EXPLOSION || $cause === \pocketmine\event\entity\EntityDamageEvent::CAUSE_ENTITY_EXPLOSION) && !($source instanceof \pocketmine\event\entity\EntityDamageByEntityEvent && $source->getDamager() instanceof Player)){
+			$source->setBaseDamage($source->getBaseDamage() * 0.25);
 		}
-		return $result;
+		parent::attack($source);
+		if(!$source->isCancelled() && $this->phase === self::PHASE_PERCHED){
+			$this->perchDamage += $source->getFinalDamage();
+			if($this->perchDamage > 25){
+				$this->setPhase(self::PHASE_TAKEOFF);
+			}
+		}
+	}
+
+	private function fight() : ?\pocketmine\world\EndDragonFight{
+		return \pocketmine\world\EndDragonFight::isEndWorld($this->getWorld()) ? \pocketmine\world\EndDragonFight::get($this->getWorld()) : null;
+	}
+
+	private function setPhase(int $phase) : void{
+		$this->phase = $phase;
+		$this->phaseTicks = 0;
+		$this->perchDamage = 0.0;
+		if($phase === self::PHASE_HOLDING){
+			$this->waypointY = 70 + mt_rand(0, 20);
+		}
+	}
+
+	/** Nearest player on the main island the dragon may attack. */
+	private function nearestPlayer(float $range) : ?Player{
+		$best = null;
+		$bestDistance = $range * $range;
+		foreach($this->getWorld()->getPlayers() as $player){
+			if(!$player->isAlive() || $player->isCreative() || $player->isSpectator()){
+				continue;
+			}
+			$p = $player->getPosition();
+			if($p->x * $p->x + $p->z * $p->z > 75 * 75){
+				continue; // the dragon stays over the island (its chunks are kept loaded)
+			}
+			$distance = $player->getPosition()->distanceSquared($this->getPosition());
+			if($distance < $bestDistance){
+				$best = $player;
+				$bestDistance = $distance;
+			}
+		}
+		return $best;
+	}
+
+	/** Smoothly steers towards a point (vanilla dragons turn in wide arcs). */
+	private function flyTowards(float $x, float $y, float $z, float $speed, float $turn = 0.06) : float{
+		$pos = $this->getPosition();
+		$dx = $x - $pos->x;
+		$dy = $y - $pos->y;
+		$dz = $z - $pos->z;
+		$distance = sqrt($dx * $dx + $dy * $dy + $dz * $dz);
+		if($distance > 0.001){
+			$this->velX += ($dx / $distance * $speed - $this->velX) * $turn;
+			$this->velY += ($dy / $distance * $speed * 0.6 - $this->velY) * $turn;
+			$this->velZ += ($dz / $distance * $speed - $this->velZ) * $turn;
+		}
+		$this->setMotion(new \pocketmine\math\Vector3($this->velX, $this->velY, $this->velZ));
+		if(abs($this->velX) + abs($this->velZ) > 0.01){
+			$this->setRotation(rad2deg(atan2(-$this->velX, $this->velZ)), -rad2deg(atan2($this->velY, sqrt($this->velX ** 2 + $this->velZ ** 2))));
+		}
+		return $distance;
+	}
+
+	protected function tickWandering(int $tickDiff) : void{
+		if(!$this->isAlive()){
+			return;
+		}
+		$this->phaseTicks += $tickDiff;
+		$crystals = $this->fight()?->getPillarCrystals() ?? [];
+		$this->tickCrystalHealing($crystals, $tickDiff);
+		$this->tickContactDamage($tickDiff);
+		$pos = $this->getPosition();
+
+		switch($this->phase){
+			case self::PHASE_HOLDING:
+				// circle the island through 12 waypoints (radius 60, inner ring 40 with few crystals)
+				$radius = count($crystals) > 4 ? 60.0 : 40.0;
+				$angle = 2 * M_PI * $this->waypoint / 12;
+				$tx = cos($angle) * $radius;
+				$tz = sin($angle) * $radius;
+				if($this->flyTowards($tx, $this->waypointY, $tz, 0.65) < 10){
+					$this->waypoint = ($this->waypoint + 1) % 12;
+					$this->waypointY = 70 + mt_rand(0, 20);
+					// vanilla: landing gets more likely the fewer crystals are left
+					$player = $this->nearestPlayer(150);
+					if($player !== null && mt_rand(0, count($crystals) + 3) === 0){
+						$this->setPhase(self::PHASE_LANDING);
+					}elseif($player !== null && mt_rand(0, 2) === 0){
+						$this->chargeTarget = $player;
+						$this->setPhase(mt_rand(0, 1) === 0 ? self::PHASE_CHARGE : self::PHASE_STRAFE);
+					}
+				}
+				break;
+			case self::PHASE_STRAFE:
+			case self::PHASE_CHARGE:
+				$target = $this->chargeTarget;
+				if($target === null || !$target->isAlive() || $target->getWorld() !== $this->getWorld() || $this->phaseTicks > 200){
+					$this->setPhase(self::PHASE_HOLDING);
+					break;
+				}
+				$tp = $target->getPosition();
+				if($this->phase === self::PHASE_STRAFE){
+					// fly past the player and spit a dragon fireball (lingering breath cloud)
+					$distance = $this->flyTowards($tp->x, $tp->y + 12, $tp->z, 0.6);
+					if($distance < 32 && $this->phaseTicks % 40 < $tickDiff){
+						$this->spawnBreath($tp->asVector3(), 3.0, 120);
+						$this->setPhase(self::PHASE_HOLDING);
+					}
+				}else{
+					if($this->flyTowards($tp->x, $tp->y + 1, $tp->z, 0.8, 0.12) < 3){
+						$this->setPhase(self::PHASE_HOLDING);
+					}
+				}
+				break;
+			case self::PHASE_LANDING:
+				$distance = $this->flyTowards(0.5, $pos->y > 80 ? 75 : 67, 0.5, 0.45, 0.1);
+				if($distance < 2.5 || ($pos->x ** 2 + $pos->z ** 2 < 4 && $pos->y < 69)){
+					$this->setPhase(self::PHASE_PERCHED);
+					$this->velX = $this->velY = $this->velZ = 0.0;
+				}elseif($this->phaseTicks > 400){
+					$this->setPhase(self::PHASE_HOLDING);
+				}
+				break;
+			case self::PHASE_PERCHED:
+				$this->setMotion(new \pocketmine\math\Vector3(0, 0, 0));
+				$player = $this->nearestPlayer(20);
+				if($player !== null){
+					$dx = $player->getPosition()->x - $pos->x;
+					$dz = $player->getPosition()->z - $pos->z;
+					$this->setRotation(rad2deg(atan2(-$dx, $dz)), 0.0);
+				}
+				$this->dragonBreathTicks += $tickDiff;
+				if($this->dragonBreathTicks >= 60 && $player !== null){
+					$this->dragonBreathTicks = 0;
+					// breath attack in front of the head
+					$dir = $player->getPosition()->subtractVector($pos); $dir = new \pocketmine\math\Vector3($dir->x, 0, $dir->z);
+					if($dir->lengthSquared() > 0.01){
+						$dir = $dir->normalize();
+					}
+					$this->spawnBreath($pos->add($dir->x * 5, 0, $dir->z * 5), 3.0, 60);
+				}
+				if($this->phaseTicks > 200){
+					$this->setPhase(self::PHASE_TAKEOFF);
+				}
+				break;
+			case self::PHASE_TAKEOFF:
+				if($this->flyTowards(0.5, 95, 0.5 + 30, 0.5, 0.1) < 10 || $this->phaseTicks > 200){
+					$this->setPhase(self::PHASE_HOLDING);
+				}
+				break;
+		}
+	}
+
+	/** End crystals within 32 blocks heal the dragon by 1 health every 10 ticks. */
+	private function tickCrystalHealing(array $crystals, int $tickDiff) : void{
+		$this->healTicks += $tickDiff;
+		if($this->healTicks < 10){
+			return;
+		}
+		$this->healTicks = 0;
+		$nearest = null;
+		$best = 32.0 * 32.0;
+		foreach($crystals as $crystal){
+			$distance = $crystal->getPosition()->distanceSquared($this->getPosition());
+			if($distance < $best){
+				$best = $distance;
+				$nearest = $crystal;
+			}
+		}
+		foreach($crystals as $crystal){
+			$crystal->setBeamTarget($crystal === $nearest ? $this->getPosition()->floor() : null);
+		}
+		if($nearest !== null && $this->getHealth() < $this->getMaxHealth()){
+			$this->setHealth(min($this->getMaxHealth(), $this->getHealth() + 1));
+		}
+	}
+
+	/** Wings knock players back, the head bites. */
+	private function tickContactDamage(int $tickDiff) : void{
+		$this->contactTicks += $tickDiff;
+		if($this->contactTicks < 10 || $this->phase === self::PHASE_PERCHED){
+			return;
+		}
+		$this->contactTicks = 0;
+		$pos = $this->getPosition();
+		foreach($this->getWorld()->getPlayers() as $player){
+			if(!$player->isAlive() || $player->isCreative() || $player->isSpectator()){
+				continue;
+			}
+			$p = $player->getPosition();
+			$dx = $p->x - $pos->x;
+			$dz = $p->z - $pos->z;
+			if($dx * $dx + $dz * $dz > 36 || abs($p->y - $pos->y - 1) > 4){
+				continue;
+			}
+			$head = $dx * $dx + $dz * $dz < 9;
+			$damage = \pocketmine\entity\ai\MobStats::scaleDamage($head ? 10.0 : 5.0, $this->getWorld()->getDifficulty());
+			if($damage > 0){
+				$player->attack(new \pocketmine\event\entity\EntityDamageByEntityEvent($this, $player, \pocketmine\event\entity\EntityDamageEvent::CAUSE_ENTITY_ATTACK, $damage, [], 0.0));
+			}
+			$length = max(0.1, sqrt($dx * $dx + $dz * $dz));
+			$player->setMotion(new \pocketmine\math\Vector3($dx / $length * 1.5, 0.4, $dz / $length * 1.5));
+		}
+	}
+
+	/** A lingering cloud of dragon's breath (instant damage). */
+	private function spawnBreath(\pocketmine\math\Vector3 $at, float $radius, int $duration) : void{
+		$cloud = new \pocketmine\entity\object\AreaEffectCloud(\pocketmine\entity\Location::fromObject($at, $this->getWorld()));
+		$cloud->getEffects()->add(new \pocketmine\entity\effect\EffectInstance(\pocketmine\entity\effect\VanillaEffects::INSTANT_DAMAGE(), 1, 0));
+		$cloud->setRadius($radius);
+		$cloud->setMaxAge($duration);
+		$cloud->spawnToAll();
 	}
 
 	protected function onDeath() : void{
-		$this->hideBossBar();
-		$this->createExitPortal();
 		foreach($this->getWorld()->getEntities() as $entity){
-			if($entity instanceof \pocketmine\entity\object\EndCrystal && $entity->getPosition()->distanceSquared(new Position(0, 80, 0, $this->getWorld())) <= 10000){
-				$entity->flagForDespawn();
+			if($entity instanceof \pocketmine\entity\object\EndCrystal){
+				$entity->setBeamTarget(null);
 			}
 		}
+		$this->broadcastAnimation(new \pocketmine\entity\animation\DragonDeathAnimation($this));
 		parent::onDeath();
 	}
 
-	private function syncBossBar() : void{
-		if($this->isClosed() || !$this->isAlive() || $this->bossBarWarmupTicks < 100){
-			return;
+	/** Vanilla death: the dragon rises for 10 seconds while dropping experience, then the portal opens. */
+	protected function onDeathUpdate(int $tickDiff) : bool{
+		$this->dyingTicks += $tickDiff;
+		$this->setMotion(new \pocketmine\math\Vector3(0, 0.1, 0));
+		$fight = $this->fight();
+		$total = $fight !== null && $fight->wasPreviouslyKilled() ? 500 : 12000;
+		if($this->dyingTicks > 150 && $this->dyingTicks % 5 < $tickDiff){
+			$this->getWorld()->dropExperience($this->getPosition(), (int) ($total * 0.08));
 		}
-		$players = [];
-		foreach($this->getViewers() as $player){
-			if(!$player instanceof Player || !$player->isConnected() || $player->getWorld() !== $this->getWorld()){
-				continue;
-			}
-			$id = $player->getId();
-			$this->viewerWarmup[$id] = ($this->viewerWarmup[$id] ?? 0) + 20;
-			if($this->viewerWarmup[$id] < 100){ continue; }
-			if(!isset($this->bossBarPlayers[$id])){
-				if($this->showBossBarTo($player)){
-					$players[$id] = $player;
-				}
-			}else{
-				if($this->sendBossBarPacket($player, BossEventPacket::healthPercent($this->getId(), $this->getHealth() / max(1, $this->getMaxHealth())))){
-					$players[$id] = $player;
-				}
-			}
+		if($this->dyingTicks >= 200){
+			$this->getWorld()->dropExperience($this->getPosition(), (int) ($total * 0.2));
+			$fight?->onDragonKilled($this);
+			return true;
 		}
-		foreach($this->bossBarPlayers as $id => $player){
-			if(!isset($players[$id])){
-				$this->sendBossBarPacket($player, BossEventPacket::hide($this->getId()));
-			}
-		}
-		$this->bossBarPlayers = $players;
-	}
-
-	private function showBossBarTo(Player $player) : bool{
-		return $this->sendBossBarPacket($player, BossEventPacket::show($this->getId(), "Enderdrache", $this->getHealth() / max(1, $this->getMaxHealth()), BossBarColor::PURPLE, BossBarOverlay::PROGRESS));
-	}
-
-	private function sendBossBarPacket(Player $player, ClientboundPacket $packet) : bool{
-		try{
-			$session = $player->getNetworkSession();
-			if(!$session->isConnected()){
-				return false;
-			}
-			return $session->sendDataPacket($packet);
-		}catch(\LogicException){
-			// A viewer can disconnect while the dragon's viewer list is being updated.
-			// Don't let a stale connection interrupt portal entry or the world tick.
-			return false;
-		}
-	}
-
-	private function hideBossBar() : void{
-		foreach($this->bossBarPlayers as $player){
-			$this->sendBossBarPacket($player, BossEventPacket::hide($this->getId()));
-		}
-		$this->bossBarPlayers = [];
-	}
-
-	private function createExitPortal() : void{
-		$world = $this->getWorld();
-		if($world->getDimensionId() !== \pocketmine\network\mcpe\protocol\types\DimensionIds::THE_END){
-			return;
-		}
-		$portal = VanillaBlocks::END_PORTAL();
-		$bedrock = VanillaBlocks::BEDROCK();
-		for($x = -2; $x <= 2; ++$x){
-			for($z = -2; $z <= 2; ++$z){
-				$world->setBlockAt($x, 64, $z, $bedrock);
-				if(abs($x) <= 1 && abs($z) <= 1){
-					$world->setBlockAt($x, 65, $z, $portal);
-				}else{
-					$world->setBlockAt($x, 65, $z, $bedrock);
-				}
-			}
-		}
+		return false;
 	}
 }
 
