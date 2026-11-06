@@ -95,4 +95,9 @@ class Fence extends Transparent implements HorizontalConnectable{
 	public function getSupportType(int $facing) : SupportType{
 		return Facing::axis($facing) === Axis::Y ? SupportType::CENTER : SupportType::NONE;
 	}
+
+	/** BetterPMMP: using a fence while leading mobs ties them to it (vanilla, any item in hand). */
+	public function onInteract(\pocketmine\item\Item $item, int $face, \pocketmine\math\Vector3 $clickVector, ?\pocketmine\player\Player $player = null, array &$returnedItems = []) : bool{
+		return $player !== null && \pocketmine\item\LeadItem::tieToFence($player, $this);
+	}
 }

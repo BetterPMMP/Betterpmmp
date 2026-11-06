@@ -103,6 +103,7 @@ abstract class Mob extends Living{
 	protected function entityBaseTick(int $tickDiff = 1) : bool{
 		$hasUpdate = parent::entityBaseTick($tickDiff);
 		if($this->isAlive()){
+			$this->tickLeash();
 			$this->tickDaylightBurning($tickDiff);
 			if($this->naturalSpawned && $this->shouldDespawnNaturally($tickDiff)){
 				$this->flagForDespawn();
@@ -166,6 +167,85 @@ abstract class Mob extends Living{
 	}
 
 	protected function canSwimInNavigation() : bool{ return true; }
+
+	// --- BetterPMMP: leads ---------------------------------------------------
+
+	private ?Entity $leashHolder = null;
+
+	/** Animals and golems can be put on a lead; monsters, villagers and bosses cannot (vanilla). */
+	public function canBeLeashed() : bool{
+		return !$this instanceof GenericHostileMob && !$this instanceof Zombie && !$this instanceof Villager
+			&& !$this instanceof GenericHostileFlyingMob;
+	}
+
+	public function getLeashHolder() : ?Entity{
+		if($this->leashHolder !== null && ($this->leashHolder->isClosed() || $this->leashHolder->isFlaggedForDespawn())){
+			$this->leashHolder = null;
+			$this->networkPropertiesDirty = true;
+		}
+		return $this->leashHolder;
+	}
+
+	public function setLeashHolder(?Entity $holder) : void{
+		$this->leashHolder = $holder;
+		$this->networkPropertiesDirty = true;
+		if($holder !== null){
+			$this->getWorld()->addSound($this->location, new \pocketmine\world\sound\VanillaSound(\pocketmine\network\mcpe\protocol\types\LevelSoundEvent::LEAD_LEASH));
+		}
+	}
+
+	/** Takes the lead off; drops it unless $dropLead is false. */
+	public function unleash(bool $dropLead = true, bool $broke = false) : void{
+		if($this->leashHolder === null){
+			return;
+		}
+		$this->leashHolder = null;
+		$this->networkPropertiesDirty = true;
+		$this->getWorld()->addSound($this->location, new \pocketmine\world\sound\VanillaSound($broke ? \pocketmine\network\mcpe\protocol\types\LevelSoundEvent::LEAD_BREAK : \pocketmine\network\mcpe\protocol\types\LevelSoundEvent::LEAD_UNLEASH));
+		if($dropLead && ($lead = \pocketmine\item\ExtraVanillaItems::get("minecraft:lead")) !== null){
+			$this->getWorld()->dropItem($this->location, $lead);
+		}
+	}
+
+	/** Vanilla: the mob is pulled when more than 6 blocks away and the lead breaks at 10. */
+	private function tickLeash() : void{
+		$holder = $this->getLeashHolder();
+		if($holder === null){
+			if($this->leashHolder === null){
+				return;
+			}
+			$this->unleash();
+			return;
+		}
+		if($holder->getWorld() !== $this->getWorld() || ($holder instanceof Living && !$holder->isAlive())){
+			$this->unleash();
+			return;
+		}
+		$d = $holder->getPosition()->subtractVector($this->location);
+		$distance = $d->length();
+		if($distance > 10){
+			$this->unleash(true, true);
+			return;
+		}
+		if($distance > 6){
+			$pull = ($distance - 6) * 0.08 / $distance;
+			$this->setMotion($this->getMotion()->add($d->x * $pull, max(0.0, $d->y * $pull), $d->z * $pull));
+		}elseif($distance > 3){
+			$this->getNavigator()->moveTo($holder->getPosition(), $this->getWalkSpeed(true), 2.0);
+		}
+	}
+
+	protected function onDeath() : void{
+		$this->unleash();
+		parent::onDeath();
+	}
+
+	protected function syncNetworkData(\pocketmine\network\mcpe\protocol\types\entity\EntityMetadataCollection $properties) : void{
+		parent::syncNetworkData($properties);
+		$holder = $this->leashHolder;
+		$properties->setGenericFlag(\pocketmine\network\mcpe\protocol\types\entity\EntityMetadataFlags::LEASHED, $holder !== null);
+		$properties->setLong(\pocketmine\network\mcpe\protocol\types\entity\EntityMetadataProperties::LEAD_HOLDER_EID, $holder !== null ? $holder->getId() : -1);
+	}
 
 	/** Vanilla speed attribute of this mob (falls back to the PocketMine attribute). */
 	protected function baseSpeedAttribute() : float{

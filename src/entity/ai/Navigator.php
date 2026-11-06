@@ -48,6 +48,12 @@ final class Navigator{
 	private int $stuckTicks = 0;
 	private ?Vector3 $lastPos = null;
 	private int $failures = 0;
+	private bool $breakDoors = false;
+
+	/** Zombies on Hard plan their paths through wooden doors (and break them). */
+	public function setCanBreakDoors(bool $value) : void{
+		$this->breakDoors = $value;
+	}
 
 	public function __construct(
 		private Living $mob,
@@ -95,7 +101,7 @@ final class Navigator{
 		}
 		$pos = $this->mob->getPosition();
 		$distance = $pos->distance($goal);
-		$finder = new PathFinder($world, $this->height, $this->canSwim);
+		$finder = new PathFinder($world, $this->height, $this->canSwim, false, $this->breakDoors);
 		$path = $finder->find(
 			(int) floor($pos->x), (int) floor($pos->y + 0.01), (int) floor($pos->z),
 			(int) floor($goal->x), (int) floor($goal->y + 0.01), (int) floor($goal->z),

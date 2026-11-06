@@ -2145,6 +2145,15 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 
 		$item = $this->inventory->getItemInHand();
 		$oldItem = clone $item;
+		//BetterPMMP: taking a lead off a mob you hold (or that is tied to a fence) gives it back
+		if(!$ev->isCancelled() && $entity instanceof \pocketmine\entity\Mob && ($holder = $entity->getLeashHolder()) !== null
+			&& ($holder === $this || $holder instanceof \pocketmine\entity\object\LeashKnot)){
+			$entity->unleash(false);
+			if($this->hasFiniteResources() && ($lead = \pocketmine\item\ExtraVanillaItems::get("minecraft:lead")) !== null){
+				$this->inventory->addItem($lead);
+			}
+			return true;
+		}
 		if(!$ev->isCancelled()){
 			if($item->onInteractEntity($this, $entity, $clickPos)){
 				if($this->hasFiniteResources() && !$item->equalsExact($oldItem) && $oldItem->equalsExact($this->inventory->getItemInHand())){

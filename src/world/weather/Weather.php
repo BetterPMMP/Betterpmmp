@@ -304,7 +304,76 @@ final class Weather{
 		if(!$this->isRainingAt($pos->getFloorX(), $pos->getFloorY(), $pos->getFloorZ())){
 			return;
 		}
+		$rod = $this->findLightningRod($pos);
+		if($rod !== null){
+			$pos = $rod;
+		}
 		self::strike($this->world, $pos);
+	}
+
+	/** @var array<int, true>|null state ids of lightning rods */
+	private static ?array $rodStates = null;
+
+	/**
+	 * Vanilla: a lightning rod open to the sky within 128 blocks takes natural strikes.
+	 * Only sub chunks whose palette contains a rod are searched, so this stays cheap.
+	 */
+	private function findLightningRod(Vector3 $near) : ?Vector3{
+		if(self::$rodStates === null){
+			self::$rodStates = [];
+			foreach(\pocketmine\block\RuntimeBlockStateRegistry::getInstance()->getAllKnownStates() as $stateId => $state){
+				if($state instanceof \pocketmine\block\LightningRod){
+					self::$rodStates[$stateId] = true;
+				}
+			}
+		}
+		$best = null;
+		$bestDistance = 128 * 128;
+		$cx = $near->getFloorX() >> Chunk::COORD_BIT_SIZE;
+		$cz = $near->getFloorZ() >> Chunk::COORD_BIT_SIZE;
+		for($x = $cx - 8; $x <= $cx + 8; ++$x){
+			for($z = $cz - 8; $z <= $cz + 8; ++$z){
+				$chunk = $this->world->isChunkLoaded($x, $z) ? $this->world->getChunk($x, $z) : null;
+				if($chunk === null){
+					continue;
+				}
+				foreach($chunk->getSubChunks() as $sy => $sub){
+					$found = false;
+					foreach($sub->getBlockLayers() as $layer){
+						foreach($layer->getPalette() as $id){
+							if(isset(self::$rodStates[$id])){
+								$found = true;
+								break 2;
+							}
+						}
+					}
+					if(!$found){
+						continue;
+					}
+					for($bx = 0; $bx < 16; ++$bx){
+						for($bz = 0; $bz < 16; ++$bz){
+							for($by = 0; $by < 16; ++$by){
+								if(!isset(self::$rodStates[$sub->getBlockStateId($bx, $by, $bz)])){
+									continue;
+								}
+								$wx = ($x << 4) + $bx;
+								$wy = ($sy << 4) + $by;
+								$wz = ($z << 4) + $bz;
+								if($this->world->getHighestBlockAt($wx, $wz) !== $wy){
+									continue; // must be open to the sky
+								}
+								$d = ($wx - $near->x) ** 2 + ($wz - $near->z) ** 2;
+								if($d < $bestDistance){
+									$bestDistance = $d;
+									$best = new Vector3($wx + 0.5, $wy + 1, $wz + 0.5);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		return $best;
 	}
 
 	/** Summons a lightning bolt (natural or channeling). */
