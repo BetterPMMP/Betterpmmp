@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.3-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.4-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.

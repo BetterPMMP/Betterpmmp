@@ -29,6 +29,13 @@ use function sqrt;
 final class Navigator{
 
 	/**
+	 * Initial jump speed. The server applies gravity and drag before moving an entity
+	 * (vanilla moves first), so the vanilla 0.42 only reaches 0.83 blocks here; 0.52
+	 * clears a full block like vanilla.
+	 */
+	public const JUMP_VELOCITY = 0.52;
+
+	/**
 	 * @var int[][]
 	 * @phpstan-var list<array{int, int, int}>
 	 */
@@ -176,7 +183,7 @@ final class Navigator{
 			// keep the head above water like vanilla's FloatGoal
 			$vy = max($vy, 0.08);
 		}elseif($ny > floor($pos->y + 0.01) && $this->mob->isOnGround() && $len < 1.6){
-			$vy = 0.42;
+			$vy = self::JUMP_VELOCITY;
 		}
 		$speed = $this->speed;
 		if($len < $speed){

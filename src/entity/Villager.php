@@ -248,6 +248,10 @@ class Villager extends Mob implements Ageable{
 		return $this->tradingPlayer !== null && $this->tradingPlayer->isConnected() ? $this->tradingPlayer : null;
 	}
 
+	public function getInteractButtonText(Player $player) : string{
+		return !$this->baby && $this->isAlive() && VillagerTrades::isTradingProfession($this->profession) ? "action.interact.trade" : "";
+	}
+
 	public function onInteract(Player $player, Vector3 $clickPos) : bool{
 		if($this->baby || !$this->isAlive() || !VillagerTrades::isTradingProfession($this->profession)){
 			return false;

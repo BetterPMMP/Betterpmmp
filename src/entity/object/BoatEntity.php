@@ -114,6 +114,10 @@ class BoatEntity extends Entity implements Rideable{
 		return StringToItemParser::getInstance()->parse($this->getItemName());
 	}
 
+	public function getInteractButtonText(Player $player) : string{
+		return count(RidingManager::getRiders($this)) < $this->getMaxRiders() && RidingManager::getVehicle($player) !== $this ? "action.interact.ride.boat" : "";
+	}
+
 	public function onInteract(Player $player, Vector3 $clickPos) : bool{
 		if($player->isSneaking() || RidingManager::getVehicle($player) === $this){
 			return false;
