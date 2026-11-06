@@ -1490,7 +1490,7 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 	}
 
 	protected function calculateFallDamage(float $fallDistance) : float{
-		return $this->flying || $this->gliding ? 0 : parent::calculateFallDamage($fallDistance);
+		return $this->flying || $this->gliding || \pocketmine\entity\riding\RidingManager::isRiding($this) ? 0 : parent::calculateFallDamage($fallDistance);
 	}
 
 	public function jump() : void{
@@ -2577,6 +2577,7 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 	}
 
 	protected function onDeath() : void{
+		\pocketmine\entity\riding\RidingManager::dismount($this);
 		//Crafting grid must always be evacuated even if keep-inventory is true. This dumps the contents into the
 		//main inventory and drops the rest on the ground.
 		$this->removeCurrentWindow();
@@ -2778,6 +2779,9 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 	}
 
 	public function teleport(Vector3 $pos, ?float $yaw = null, ?float $pitch = null) : bool{
+		if(\pocketmine\entity\riding\RidingManager::isRiding($this)){
+			\pocketmine\entity\riding\RidingManager::dismount($this);
+		}
 		$fromDimension = $this->getWorld()->getDimensionId();
 		$targetWorld = $pos instanceof Position ? $pos->getWorld() : $this->getWorld();
 		if(parent::teleport($pos, $yaw, $pitch)){

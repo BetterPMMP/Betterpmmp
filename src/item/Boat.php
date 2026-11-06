@@ -23,6 +23,8 @@ declare(strict_types=1);
 
 namespace pocketmine\item;
 
+use function array_search;
+
 class Boat extends Item{
 	private BoatType $boatType;
 
@@ -43,5 +45,16 @@ class Boat extends Item{
 		return 1;
 	}
 
-	//TODO
+	public function onClickAir(\pocketmine\player\Player $player, \pocketmine\math\Vector3 $directionVector, array &$returnedItems) : ItemUseResult{
+		$variant = array_search($this->boatType, BoatType::cases(), true);
+		if(\pocketmine\entity\object\BoatEntity::placeFromItem($player, $variant === false ? 0 : $variant, false)){
+			$this->pop();
+			return ItemUseResult::SUCCESS;
+		}
+		return ItemUseResult::NONE;
+	}
+
+	public function onInteractBlock(\pocketmine\player\Player $player, \pocketmine\block\Block $blockReplace, \pocketmine\block\Block $blockClicked, int $face, \pocketmine\math\Vector3 $clickVector, array &$returnedItems) : ItemUseResult{
+		return $this->onClickAir($player, $player->getDirectionVector(), $returnedItems);
+	}
 }

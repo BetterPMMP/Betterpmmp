@@ -319,7 +319,9 @@ class BreezeMob extends GenericHostileMob{
 	protected const WIDTH = 0.6;
 }
 
-class CamelMob extends GenericAnimalMob{
+class CamelMob extends GenericAnimalMob implements \pocketmine\entity\riding\Rideable{
+	use \pocketmine\entity\riding\MountableAnimalTrait;
+	protected function mountKind() : string{ return "camel"; }
 	protected const ENTITY_ID = EntityIds::CAMEL;
 	protected const DISPLAY_NAME = "Camel";
 	protected const SPAWN_EGG_GETTER = "CAMEL_SPAWN_EGG";
@@ -383,7 +385,9 @@ class DolphinMob extends GenericSwimmingAnimalMob{
 	protected const WIDTH = 0.6;
 }
 
-class DonkeyMob extends GenericAnimalMob{
+class DonkeyMob extends GenericAnimalMob implements \pocketmine\entity\riding\Rideable{
+	use \pocketmine\entity\riding\MountableAnimalTrait;
+	protected function mountKind() : string{ return "horse"; }
 	protected const ENTITY_ID = EntityIds::DONKEY;
 	protected const DISPLAY_NAME = "Donkey";
 	protected const SPAWN_EGG_GETTER = "DONKEY_SPAWN_EGG";
@@ -798,7 +802,9 @@ class HoglinMob extends GenericHostileMob{
 	protected const WIDTH = 0.6;
 }
 
-class HorseMob extends GenericAnimalMob{
+class HorseMob extends GenericAnimalMob implements \pocketmine\entity\riding\Rideable{
+	use \pocketmine\entity\riding\MountableAnimalTrait;
+	protected function mountKind() : string{ return "horse"; }
 	protected const ENTITY_ID = EntityIds::HORSE;
 	protected const DISPLAY_NAME = "Horse";
 	protected const SPAWN_EGG_GETTER = "HORSE_SPAWN_EGG";
@@ -893,7 +899,9 @@ class MooshroomMob extends GenericAnimalMob{
 	protected const WIDTH = 0.9;
 }
 
-class MuleMob extends GenericAnimalMob{
+class MuleMob extends GenericAnimalMob implements \pocketmine\entity\riding\Rideable{
+	use \pocketmine\entity\riding\MountableAnimalTrait;
+	protected function mountKind() : string{ return "horse"; }
 	protected const ENTITY_ID = EntityIds::MULE;
 	protected const DISPLAY_NAME = "Mule";
 	protected const SPAWN_EGG_GETTER = "MULE_SPAWN_EGG";
@@ -1046,7 +1054,9 @@ class SkeletonMob extends GenericRangedHostileMob{
 	protected const WIDTH = 0.6;
 }
 
-class SkeletonHorseMob extends GenericAnimalMob{
+class SkeletonHorseMob extends GenericAnimalMob implements \pocketmine\entity\riding\Rideable{
+	use \pocketmine\entity\riding\MountableAnimalTrait;
+	protected function mountKind() : string{ return "skeleton_horse"; }
 	protected const ENTITY_ID = EntityIds::SKELETON_HORSE;
 	protected const DISPLAY_NAME = "Skeleton Horse";
 	protected const SPAWN_EGG_GETTER = "SKELETON_HORSE_SPAWN_EGG";
@@ -1094,7 +1104,9 @@ class StrayMob extends GenericRangedHostileMob{
 	protected const WIDTH = 0.6;
 }
 
-class StriderMob extends GenericAnimalMob{
+class StriderMob extends GenericAnimalMob implements \pocketmine\entity\riding\Rideable{
+	use \pocketmine\entity\riding\MountableAnimalTrait;
+	protected function mountKind() : string{ return "strider"; }
 	protected const ENTITY_ID = EntityIds::STRIDER;
 	protected const DISPLAY_NAME = "Strider";
 	protected const SPAWN_EGG_GETTER = "STRIDER_SPAWN_EGG";

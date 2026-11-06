@@ -244,6 +244,16 @@ class InGamePacketHandler extends PacketHandler{
 			}
 		}
 
+		//BetterPMMP: steering input for the ridden vehicle
+		$vehicle = \pocketmine\entity\riding\RidingManager::getVehicle($this->player);
+		if($vehicle instanceof \pocketmine\entity\riding\Rideable && \pocketmine\entity\riding\RidingManager::getDriver($vehicle) === $this->player){
+			$vehicle->setDriverInput($packet->getMoveVecZ(), -$packet->getMoveVecX(), $this->player->getLocation()->getYaw(), $inputFlags->get(PlayerAuthInputFlags::JUMPING));
+		}
+		if($vehicle !== null && $inputFlags->get(PlayerAuthInputFlags::START_SNEAKING)){
+			\pocketmine\entity\riding\RidingManager::dismount($this->player);
+			$vehicle = null;
+		}
+
 		if(!$this->forceMoveSync && $hasMoved){
 			$this->lastPlayerAuthInputPosition = $rawPos;
 			//TODO: this packet has WAYYYYY more useful information that we're not using
@@ -638,6 +648,21 @@ class InGamePacketHandler extends PacketHandler{
 		return false;
 	}
 
+	/** BetterPMMP: the driving client moves its vehicle (boats, horses, ...). */
+	public function handleMoveActorAbsolute(\pocketmine\network\mcpe\protocol\MoveActorAbsolutePacket $packet) : bool{
+		$vehicle = $this->player->getWorld()->getEntity($packet->actorRuntimeId);
+		if($vehicle === null || \pocketmine\entity\riding\RidingManager::getDriver($vehicle) !== $this->player || !method_exists($vehicle, "applyClientMovement")){
+			return false;
+		}
+		foreach([$packet->position->x, $packet->position->y, $packet->position->z, $packet->yaw, $packet->pitch] as $float){
+			if(is_infinite($float) || is_nan($float)){
+				return false;
+			}
+		}
+		$vehicle->applyClientMovement($this->player, $packet->position, $packet->yaw, $packet->pitch);
+		return true;
+	}
+
 	public function handleInteract(InteractPacket $packet) : bool{
 		if($packet->action === InteractPacket::ACTION_MOUSEOVER){
 			//TODO HACK: silence useless spam (MCPE 1.8)
@@ -650,6 +675,11 @@ class InGamePacketHandler extends PacketHandler{
 		$target = $this->player->getWorld()->getEntity($packet->targetActorRuntimeId);
 		if($target === null){
 			return false;
+		}
+		if($packet->action === InteractPacket::ACTION_LEAVE_VEHICLE){
+			//BetterPMMP: "leave vehicle" button
+			\pocketmine\entity\riding\RidingManager::dismount($this->player);
+			return true;
 		}
 		if($packet->action === InteractPacket::ACTION_OPEN_INVENTORY && $target === $this->player){
 			$this->inventoryManager->onClientOpenMainInventory();
