@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.0-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.1-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -59,8 +59,10 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 | System | Stand |
 |---|---|
 | Kampf, Rüstung, Hunger, XP | 🟡 (PMMP-Basis) |
-| Verzauberungen | 🟡 (Teilmenge) |
-| Brauen | ❌ |
+| Verzauberungen | 🟡 (Verzauberungstisch aus dem Kern) |
+| Amboss | ✅ **neu in 5.1**: Reparieren mit Material (25 % pro Stück), zwei Gegenstände kombinieren (+12 %), verzauberte Bücher, Verzauberungen zusammenführen (gleiche Stufe +1, Maximum), Umbenennen, Arbeitsstrafe (RepairCost), „Zu teuer“ ab 40 Stufen, Amboss nutzt sich ab (12 %) |
+| Schleifstein | ✅ **neu in 5.1**: entfernt Verzauberungen (außer Fluch) mit EP-Rückgabe, verzauberte Bücher werden zu Büchern, zwei Gegenstände kombinieren (+5 %) |
+| Brauen | 🟡 (Braustand aus dem Kern) |
 | Loot-Tables für Truhen/Mobs | 🟡 |
 
 ## Reihenfolge der nächsten Schritte
