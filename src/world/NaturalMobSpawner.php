@@ -72,12 +72,13 @@ use function max;
 final class NaturalMobSpawner{
 	/** @var array<string, true> */
 	private array $villageResidentChunks = [];
-	/** @var array<int, \pocketmine\world\generator\vanilla\structure\StructureManager|null> */
-	private array $structureManagers = [];
 	/** @var int[] world id => server tick of the next patrol attempt */
 	private array $nextPatrolTick = [];
 
 	public function tick(World $world) : void{
+		if(!\pocketmine\BetterPMMPConfig::mobSpawningEnabled($world)){
+			return;
+		}
 		$eligiblePlayers = [];
 		foreach($world->getPlayers() as $player){
 			// Creative players still keep a world active for natural spawning; spectators do not.
@@ -88,14 +89,25 @@ final class NaturalMobSpawner{
 		if($eligiblePlayers === []){
 			return;
 		}
-		$this->ensureVillageResidentsNearPlayers($world, $eligiblePlayers);
-		$this->tickPillagers($world, $eligiblePlayers);
-		if($world->getDimensionId() === DimensionIds::OVERWORLD){
+		if(\pocketmine\BetterPMMPConfig::spawns($world, "village-residents")){
+			$this->ensureVillageResidentsNearPlayers($world, $eligiblePlayers);
+		}
+		if(\pocketmine\BetterPMMPConfig::spawns($world, "pillagers")){
+			$this->tickPillagers($world, $eligiblePlayers);
+			$this->ensureOutpostGuards($world, $eligiblePlayers);
+		}
+		if(\pocketmine\BetterPMMPConfig::spawns($world, "wardens")){
+			\pocketmine\world\SculkShriekers::tick($world, $eligiblePlayers);
+		}
+		if($world->getDimensionId() === DimensionIds::OVERWORLD || $world->getDimensionId() === DimensionIds::NETHER){
 			$this->spawnOverworldCategories($world, $eligiblePlayers);
+		}
+		if($world->getDimensionId() === DimensionIds::OVERWORLD && !\pocketmine\BetterPMMPConfig::spawns($world, "water")){
+			return;
 		}
 
 		$mobCount = 0;
-		$overworld = $world->getDimensionId() === DimensionIds::OVERWORLD;
+		$overworld = $world->getDimensionId() === DimensionIds::OVERWORLD || $world->getDimensionId() === DimensionIds::NETHER;
 		foreach($world->getEntities() as $entity){
 			if($overworld && self::categoryOf($entity) !== null){
 				continue; // land mobs have their own vanilla caps
@@ -126,26 +138,7 @@ final class NaturalMobSpawner{
 			}
 
 			if($world->getDimensionId() === DimensionIds::NETHER){
-				for($floorY = min($world->getMaxY() - 3, 110); $floorY >= max($world->getMinY() + 1, 1); --$floorY){
-					$floor = $world->getBlockAt($x, $floorY, $z);
-					if(!in_array($floor->getTypeId(), [BlockTypeIds::NETHERRACK, BlockTypeIds::SOUL_SAND, BlockTypeIds::SOUL_SOIL, BlockTypeIds::BASALT], true)){
-						continue;
-					}
-					$feet = $world->getBlockAt($x, $floorY + 1, $z);
-					$head = $world->getBlockAt($x, $floorY + 2, $z);
-					if($feet->isSolid() || $head->isSolid() || $feet->getTypeId() === BlockTypeIds::LAVA || $head->getTypeId() === BlockTypeIds::LAVA){
-						continue;
-					}
-					$classes = [ZombiePigmanMob::class, ZombiePigmanMob::class, MagmaCubeMob::class, WitherSkeletonMob::class, BlazeMob::class, PiglinMob::class, HoglinMob::class];
-					// Ghasts need a broad open volume; only select them when the sampled column is high and clear.
-					if($floorY > 70 && !$world->getBlockAt($x + 1, $floorY + 2, $z)->isSolid() && !$world->getBlockAt($x - 1, $floorY + 2, $z)->isSolid()){
-						$classes[] = GhastMob::class;
-					}
-					$class = $classes[mt_rand(0, count($classes) - 1)];
-					$this->spawnNaturalMob($class, new Location($x + 0.5, $floorY + 1.0, $z + 0.5, $world, (float) mt_rand(0, 359), 0.0));
-					return;
-				}
-				continue;
+				continue; // handled by spawnOverworldCategories (biome tables + fortresses)
 			}
 			if($world->getDimensionId() === DimensionIds::THE_END){
 				for($floorY = min($world->getMaxY() - 3, 120); $floorY >= max($world->getMinY() + 1, 1); --$floorY){
@@ -223,7 +216,8 @@ final class NaturalMobSpawner{
 		if($entity instanceof \pocketmine\entity\BatMob){
 			return VanillaSpawnTables::CATEGORY_AMBIENT;
 		}
-		if($entity instanceof \pocketmine\entity\GenericHostileMob || $entity instanceof Zombie){
+		if($entity instanceof \pocketmine\entity\GenericHostileMob || $entity instanceof Zombie
+			|| ($entity instanceof \pocketmine\entity\GenericHostileFlyingMob && !$entity instanceof \pocketmine\entity\EnderDragonMob && !$entity instanceof \pocketmine\entity\WitherMob)){
 			return VanillaSpawnTables::CATEGORY_MONSTER;
 		}
 		if($entity instanceof \pocketmine\entity\Animal || ($entity instanceof \pocketmine\entity\GenericAnimalMob && !$entity instanceof \pocketmine\entity\IronGolemMob && !$entity instanceof \pocketmine\entity\SnowGolemMob)){
@@ -256,8 +250,21 @@ final class NaturalMobSpawner{
 			}
 		}
 		$peaceful = $world->getDifficulty() === World::DIFFICULTY_PEACEFUL;
+		$nether = $world->getDimensionId() === DimensionIds::NETHER;
+		$caps = [
+			VanillaSpawnTables::CATEGORY_MONSTER => \pocketmine\BetterPMMPConfig::int("mob-spawning", "max-monsters-per-player", 70),
+			VanillaSpawnTables::CATEGORY_CREATURE => \pocketmine\BetterPMMPConfig::int("mob-spawning", "max-animals-per-player", 10),
+			VanillaSpawnTables::CATEGORY_AMBIENT => \pocketmine\BetterPMMPConfig::int("mob-spawning", "max-ambient-per-player", 15),
+		];
+		$switches = [VanillaSpawnTables::CATEGORY_MONSTER => "monsters", VanillaSpawnTables::CATEGORY_CREATURE => "animals", VanillaSpawnTables::CATEGORY_AMBIENT => "ambient"];
 		foreach($players as $player){
-			foreach(VanillaSpawnTables::CAPS as $category => $cap){
+			foreach($caps as $category => $cap){
+				if($nether && $category !== VanillaSpawnTables::CATEGORY_MONSTER){
+					continue;
+				}
+				if(!\pocketmine\BetterPMMPConfig::spawns($world, $switches[$category])){
+					continue;
+				}
 				if($counts[$category] >= $cap * count($players)){
 					continue;
 				}
@@ -288,19 +295,26 @@ final class NaturalMobSpawner{
 		if(!$world->isChunkLoaded($x >> 4, $z >> 4)){
 			return 0;
 		}
-		$top = $world->getHighestBlockAt($x, $z);
-		if($top === null){
-			return 0;
+		$nether = $world->getDimensionId() === DimensionIds::NETHER;
+		if($nether){
+			$y = mt_rand(max($world->getMinY() + 1, 5), 122);
+		}else{
+			$top = $world->getHighestBlockAt($x, $z);
+			if($top === null){
+				return 0;
+			}
+			$y = $category === VanillaSpawnTables::CATEGORY_CREATURE ? $top + 1 : mt_rand($world->getMinY() + 1, $top + 1);
 		}
-		$y = $category === VanillaSpawnTables::CATEGORY_CREATURE ? $top + 1 : mt_rand($world->getMinY() + 1, $top + 1);
 		$y = $this->findFloor($world, $x, $y, $z, 16);
 		if($y === null){
 			return 0;
 		}
 		$biome = $world->getBiomeId($x, $y, $z);
-		$entries = match($category){
-			VanillaSpawnTables::CATEGORY_MONSTER => VanillaSpawnTables::monsters($biome),
-			VanillaSpawnTables::CATEGORY_CREATURE => VanillaSpawnTables::creatures($biome),
+		$entries = match(true){
+			$nether && $this->inFortress($world, $x, $y, $z) => VanillaSpawnTables::fortressMonsters(),
+			$nether => VanillaSpawnTables::netherMonsters($biome),
+			$category === VanillaSpawnTables::CATEGORY_MONSTER => VanillaSpawnTables::monsters($biome),
+			$category === VanillaSpawnTables::CATEGORY_CREATURE => VanillaSpawnTables::creatures($biome),
 			default => VanillaSpawnTables::ambient($biome),
 		};
 		$entry = VanillaSpawnTables::pick($entries);
@@ -327,6 +341,66 @@ final class NaturalMobSpawner{
 			++$spawned;
 		}
 		return $spawned;
+	}
+
+	/** Whether a position lies inside a nether fortress of a BetterPMMP vanilla Nether. */
+	private function inFortress(World $world, int $x, int $y, int $z) : bool{
+		$manager = \pocketmine\world\generator\vanilla\structure\WorldStructures::get($world);
+		if($manager === null){
+			return false;
+		}
+		foreach($manager->startsIn($x >> 4, $z >> 4) as $start){
+			if($start->type === "fortress" && $start->containsColumn($x, $z) && $y >= $start->minY - 1 && $y <= $start->maxY + 1){
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** @var array<string, true> outposts that already got their guards */
+	private array $guardedOutposts = [];
+
+	/**
+	 * Vanilla outposts are guarded from the start: when a player first comes
+	 * near one, 4-6 pillagers spawn around the tower.
+	 * @param Player[] $players
+	 */
+	private function ensureOutpostGuards(World $world, array $players) : void{
+		$manager = $this->structuresFor($world);
+		if($manager === null){
+			return;
+		}
+		foreach($players as $player){
+			$cx = $player->getPosition()->getFloorX() >> 4;
+			$cz = $player->getPosition()->getFloorZ() >> 4;
+			for($dx = -3; $dx <= 3; ++$dx){
+				for($dz = -3; $dz <= 3; ++$dz){
+					foreach($manager->startsIn($cx + $dx, $cz + $dz) as $start){
+						if($start->type !== "pillager_outpost"){
+							continue;
+						}
+						$key = $world->getId() . ":" . $start->chunkX . ":" . $start->chunkZ;
+						if(isset($this->guardedOutposts[$key])){
+							continue;
+						}
+						$mx = intdiv($start->minX + $start->maxX, 2);
+						$mz = intdiv($start->minZ + $start->maxZ, 2);
+						if(!$world->isChunkLoaded($mx >> 4, $mz >> 4)){
+							continue;
+						}
+						$this->guardedOutposts[$key] = true;
+						$count = mt_rand(4, 6);
+						for($i = 0, $tries = 0; $i < $count && $tries < 40; ++$tries){
+							$location = $this->surfaceSpawnPoint($world, $mx + mt_rand(-10, 10), $mz + mt_rand(-10, 10));
+							if($location !== null){
+								$this->spawnNaturalMob(PillagerMob::class, $location);
+								++$i;
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 
 	/** First standable feet position at or below $y (within $depth blocks). */
@@ -369,6 +443,22 @@ final class NaturalMobSpawner{
 		$skyLight = $world->getRealBlockSkyLightAt($x, $y, $z);
 		switch($category){
 			case VanillaSpawnTables::CATEGORY_MONSTER:
+				if($world->getDimensionId() === DimensionIds::NETHER){
+					// the Nether has no sky: monsters spawn up to block light 11
+					if($blockLight > 11){
+						return false;
+					}
+					if($class === \pocketmine\entity\GhastMob::class){
+						for($dy = 0; $dy < 4; ++$dy){
+							foreach([[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]] as [$ox, $oz]){
+								if($world->getBlockAt($x + $ox * 2, $y + $dy, $z + $oz * 2)->isSolid()){
+									return false;
+								}
+							}
+						}
+					}
+					return true;
+				}
 				if($blockLight > 0 || $skyLight > mt_rand(0, 7)){
 					return false;
 				}
@@ -479,19 +569,10 @@ final class NaturalMobSpawner{
 	 * (the same deterministic layout the generator used).
 	 */
 	private function structuresFor(World $world) : ?\pocketmine\world\generator\vanilla\structure\StructureManager{
-		$id = $world->getId();
-		if(!array_key_exists($id, $this->structureManagers)){
-			$manager = null;
-			try{
-				if($world->getDimensionId() === DimensionIds::OVERWORLD && strtolower($world->getProvider()->getWorldData()->getGenerator()) === "vanilla"){
-					$manager = (new \pocketmine\world\generator\vanilla\Overworld($world->getSeed(), ""))->getStructureManager();
-				}
-			}catch(\Throwable){
-				$manager = null;
-			}
-			$this->structureManagers[$id] = $manager;
+		if($world->getDimensionId() !== DimensionIds::OVERWORLD){
+			return null;
 		}
-		return $this->structureManagers[$id];
+		return \pocketmine\world\generator\vanilla\structure\WorldStructures::get($world);
 	}
 
 	/** Ground position for a mob in a column: solid floor with two free blocks above. */

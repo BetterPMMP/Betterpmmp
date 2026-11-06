@@ -54,6 +54,16 @@ final class StructureManager{
 	 * All structure starts overlapping a chunk.
 	 * @return StructureStart[]
 	 */
+	/** The start of a structure type at a start chunk, or null if none generates there. */
+	public function startOf(string $name, int $chunkX, int $chunkZ) : ?StructureStart{
+		foreach($this->structures as $structure){
+			if($structure->getName() === $name){
+				return $this->start($structure, $chunkX, $chunkZ);
+			}
+		}
+		return null;
+	}
+
 	public function startsIn(int $chunkX, int $chunkZ) : array{
 		$minX = $chunkX << 4;
 		$minZ = $chunkZ << 4;

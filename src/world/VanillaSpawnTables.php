@@ -138,6 +138,34 @@ final class VanillaSpawnTables{
 	}
 
 	/**
+	 * Nether monsters per biome (vanilla weights and group sizes).
+	 * @return array<int, array{class-string, int, int, int}>
+	 */
+	public static function netherMonsters(int $biome) : array{
+		return match($biome){
+			B::SOULSAND_VALLEY => [[\pocketmine\entity\SkeletonMob::class, 20, 5, 5], [\pocketmine\entity\GhastMob::class, 50, 4, 4], [EndermanMob::class, 1, 4, 4]],
+			B::CRIMSON_FOREST => [[\pocketmine\entity\ZombiePigmanMob::class, 1, 2, 4], [\pocketmine\entity\HoglinMob::class, 9, 3, 4], [\pocketmine\entity\PiglinMob::class, 5, 3, 4]],
+			B::WARPED_FOREST => [[EndermanMob::class, 1, 4, 4]],
+			B::BASALT_DELTAS => [[\pocketmine\entity\GhastMob::class, 40, 1, 1], [\pocketmine\entity\MagmaCubeMob::class, 100, 2, 5]],
+			default => [[\pocketmine\entity\GhastMob::class, 50, 4, 4], [\pocketmine\entity\ZombiePigmanMob::class, 100, 4, 4], [\pocketmine\entity\MagmaCubeMob::class, 2, 4, 4], [EndermanMob::class, 1, 4, 4], [\pocketmine\entity\PiglinMob::class, 15, 4, 4]],
+		};
+	}
+
+	/**
+	 * Monsters inside a nether fortress.
+	 * @return array<int, array{class-string, int, int, int}>
+	 */
+	public static function fortressMonsters() : array{
+		return [
+			[\pocketmine\entity\BlazeMob::class, 10, 2, 3],
+			[\pocketmine\entity\ZombiePigmanMob::class, 5, 4, 4],
+			[\pocketmine\entity\WitherSkeletonMob::class, 8, 5, 5],
+			[SkeletonMob::class, 2, 5, 5],
+			[\pocketmine\entity\MagmaCubeMob::class, 3, 4, 4],
+		];
+	}
+
+	/**
 	 * @param array<int, array{class-string, int, int, int}> $entries
 	 * @return array{class-string, int, int, int}|null
 	 */

@@ -95,8 +95,16 @@ final class AncientCity extends SimpleStructure{
 				//dome shaped cavern: tallest in the middle
 				$height = (int) (8 + 14 * (1 - $d));
 				$c->fill($x, $y, $z, $x, $y + $height, $z, $air);
-				$c->set($x, $y - 1, $z, $r->nextBoundedInt(5) === 0 ? $sculk : $tiles);
+				$onSculk = $r->nextBoundedInt(5) === 0;
+				$c->set($x, $y - 1, $z, $onSculk ? $sculk : $tiles);
 				$c->set($x, $y - 2, $z, VanillaBlocks::DEEPSLATE());
+				// vanilla ancient cities are full of sculk shriekers (that can summon the warden) and sensors
+				if($onSculk && $d < 0.85 && ($roll = $r->nextBoundedInt(60)) < 2){
+					$block = \pocketmine\block\ExtraVanillaBlocks::get($roll === 0 ? "minecraft:sculk_shrieker" : "minecraft:sculk_sensor");
+					if($block !== null){
+						$c->set($x, $y, $z, $roll === 0 ? $block->withProperties(["can_summon" => true]) : $block);
+					}
+				}
 				//paths of polished deepslate on the axes
 				if(abs($x - $cx) <= 1 || abs($z - $cz) <= 1){
 					$c->set($x, $y - 1, $z, VanillaBlocks::POLISHED_DEEPSLATE());

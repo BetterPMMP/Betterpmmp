@@ -1,0 +1,36 @@
+# BetterPMMP – Vanilla-Einstellungen
+# Diese Datei wird beim ersten Start im Serverordner angelegt.
+# Änderungen werden beim nächsten Serverstart übernommen.
+
+# ---------------------------------------------------------------
+# Mob-Spawning in normalen Welten (Oberwelt-Typ)
+# ---------------------------------------------------------------
+# Nether- und End-Welten verhalten sich IMMER wie Vanilla
+# (Mobs, Festungen, Enderdrache) – egal was hier steht.
+#
+# worlds: Liste der Welt-Ordnernamen, in denen Mobs natürlich spawnen.
+#   "*"        = in allen Welten
+#   "default"  = nur in der Hauptwelt (level-name aus server.properties)
+# Beispiel:  worlds: ["world", "survival"]
+mob-spawning:
+  worlds: ["default"]
+  # Welten, in denen NIE Mobs spawnen (z. B. Lobby, Minispiele)
+  disabled-worlds: []    # z. B. ["lobby", "minispiel"]
+  monsters: true          # Zombies, Skelette, Creeper, ...
+  animals: true           # Kühe, Schafe, Schweine, ...
+  ambient: true           # Fledermäuse
+  water: true             # Fische, Tintenfische, Delfine
+  village-residents: true # Dorfbewohner in generierten Dörfern
+  pillagers: true         # Plünderer an Außenposten und Patrouillen
+  wardens: true           # Warden aus Sculk-Kreischern im Tiefen Dunkel
+  # Vanilla-Limits pro Spieler
+  max-monsters-per-player: 70
+  max-animals-per-player: 10
+  max-ambient-per-player: 15
+
+# ---------------------------------------------------------------
+# Mob-KI
+# ---------------------------------------------------------------
+mob-ai:
+  # Millisekunden Wegfindung pro Server-Tick für alle Mobs zusammen
+  pathfinding-ms-per-tick: 6

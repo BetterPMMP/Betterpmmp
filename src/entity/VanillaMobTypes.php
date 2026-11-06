@@ -210,6 +210,8 @@ abstract class GenericCreeperMob extends GenericHostileMob{
 }
 
 abstract class GenericRangedHostileMob extends GenericHostileMob{
+	/** The weapon shown in the mob's hand. */
+	protected function heldWeapon() : Item{ return VanillaItems::BOW(); }
 	private int $strafeTicks = 0;
 	private int $strafeDirection = 1;
 	public function spawnTo(Player $player) : void{
@@ -223,7 +225,7 @@ abstract class GenericRangedHostileMob extends GenericHostileMob{
 		$session = $player->getNetworkSession();
 		$session->sendDataPacket(MobEquipmentPacket::create(
 			$this->getId(),
-			ItemStackWrapper::legacy($session->getTypeConverter()->coreItemStackToNet(VanillaItems::BOW())),
+			ItemStackWrapper::legacy($session->getTypeConverter()->coreItemStackToNet($this->heldWeapon())),
 			0,
 			0,
 			ContainerIds::INVENTORY
@@ -977,6 +979,7 @@ class PillagerMob extends GenericRangedHostileMob{
 	protected const SPAWN_EGG_GETTER = "PILLAGER_SPAWN_EGG";
 	protected const HEIGHT = 1.8;
 	protected const WIDTH = 0.6;
+	protected function heldWeapon() : Item{ return \pocketmine\item\ExtraVanillaItems::get("minecraft:crossbow") ?? VanillaItems::BOW(); }
 }
 
 class PolarBearMob extends GenericAnimalMob{

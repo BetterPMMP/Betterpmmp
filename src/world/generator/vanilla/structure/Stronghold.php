@@ -258,6 +258,9 @@ final class Stronghold extends Structure{
 			return false;
 		}
 		$start->add($piece);
+		if($type === "portal"){
+			$start->markers["portal"] = [intdiv($minX + $maxX, 2), $y + 3, intdiv($minZ + $maxZ, 2)];
+		}
 		if($queue !== null){
 			foreach($exits as [$ex, $ey, $ez, $turn]){
 				$nextFace = $turn === 0 ? $face : Facing::rotateY($face, $turn > 0);
