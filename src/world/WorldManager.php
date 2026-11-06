@@ -126,6 +126,43 @@ class WorldManager{
 	}
 
 	/** Returns an already-loaded world for a dimension, optionally excluding a source world. */
+	/**
+	 * BetterPMMP: loads a Nether/End world, upgrading old formats. If it exists but
+	 * cannot be loaded (old generator, broken data, unsupported format), the folder is
+	 * renamed to "<name>_defekt_<date>" (nothing is deleted) and a fresh world is made.
+	 *
+	 * @phpstan-param class-string<\pocketmine\world\generator\Generator> $generatorClass
+	 */
+	public function loadOrCreateDimensionWorld(string $name, string $generatorClass, \pocketmine\math\Vector3 $spawn, int $seed) : ?World{
+		$world = $this->getWorldByName($name);
+		if($world !== null){
+			return $world;
+		}
+		if($this->isWorldGenerated($name)){
+			try{
+				if($this->loadWorld($name, true)){
+					return $this->getWorldByName($name);
+				}
+			}catch(\Throwable $e){
+				$this->server->getLogger()->warning("BetterPMMP: world \"$name\" could not be loaded: " . $e->getMessage());
+			}
+			$broken = $this->getWorldPath($name);
+			$backup = rtrim($broken, "/\\") . "_defekt_" . date("Y-m-d_H-i-s");
+			if(@rename($broken, $backup)){
+				$this->server->getLogger()->warning("BetterPMMP: moved the unloadable world \"$name\" to \"" . basename($backup) . "\" and created a new one");
+			}else{
+				$this->server->getLogger()->error("BetterPMMP: world \"$name\" cannot be loaded and could not be moved aside");
+				return null;
+			}
+		}
+		$this->generateWorld($name, WorldCreationOptions::create()
+			->setSeed($seed)
+			->setGeneratorClass($generatorClass)
+			->setSpawnPosition($spawn)
+			->setDifficulty($this->server->getDifficulty()), false);
+		return $this->getWorldByName($name);
+	}
+
 	public function getWorldByDimensionId(int $dimensionId, ?World $exclude = null) : ?World{
 		foreach($this->worlds as $world){
 			if($world !== $exclude && $world->getDimensionId() === $dimensionId){
