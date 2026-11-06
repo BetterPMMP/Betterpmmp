@@ -89,6 +89,22 @@ class NetherPortal extends Transparent{
 	}
 
 	public function onEntityInside(Entity $entity) : bool{
+		// BetterPMMP: a failing dimension transfer must never take the whole server down
+		try{
+			return $this->onEntityInsideUnsafe($entity);
+		}catch(\Throwable $e){
+			$world = $entity->getWorld();
+			$world->getLogger()->error("Portal transfer failed: " . $e->getMessage());
+			$world->getLogger()->logException($e);
+			$entity->setPortalCooldown(200);
+			if($entity instanceof \pocketmine\player\Player){
+				$entity->sendMessage("§cDas Portal konnte die Zielwelt nicht laden (siehe Server-Konsole).");
+			}
+			return true;
+		}
+	}
+
+	private function onEntityInsideUnsafe(Entity $entity) : bool{
 		if($entity->hasPortalCooldown()){
 			return true;
 		}
@@ -137,60 +153,65 @@ class NetherPortal extends Transparent{
 		$pitch = $entity->getLocation()->pitch;
 		$target->requestChunkPopulation($x >> 4, $z >> 4, null)->onCompletion(
 			static function() use ($entity, $source, $target, $x, $z, $yaw, $pitch) : void{
-				if($entity->isClosed() || $entity->getWorld() !== $source || !$target->isLoaded()){
-					return;
-				}
-				// A scaled coordinate may land in a lava pool or a large cave. Search
-				// nearby columns too, otherwise the portal silently consumes its cooldown
-				// without transferring the player.
-				$minY = $target->getMinY();
-				$maxY = $target->getMaxY();
-				$destination = null;
-				for($radius = 0; $radius <= 8 && $destination === null; ++$radius){
-					for($dx = -$radius; $dx <= $radius && $destination === null; ++$dx){
-						for($dz = -$radius; $dz <= $radius && $destination === null; ++$dz){
-							if($radius > 0 && abs($dx) !== $radius && abs($dz) !== $radius){
-								continue;
-							}
-							$columnX = $x + $dx;
-							$columnZ = $z + $dz;
-							if(!$target->isChunkLoaded($columnX >> 4, $columnZ >> 4)){
-								continue;
-							}
-							for($floorY = min($maxY - 3, 118); $floorY >= $minY + 1; --$floorY){
-								$floor = $target->getBlockAt($columnX, $floorY, $columnZ);
-								$feet = $target->getBlockAt($columnX, $floorY + 1, $columnZ);
-								$head = $target->getBlockAt($columnX, $floorY + 2, $columnZ);
-								if($floor->isSolid() && $floor->getTypeId() !== BlockTypeIds::BEDROCK && $floor->getTypeId() !== BlockTypeIds::LAVA && !$feet->isSolid() && !$head->isSolid() && $feet->getTypeId() !== BlockTypeIds::LAVA && $head->getTypeId() !== BlockTypeIds::LAVA){
-									$destination = [$columnX + 0.5, $floorY + 1.0, $columnZ + 0.5];
-									break;
+				try{
+					if($entity->isClosed() || $entity->getWorld() !== $source || !$target->isLoaded()){
+						return;
+					}
+					// A scaled coordinate may land in a lava pool or a large cave. Search
+					// nearby columns too, otherwise the portal silently consumes its cooldown
+					// without transferring the player.
+					$minY = $target->getMinY();
+					$maxY = $target->getMaxY();
+					$destination = null;
+					for($radius = 0; $radius <= 8 && $destination === null; ++$radius){
+						for($dx = -$radius; $dx <= $radius && $destination === null; ++$dx){
+							for($dz = -$radius; $dz <= $radius && $destination === null; ++$dz){
+								if($radius > 0 && abs($dx) !== $radius && abs($dz) !== $radius){
+									continue;
+								}
+								$columnX = $x + $dx;
+								$columnZ = $z + $dz;
+								if(!$target->isChunkLoaded($columnX >> 4, $columnZ >> 4)){
+									continue;
+								}
+								for($floorY = min($maxY - 3, 118); $floorY >= $minY + 1; --$floorY){
+									$floor = $target->getBlockAt($columnX, $floorY, $columnZ);
+									$feet = $target->getBlockAt($columnX, $floorY + 1, $columnZ);
+									$head = $target->getBlockAt($columnX, $floorY + 2, $columnZ);
+									if($floor->isSolid() && $floor->getTypeId() !== BlockTypeIds::BEDROCK && $floor->getTypeId() !== BlockTypeIds::LAVA && !$feet->isSolid() && !$head->isSolid() && $feet->getTypeId() !== BlockTypeIds::LAVA && $head->getTypeId() !== BlockTypeIds::LAVA){
+										$destination = [$columnX + 0.5, $floorY + 1.0, $columnZ + 0.5];
+										break;
+									}
 								}
 							}
 						}
 					}
-				}
-				if($destination === null){
-					$entity->setPortalCooldown(0);
-					return;
-				}
-				$searchRadius = $target->getDimensionId() === DimensionIds::NETHER ? 16 : 128;
-				$existingPortal = self::findExistingPortalNear($target, (int) floor($destination[0]), (int) floor($destination[1]), (int) floor($destination[2]), $searchRadius);
-				if($existingPortal !== null){
-					// Reuse a player-built portal in the target world. Only create a
-					// new frame when no loaded portal is in the normal link radius.
-					[$portalX, $portalY, $portalZ, $axis] = $existingPortal;
-					$destination = $axis === Axis::X
-						? [$portalX + 0.5, (float) $portalY, $portalZ + 2.5]
-						: [$portalX + 2.5, (float) $portalY, $portalZ + 0.5];
-				}else{
-					$portal = self::buildReturnPortal($target, $destination[0], $destination[1] - 1.0, $destination[2]);
-					if($portal !== null){
-						// Arrive beside the portal, not inside it; otherwise the portal
-						// cooldown expiring would immediately send the player back.
-						$destination = [$portal[0] + 0.5, $portal[1] + 1.0, $portal[2] + 2.0];
+					if($destination === null){
+						$entity->setPortalCooldown(0);
+						return;
 					}
+					$searchRadius = $target->getDimensionId() === DimensionIds::NETHER ? 16 : 128;
+					$existingPortal = self::findExistingPortalNear($target, (int) floor($destination[0]), (int) floor($destination[1]), (int) floor($destination[2]), $searchRadius);
+					if($existingPortal !== null){
+						// Reuse a player-built portal in the target world. Only create a
+						// new frame when no loaded portal is in the normal link radius.
+						[$portalX, $portalY, $portalZ, $axis] = $existingPortal;
+						$destination = $axis === Axis::X
+							? [$portalX + 0.5, (float) $portalY, $portalZ + 2.5]
+							: [$portalX + 2.5, (float) $portalY, $portalZ + 0.5];
+					}else{
+						$portal = self::buildReturnPortal($target, $destination[0], $destination[1] - 1.0, $destination[2]);
+						if($portal !== null){
+							// Arrive beside the portal, not inside it; otherwise the portal
+							// cooldown expiring would immediately send the player back.
+							$destination = [$portal[0] + 0.5, $portal[1] + 1.0, $portal[2] + 2.0];
+						}
+					}
+					$entity->teleport(new Location($destination[0], $destination[1], $destination[2], $target, $yaw, $pitch));
+				}catch(\Throwable $e){
+					$target->getLogger()->error("Nether portal transfer failed: " . $e->getMessage());
+					$target->getLogger()->logException($e);
 				}
-				$entity->teleport(new Location($destination[0], $destination[1], $destination[2], $target, $yaw, $pitch));
 			},
 			static function() use ($entity) : void{
 				if(!$entity->isClosed()){

@@ -54,6 +54,7 @@ return array(
     'pocketmine\\item\\VehicleBoatItem' => $baseDir . '/src/item/VehicleBoatItem.php',
     'pocketmine\\world\\map\\MapManager' => $baseDir . '/src/world/map/MapManager.php',
     'pocketmine\\item\\EmptyMapItem' => $baseDir . '/src/item/EmptyMapItem.php',
+    'pocketmine\\entity\\trade\\Trader' => $baseDir . '/src/entity/trade/Trader.php',
     'pocketmine\\block\\ExtraVanillaBlocks' => $baseDir . '/src/block/ExtraVanillaBlocks.php',
     'pocketmine\\block\\ExtraVanillaBlockNames' => $baseDir . '/src/block/ExtraVanillaBlockNames.php',
     'pocketmine\\entity\\BossBarTracker' => $baseDir . '/src/entity/BossBarTracker.php',

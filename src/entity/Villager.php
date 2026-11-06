@@ -63,7 +63,7 @@ use function mt_rand;
  * blocks, trading with vanilla trade tables, five levels with experience,
  * restocking at the job site and biome-dependent appearance.
  */
-class Villager extends Mob implements Ageable{
+class Villager extends Mob implements Ageable, \pocketmine\entity\trade\Trader{
 	//legacy (villager v1) profession ids kept for API compatibility
 	public const PROFESSION_FARMER = 0;
 	public const PROFESSION_LIBRARIAN = 1;

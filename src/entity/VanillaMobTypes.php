@@ -522,7 +522,8 @@ class EnderDragonMob extends GenericHostileFlyingMob{
 		}
 		$this->setMotion(new \pocketmine\math\Vector3($this->velX, $this->velY, $this->velZ));
 		if(abs($this->velX) + abs($this->velZ) > 0.01){
-			$this->setRotation(rad2deg(atan2(-$this->velX, $this->velZ)), -rad2deg(atan2($this->velY, sqrt($this->velX ** 2 + $this->velZ ** 2))));
+			// the dragon model faces backwards compared to other mobs (vanilla adds 180 degrees)
+			$this->setRotation(rad2deg(atan2(-$this->velX, $this->velZ)) + 180.0, rad2deg(atan2($this->velY, sqrt($this->velX ** 2 + $this->velZ ** 2))));
 		}
 		return $distance;
 	}
@@ -593,7 +594,7 @@ class EnderDragonMob extends GenericHostileFlyingMob{
 				if($player !== null){
 					$dx = $player->getPosition()->x - $pos->x;
 					$dz = $player->getPosition()->z - $pos->z;
-					$this->setRotation(rad2deg(atan2(-$dx, $dz)), 0.0);
+					$this->setRotation(rad2deg(atan2(-$dx, $dz)) + 180.0, 0.0);
 				}
 				$this->dragonBreathTicks += $tickDiff;
 				if($this->dragonBreathTicks >= 60 && $player !== null){
@@ -712,6 +713,96 @@ class EndermanMob extends GenericHostileMob{
 	protected const SPAWN_EGG_GETTER = "ENDERMAN_SPAWN_EGG";
 	protected const HEIGHT = 1.8;
 	protected const WIDTH = 0.6;
+	private int $waterTicks = 0;
+	private int $chaseTeleportTicks = 0;
+
+	/** Vanilla: projectiles never hit endermen, they teleport away instead; other damage makes them teleport sometimes. */
+	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{
+		if($source->getCause() === \pocketmine\event\entity\EntityDamageEvent::CAUSE_PROJECTILE){
+			$source->cancel();
+			if($source instanceof \pocketmine\event\entity\EntityDamageByEntityEvent && ($damager = $source->getDamager()) instanceof Living){
+				$this->angerAt($damager);
+			}
+			for($i = 0; $i < 64 && !$this->teleportRandomly(); ++$i){}
+			return;
+		}
+		parent::attack($source);
+		if(!$source->isCancelled() && $this->isAlive() && mt_rand(0, 9) < 7){
+			for($i = 0; $i < 64 && !$this->teleportRandomly(); ++$i){}
+		}
+	}
+
+	protected function entityBaseTick(int $tickDiff = 1) : bool{
+		$result = parent::entityBaseTick($tickDiff);
+		if(!$this->isAlive()){
+			return $result;
+		}
+		// water hurts endermen and makes them flee
+		if($this->isUnderwater() || $this->getWorld()->getBlock($this->getPosition())->getTypeId() === \pocketmine\block\BlockTypeIds::WATER){
+			$this->waterTicks += $tickDiff;
+			if($this->waterTicks >= 20){
+				$this->waterTicks = 0;
+				$this->attack(new \pocketmine\event\entity\EntityDamageEvent($this, \pocketmine\event\entity\EntityDamageEvent::CAUSE_DROWNING, 1));
+				for($i = 0; $i < 64 && !$this->teleportRandomly(); ++$i){}
+			}
+		}
+		// chasing: teleport towards a target that is far away or out of reach
+		$target = $this->getCombatTarget();
+		if($target !== null && ($this->chaseTeleportTicks += $tickDiff) >= 30){
+			$this->chaseTeleportTicks = 0;
+			if($target->getPosition()->distanceSquared($this->getPosition()) > 256 && mt_rand(0, 2) === 0){
+				for($i = 0; $i < 16 && !$this->teleportTowards($target->getPosition()); ++$i){}
+			}
+		}
+		return $result;
+	}
+
+	/** Vanilla teleportRandomly: a spot up to 32 blocks away horizontally and vertically. */
+	public function teleportRandomly() : bool{
+		$pos = $this->getPosition();
+		return $this->teleportTo($pos->x + mt_rand(-32, 32), $pos->y + mt_rand(-32, 32), $pos->z + mt_rand(-32, 32));
+	}
+
+	private function teleportTowards(\pocketmine\math\Vector3 $target) : bool{
+		$pos = $this->getPosition();
+		$dir = $target->subtractVector($pos);
+		if($dir->lengthSquared() < 0.01){
+			return false;
+		}
+		$dir = $dir->normalize();
+		return $this->teleportTo($pos->x + $dir->x * 16 + mt_rand(-4, 4), $pos->y + mt_rand(-8, 8), $pos->z + $dir->z * 16 + mt_rand(-4, 4));
+	}
+
+	/** Moves down to solid ground below the spot and teleports there if 3 blocks of air and no water. */
+	private function teleportTo(float $x, float $y, float $z) : bool{
+		$world = $this->getWorld();
+		$bx = (int) floor($x);
+		$bz = (int) floor($z);
+		if(!$world->isChunkLoaded($bx >> 4, $bz >> 4)){
+			return false;
+		}
+		$by = (int) floor($y);
+		$by = max($world->getMinY() + 1, min($world->getMaxY() - 4, $by));
+		while($by > $world->getMinY() + 1 && !$world->getBlockAt($bx, $by - 1, $bz)->isSolid()){
+			--$by;
+		}
+		$floor = $world->getBlockAt($bx, $by - 1, $bz);
+		if(!$floor->isSolid()){
+			return false;
+		}
+		for($h = 0; $h < 3; ++$h){
+			$b = $world->getBlockAt($bx, $by + $h, $bz);
+			if($b->isSolid() || $b instanceof \pocketmine\block\Liquid){
+				return false;
+			}
+		}
+		$from = $this->getPosition()->asVector3();
+		$world->addSound($from, new \pocketmine\world\sound\EndermanTeleportSound());
+		$this->teleport(new \pocketmine\math\Vector3($bx + 0.5, $by, $bz + 0.5));
+		$this->getNavigator()->stop();
+		$world->addSound($this->getPosition(), new \pocketmine\world\sound\EndermanTeleportSound());
+		return true;
+	}
 }
 
 class EndermiteMob extends GenericHostileMob{
@@ -1170,12 +1261,145 @@ class VindicatorMob extends GenericHostileMob{
 	protected const WIDTH = 0.6;
 }
 
-class WanderingTraderMob extends GenericAnimalMob{
+class WanderingTraderMob extends GenericAnimalMob implements \pocketmine\entity\trade\Trader{
 	protected const ENTITY_ID = EntityIds::WANDERING_TRADER;
 	protected const DISPLAY_NAME = "Wandering Trader";
 	protected const SPAWN_EGG_GETTER = "WANDERING_TRADER_SPAWN_EGG";
 	protected const HEIGHT = 1.8;
 	protected const WIDTH = 0.6;
+
+	/** Vanilla wandering trader offers: [item, count, emeralds, max uses]. */
+	private const COMMON = [
+		["sea_pickle", 1, 2, 5], ["slime_ball", 1, 4, 5], ["glowstone", 1, 2, 5], ["nautilus_shell", 1, 5, 5],
+		["fern", 1, 1, 12], ["sugar_cane", 1, 1, 8], ["pumpkin", 1, 1, 4], ["kelp", 1, 3, 12], ["cactus", 1, 3, 8],
+		["dandelion", 1, 1, 12], ["poppy", 1, 1, 12], ["blue_orchid", 1, 1, 8], ["allium", 1, 1, 12], ["azure_bluet", 1, 1, 12],
+		["red_tulip", 1, 1, 12], ["orange_tulip", 1, 1, 12], ["white_tulip", 1, 1, 12], ["pink_tulip", 1, 1, 12],
+		["oxeye_daisy", 1, 1, 12], ["cornflower", 1, 1, 12], ["lily_of_the_valley", 1, 1, 7], ["wheat_seeds", 1, 1, 12],
+		["beetroot_seeds", 1, 1, 12], ["pumpkin_seeds", 1, 1, 12], ["melon_seeds", 1, 1, 12], ["acacia_sapling", 1, 5, 8],
+		["birch_sapling", 1, 5, 8], ["dark_oak_sapling", 1, 5, 8], ["jungle_sapling", 1, 5, 8], ["oak_sapling", 1, 5, 8],
+		["spruce_sapling", 1, 5, 8], ["cherry_sapling", 1, 5, 8], ["mangrove_propagule", 1, 5, 8], ["red_dye", 3, 1, 12],
+		["white_dye", 3, 1, 12], ["blue_dye", 3, 1, 12], ["pink_dye", 3, 1, 12], ["black_dye", 3, 1, 12], ["green_dye", 3, 1, 12],
+		["light_gray_dye", 3, 1, 12], ["magenta_dye", 3, 1, 12], ["yellow_dye", 3, 1, 12], ["gray_dye", 3, 1, 12],
+		["purple_dye", 3, 1, 12], ["light_blue_dye", 3, 1, 12], ["lime_dye", 3, 1, 12], ["orange_dye", 3, 1, 12],
+		["brown_dye", 3, 1, 12], ["cyan_dye", 3, 1, 12], ["brain_coral_block", 1, 3, 8], ["bubble_coral_block", 1, 3, 8],
+		["fire_coral_block", 1, 3, 8], ["horn_coral_block", 1, 3, 8], ["tube_coral_block", 1, 3, 8], ["vines", 1, 1, 12],
+		["brown_mushroom", 1, 1, 12], ["red_mushroom", 1, 1, 12], ["lily_pad", 2, 1, 5], ["small_dripleaf", 2, 1, 5],
+		["sand", 8, 1, 8], ["red_sand", 4, 1, 6], ["pointed_dripstone", 2, 1, 5], ["rooted_dirt", 2, 1, 5], ["moss_block", 2, 1, 5],
+	];
+	private const RARE = [
+		["tropical_fish_bucket", 1, 5, 4], ["pufferfish_bucket", 1, 5, 4], ["packed_ice", 1, 3, 6], ["blue_ice", 1, 6, 6],
+		["gunpowder", 1, 1, 8], ["podzol", 3, 3, 6],
+	];
+
+	/** @var \pocketmine\entity\trade\TradeOffer[] */
+	private array $offers = [];
+	private ?Player $tradingPlayer = null;
+	private int $lifeTicks = 0;
+
+	protected function initEntity(CompoundTag $nbt) : void{
+		parent::initEntity($nbt);
+		foreach($nbt->getListTag("BetterPMMPOffers") ?? [] as $tag){
+			if($tag instanceof CompoundTag && ($offer = \pocketmine\entity\trade\TradeOffer::fromNbt($tag)) !== null){
+				$this->offers[] = $offer;
+			}
+		}
+		$this->lifeTicks = $nbt->getInt("BetterPMMPLife", 0);
+		if(count($this->offers) === 0){
+			$this->rollOffers();
+		}
+	}
+
+	public function saveNBT() : CompoundTag{
+		$nbt = parent::saveNBT();
+		$list = new \pocketmine\nbt\tag\ListTag();
+		foreach($this->offers as $i => $offer){
+			$list->push($offer->toNbt($i + 1));
+		}
+		$nbt->setTag("BetterPMMPOffers", $list);
+		$nbt->setInt("BetterPMMPLife", $this->lifeTicks);
+		return $nbt;
+	}
+
+	private function rollOffers() : void{
+		$parser = \pocketmine\item\StringToItemParser::getInstance();
+		$emerald = VanillaItems::EMERALD();
+		$pick = function(array $table, int $count) use ($parser, $emerald) : void{
+			$keys = array_keys($table);
+			shuffle($keys);
+			$added = 0;
+			foreach($keys as $key){
+				if($added >= $count){
+					break;
+				}
+				[$name, $amount, $price, $uses] = $table[$key];
+				$item = $parser->parse($name);
+				if($item === null){
+					continue;
+				}
+				$this->offers[] = new \pocketmine\entity\trade\TradeOffer((clone $emerald)->setCount($price), null, $item->setCount($amount), $uses, 1, 0);
+				++$added;
+			}
+		};
+		$pick(self::COMMON, 5);
+		$pick(self::RARE, 1);
+	}
+
+	public function getOffers() : array{ return $this->offers; }
+	public function getLevel() : int{ return 0; }
+	public function isBaby() : bool{ return false; }
+
+	public function setTradingPlayer(?Player $player) : void{
+		$this->tradingPlayer = $player;
+		$this->networkPropertiesDirty = true;
+		$this->sendData(null);
+	}
+
+	public function onTrade(Player $player, \pocketmine\entity\trade\TradeOffer $offer, int $times) : void{
+		foreach($this->getWorld()->getPlayers() as $viewer){
+			$window = $viewer->getCurrentWindow();
+			if($window instanceof \pocketmine\inventory\TradeInventory && $window->getVillager() === $this){
+				$viewer->getNetworkSession()->getInvManager()?->syncTradeWindow($window);
+			}
+		}
+	}
+
+	public function getInteractButtonText(Player $player) : string{
+		return "action.interact.trade";
+	}
+
+	public function onInteract(Player $player, \pocketmine\math\Vector3 $clickPos) : bool{
+		if(!$this->isAlive() || ($this->tradingPlayer !== null && $this->tradingPlayer !== $player && $this->tradingPlayer->isConnected())){
+			return false;
+		}
+		$this->getNavigator()->stop();
+		$this->tradingPlayer = $player;
+		$this->networkPropertiesDirty = true;
+		$this->sendData(null);
+		$player->setCurrentWindow(new \pocketmine\inventory\TradeInventory($this));
+		return true;
+	}
+
+	protected function tickWandering(int $tickDiff) : void{
+		if($this->tradingPlayer !== null && $this->tradingPlayer->isConnected()){
+			$this->getNavigator()->stop();
+			return;
+		}
+		parent::tickWandering($tickDiff);
+	}
+
+	protected function entityBaseTick(int $tickDiff = 1) : bool{
+		$result = parent::entityBaseTick($tickDiff);
+		// vanilla: the trader leaves after 40-60 minutes
+		if(($this->lifeTicks += $tickDiff) >= 48000 && $this->tradingPlayer === null){
+			$this->flagForDespawn();
+		}
+		return $result;
+	}
+
+	protected function syncNetworkData(EntityMetadataCollection $properties) : void{
+		parent::syncNetworkData($properties);
+		$properties->setLong(EntityMetadataProperties::TRADING_PLAYER_EID, $this->tradingPlayer !== null && $this->tradingPlayer->isConnected() ? $this->tradingPlayer->getId() : -1);
+	}
 }
 
 class WardenMob extends GenericHostileMob{

@@ -30,6 +30,22 @@ class EndPortal extends Transparent{
 	public function getLightLevel() : int{ return 15; }
 
 	public function onEntityInside(Entity $entity) : bool{
+		// BetterPMMP: a failing dimension transfer must never take the whole server down
+		try{
+			return $this->onEntityInsideUnsafe($entity);
+		}catch(\Throwable $e){
+			$world = $entity->getWorld();
+			$world->getLogger()->error("Portal transfer failed: " . $e->getMessage());
+			$world->getLogger()->logException($e);
+			$entity->setPortalCooldown(200);
+			if($entity instanceof \pocketmine\player\Player){
+				$entity->sendMessage("§cDas Portal konnte die Zielwelt nicht laden (siehe Server-Konsole).");
+			}
+			return true;
+		}
+	}
+
+	private function onEntityInsideUnsafe(Entity $entity) : bool{
 		if($entity->hasPortalCooldown()){
 			return true;
 		}
