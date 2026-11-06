@@ -27,6 +27,8 @@ use pmmp\encoding\BE;
 use pmmp\encoding\Byte;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
+use pocketmine\nbt\LittleEndianNbtSerializer;
+use pocketmine\nbt\TreeRoot;
 use pocketmine\world\format\Chunk;
 use pocketmine\world\format\PalettedBlockArray;
 use pocketmine\world\format\SubChunk;
@@ -42,6 +44,7 @@ use function unpack;
  */
 final class FastChunkSerializer{
 	private const FLAG_POPULATED = 1 << 1;
+	private const FLAG_PENDING_TILES = 1 << 2;
 
 	private function __construct(){
 		//NOOP
@@ -64,7 +67,8 @@ final class FastChunkSerializer{
 	 */
 	public static function serializeTerrain(Chunk $chunk) : string{
 		$stream = new ByteBufferWriter();
-		Byte::writeUnsigned($stream, ($chunk->isPopulated() ? self::FLAG_POPULATED : 0));
+		$pendingTiles = $chunk->getPendingTiles();
+		Byte::writeUnsigned($stream, ($chunk->isPopulated() ? self::FLAG_POPULATED : 0) | (count($pendingTiles) > 0 ? self::FLAG_PENDING_TILES : 0));
 
 		//subchunks
 		$subChunks = $chunk->getSubChunks();
@@ -82,6 +86,16 @@ final class FastChunkSerializer{
 			}
 			self::serializePalettedArray($stream, $subChunk->getBiomeArray());
 
+		}
+
+		if(count($pendingTiles) > 0){
+			$serializer = new LittleEndianNbtSerializer();
+			BE::writeUnsignedInt($stream, count($pendingTiles));
+			foreach($pendingTiles as $nbt){
+				$data = $serializer->write(new TreeRoot($nbt));
+				BE::writeUnsignedInt($stream, strlen($data));
+				$stream->writeByteArray($data);
+			}
 		}
 
 		return $stream->getData();
@@ -123,6 +137,15 @@ final class FastChunkSerializer{
 			$subChunks[$y] = new SubChunk($airBlockId, $layers, $biomeArray);
 		}
 
-		return new Chunk($subChunks, $terrainPopulated);
+		$chunk = new Chunk($subChunks, $terrainPopulated);
+		if(($flags & self::FLAG_PENDING_TILES) !== 0){
+			$serializer = new LittleEndianNbtSerializer();
+			for($i = 0, $count = BE::readUnsignedInt($stream); $i < $count; ++$i){
+				$nbt = $serializer->read($stream->readByteArray(BE::readUnsignedInt($stream)))->mustGetCompoundTag();
+				//tile NBT carries absolute coordinates
+				$chunk->addPendingTile($nbt->getInt("x") & Chunk::COORD_MASK, $nbt->getInt("y"), $nbt->getInt("z") & Chunk::COORD_MASK, $nbt);
+			}
+		}
+		return $chunk;
 	}
 }

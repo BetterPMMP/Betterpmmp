@@ -1255,9 +1255,47 @@ class Server{
 				throw new AssumptionFailedError("We just loaded/generated the default world, so it must exist");
 			}
 			$this->worldManager->setDefaultWorld($world);
+			$this->ensureVanillaDimensions($world);
 		}
 
 		return !$anyWorldFailedToLoad;
+	}
+
+	/**
+	 * BetterPMMP: a world generated with the vanilla-style generator gets its
+	 * Nether and End created (or loaded) at startup, like a vanilla server.
+	 * The portals find them by the "<world>_nether" / "<world>_the_end" names.
+	 */
+	private function ensureVanillaDimensions(World $overworld) : void{
+		try{
+			$generator = strtolower($overworld->getProvider()->getWorldData()->getGenerator());
+		}catch(\Throwable){
+			return;
+		}
+		if($generator !== "vanilla"){
+			return;
+		}
+		$name = $overworld->getFolderName();
+		$dimensions = [
+			[$name . "_nether", \pocketmine\world\generator\vanilla\VanillaNether::class, new \pocketmine\math\Vector3(0.5, 70, 0.5)],
+			[$name . "_the_end", \pocketmine\world\generator\vanilla\VanillaEnd::class, new \pocketmine\math\Vector3(100.5, 49, 0.5)],
+		];
+		foreach($dimensions as [$dimensionName, $class, $spawn]){
+			try{
+				if(!$this->worldManager->isWorldGenerated($dimensionName)){
+					$this->worldManager->generateWorld($dimensionName, WorldCreationOptions::create()
+						->setSeed($overworld->getSeed())
+						->setGeneratorClass($class)
+						->setSpawnPosition($spawn)
+						->setDifficulty($this->getDifficulty()));
+					$this->logger->info("BetterPMMP: created vanilla dimension world \"$dimensionName\"");
+				}elseif(!$this->worldManager->isWorldLoaded($dimensionName)){
+					$this->worldManager->loadWorld($dimensionName);
+				}
+			}catch(\Throwable $e){
+				$this->logger->warning("BetterPMMP: could not prepare dimension world \"$dimensionName\": " . $e->getMessage());
+			}
+		}
 	}
 
 	/**

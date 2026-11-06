@@ -13,6 +13,7 @@ use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\protocol\types\DimensionIds;
 use pocketmine\world\WorldCreationOptions;
 use pocketmine\world\generator\the_end\TheEnd;
+use pocketmine\world\generator\vanilla\VanillaEnd;
 use pocketmine\world\WorldManager;
 
 class EndPortal extends Transparent{
@@ -70,8 +71,8 @@ class EndPortal extends Transparent{
 				}
 				$options = WorldCreationOptions::create()
 					->setSeed($source->getSeed())
-					->setGeneratorClass(TheEnd::class)
-					->setSpawnPosition(new Vector3(0, 65, 0));
+					->setGeneratorClass(VanillaEnd::class)
+					->setSpawnPosition(new Vector3(100.5, 49, 0.5));
 				if(!$manager->isWorldGenerated($targetName)){
 					$manager->generateWorld($targetName, $options, false);
 				}
@@ -109,24 +110,42 @@ class EndPortal extends Transparent{
 			$y = 65;
 			$z = 0;
 		}
+		//BetterPMMP vanilla End: arrival on the obsidian platform at (100, 49, 0) like vanilla
+		$vanillaEnd = !$isEnd && self::isVanillaEnd($target);
+		if($vanillaEnd){
+			$x = 100;
+			$y = 49;
+			$z = 0;
+		}
 		$entity->setPortalCooldown(80);
 		$location = $entity->getLocation();
 		$yaw = $location->yaw;
 		$pitch = $location->pitch;
 		$target->requestChunkPopulation($x >> 4, $z >> 4, null)->onCompletion(
-			static function() use ($entity, $source, $target, $x, $y, $z, $yaw, $pitch, $isEnd, $returnKey, $returnLocation) : void{
+			static function() use ($entity, $source, $target, $x, $y, $z, $yaw, $pitch, $isEnd, $returnKey, $returnLocation, $vanillaEnd) : void{
 				if($entity->isClosed() || $entity->getWorld() !== $source || !$target->isLoaded()){
 					return;
 				}
 				// The generated End already contains its island and pillars. Older End
 				// worlds get only the arrival chunk repaired; queuing 169 chunks here
 				// kept the destination request behind a long generation backlog.
-				if(!$isEnd && $target->getBlockAt(0, 63, 0)->getTypeId() !== VanillaBlocks::END_STONE()->getTypeId()){
+				if(!$isEnd && !$vanillaEnd && $target->getBlockAt(0, 63, 0)->getTypeId() !== VanillaBlocks::END_STONE()->getTypeId()){
 					TheEnd::upgradeArenaChunk($target, 0, 0);
+				}
+				if($vanillaEnd){
+					//vanilla rebuilds the obsidian platform on every arrival
+					for($padX = -2; $padX <= 2; ++$padX){
+						for($padZ = -2; $padZ <= 2; ++$padZ){
+							$target->setBlockAt(100 + $padX, 48, $padZ, VanillaBlocks::OBSIDIAN());
+							for($padY = 49; $padY <= 51; ++$padY){
+								$target->setBlockAt(100 + $padX, $padY, $padZ, VanillaBlocks::AIR());
+							}
+						}
+					}
 				}
 				// An arrival pad is mandatory even when an older or custom End
 				// generator left the origin empty. Never spawn over the void.
-				if(!$isEnd){
+				if(!$isEnd && !$vanillaEnd){
 					$endStone = VanillaBlocks::END_STONE();
 					for($padX = -2; $padX <= 2; ++$padX){
 						for($padZ = -2; $padZ <= 2; ++$padZ){
@@ -158,7 +177,7 @@ class EndPortal extends Transparent{
 							}
 						}
 					}
-					foreach(TheEnd::getPillars() as [$pillarX, $pillarZ, $height, $_caged]){
+					foreach(($vanillaEnd ? VanillaEnd::getPillars() : TheEnd::getPillars()) as [$pillarX, $pillarZ, $height]){
 						$target->requestChunkPopulation($pillarX >> 4, $pillarZ >> 4, null)->onCompletion(
 							static function() use ($target, $pillarX, $pillarZ, $height) : void{
 								if(!$target->isLoaded()){
@@ -242,5 +261,14 @@ class EndPortal extends Transparent{
 			$world = $manager->getWorldByName($name);
 		}
 		return $world !== null && $world->getDimensionId() === $dimensionId ? $world : null;
+	}
+
+	/** Whether an End world uses the BetterPMMP vanilla-style generator. */
+	private static function isVanillaEnd(\pocketmine\world\World $world) : bool{
+		try{
+			return strtolower($world->getProvider()->getWorldData()->getGenerator()) === "vanilla_end";
+		}catch(\Throwable){
+			return false;
+		}
 	}
 }

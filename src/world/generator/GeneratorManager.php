@@ -30,6 +30,7 @@ use pocketmine\world\generator\hell\Nether;
 use pocketmine\world\generator\the_end\TheEnd;
 use pocketmine\world\generator\normal\Normal;
 use pocketmine\world\generator\vanilla\Overworld;
+use pocketmine\world\generator\vanilla\VanillaEnd;
 use pocketmine\world\generator\vanilla\VanillaNether;
 use function array_keys;
 use function strtolower;
@@ -64,6 +65,7 @@ final class GeneratorManager{
 		$this->addAlias("nether", "hell");
 		$this->addGenerator(VanillaNether::class, "vanilla_nether", fn() => null, spawnPositionProvider: fn(int $seed) => new Vector3(0.5, 70, 0.5));
 		$this->addGenerator(TheEnd::class, "the_end", fn() => null, spawnPositionProvider: fn(int $seed) => new Vector3(0, 65, 0));
+		$this->addGenerator(VanillaEnd::class, "vanilla_end", fn() => null, spawnPositionProvider: fn(int $seed) => new Vector3(100.5, 49, 0.5));
 		$this->addGenerator(VoidGenerator::class, "void", fn() => null, fast: true, spawnPositionProvider: fn(int $seed) => new Vector3(0, -63, 0));
 	}
 

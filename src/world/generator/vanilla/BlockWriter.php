@@ -9,8 +9,14 @@ declare(strict_types=1);
 
 namespace pocketmine\world\generator\vanilla;
 
+use pocketmine\block\Bed;
 use pocketmine\block\Block;
 use pocketmine\block\RuntimeBlockStateRegistry;
+use pocketmine\block\tile\Bed as BedTile;
+use pocketmine\block\tile\Tile;
+use pocketmine\block\tile\TileFactory;
+use pocketmine\data\bedrock\DyeColorIdMap;
+use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\world\ChunkManager;
 use pocketmine\world\format\Chunk;
 use pocketmine\world\World;
@@ -62,11 +68,44 @@ final class BlockWriter{
 			return;
 		}
 		$chunk = $this->chunk($x, $z);
-		$chunk?->setBlockStateId($x & 15, $y, $z & 15, $state);
+		if($chunk !== null){
+			$chunk->setBlockStateId($x & 15, $y, $z & 15, $state);
+			$chunk->removePendingTile($x & 15, $y, $z & 15);
+		}
 	}
 
-	public function setBlock(int $x, int $y, int $z, Block $block) : void{
-		$this->set($x, $y, $z, $block->getStateId());
+	/**
+	 * Sets a block. Blocks that need a tile (chests, beds, furnaces, bells,
+	 * spawners, ...) get one when the chunk reaches the world; $tileData can
+	 * carry its contents (e.g. chest items, spawner entity).
+	 */
+	public function setBlock(int $x, int $y, int $z, Block $block, ?CompoundTag $tileData = null) : void{
+		if($y < Overworld::MIN_Y || $y >= Overworld::MAX_Y){
+			return;
+		}
+		$chunk = $this->chunk($x, $z);
+		if($chunk === null){
+			return;
+		}
+		$chunk->setBlockStateId($x & 15, $y, $z & 15, $block->getStateId());
+		$tileClass = $block->getIdInfo()->getTileClass();
+		if($tileClass === null){
+			$chunk->removePendingTile($x & 15, $y, $z & 15);
+			return;
+		}
+		$nbt = $tileData !== null ? clone $tileData : new CompoundTag();
+		$nbt->setString(Tile::TAG_ID, TileFactory::getInstance()->getSaveId($tileClass));
+		$nbt->setInt(Tile::TAG_X, $x);
+		$nbt->setInt(Tile::TAG_Y, $y);
+		$nbt->setInt(Tile::TAG_Z, $z);
+		if($block instanceof \pocketmine\block\MobHead && $nbt->getTag("SkullType") === null){
+			$nbt->setByte("SkullType", \pocketmine\data\bedrock\MobHeadTypeIdMap::getInstance()->toId($block->getMobHeadType()));
+			$nbt->setFloat("Rotation", $block->getRotation() * 22.5);
+		}
+		if($block instanceof Bed && $nbt->getTag(BedTile::TAG_COLOR) === null){
+			$nbt->setByte(BedTile::TAG_COLOR, DyeColorIdMap::getInstance()->toId($block->getColor()));
+		}
+		$chunk->addPendingTile($x & 15, $y, $z & 15, $nbt);
 	}
 
 	public function getBiome(int $x, int $y, int $z) : int{

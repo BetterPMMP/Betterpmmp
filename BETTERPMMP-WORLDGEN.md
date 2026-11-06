@@ -82,3 +82,82 @@ Er ersetzt den alten PocketMine-Generator **nur für neue Welten**.
 - Getestet mit einem Testaufbau ohne PocketMine-PHP-Erweiterungen:
   1.200 Chunks über 6 Seeds fehlerfrei, ca. 15–20 ms je Chunk für Erzeugung und
   Bevölkerung. Kein Test mit einem echten Minecraft-Client.
+
+---
+
+# BetterPMMP 4.6 — Weltgenerierung Beta 2: Strukturen, Dörfer, End
+
+## Beim Serverstart
+
+Nutzt die Hauptwelt den neuen Generator (`vanilla`), legt der Server beim Start
+automatisch `<welt>_nether` (Generator `vanilla_nether`) und `<welt>_the_end`
+(Generator `vanilla_end`) an bzw. lädt sie. Die Portale verbinden diese Welten.
+
+## Strukturen (Oberwelt)
+
+Platziert wie in Vanilla auf einem Raster mit Mindestabstand („spacing/separation“)
+und nur in passenden Biomen. Große Strukturen gehen über viele Chunks.
+
+| Struktur | Inhalt |
+|---|---|
+| **Dörfer** (Ebene, Wüste, Savanne, Taiga, Schnee) | Brunnen mit Glocke, verzweigte Straßen, kleine Häuser (Mojang-Vorlagen) und mittlere Häuser, Arbeitsgebäude: Waffenschmied (Esse mit Lava, Amboss), Werkzeugschmied (Schmiedetisch), Rüstungsschmied (Schmelzofen), Metzger (Räucherofen), Kartograf, Pfeilmacher, Fischer (Fass), Bibliothek (Lesepult, Bücherregale), Tempel (Braustand, Glocke), Steinmetz (Steinsäge), Schäfer (Webstuhl), Gerber (Kessel); Felder, Tiergehege, Laternen; Truhen mit Dorf-Beute; Betten in Farben; Material je Biom |
+| Verlassene Mine | Gangnetz mit Holzstützen, Schienen, Spinnweben, Kreuzungen, Treppen, Truhen, Höhlenspinnen-Spawner; im Tafelberg-Biom aus Schwarzeiche |
+| Festung (Stronghold) | 12–45 Räume: Gänge, Kreuzungen mit Brunnen, Gefängnis, Bibliothek mit Galerie, Truhengänge, Treppen; **Endportalraum** mit 12 Rahmen (je 10 % mit Auge), Lavabecken, Silberfisch-Spawner. Platzierung in Ringen wie Vanilla (erste 3 bei ca. 1400–2700 Blöcken) |
+| Verlies | Bruchstein/Moosstein-Raum mit Spawner (Zombie/Skelett/Spinne) und Truhen |
+| Wüstentempel | Pyramide mit Türmen, Terrakotta-Muster, Schatzkammer mit 4 Truhen und TNT-Falle |
+| Dschungeltempel | Moosbruchstein-Tempel, 3 Ebenen, Hebel, Stolperdraht, 2 Truhen, Ranken |
+| Iglu | Schneekuppel mit Bett, Ofen; 50 % mit Keller (Leiter, Braustand, Kessel, Truhe, Zellen) |
+| Hexenhütte | Fichtenhütte auf Stelzen im Sumpf mit Kessel |
+| Plünderer-Außenposten | Wachturm aus Schwarzeiche mit Truhe, Käfig, Zelt, Holzstapel; Abstand zu Dörfern |
+| Ruinenportal | Zerbrochener Obsidianrahmen, Netherrack, Magma, Gold, Truhe; Varianten je Biom; auch im Nether |
+| Schiffswrack | Rumpf, Mast, Kajüte, 3 Truhen (Vorrat, Karte, Schatz); auch kopfüber |
+| Ozeanruinen | Stein- bzw. Sandsteinruinen mit Truhe, große Ruinen mit Nebenruinen |
+| Ozeanmonument | 58×58 Prismarin, Flügel, Mittelturm, Räume, Meereslaternen, nasse Schwämme, 8 Goldblöcke |
+| Waldanwesen | Mehrstöckig aus Schwarzeiche: Schlafzimmer, Bibliotheken, Lager, Spinnenraum, Speisesaal, Truhen |
+| Antike Stadt | Riesige Höhle im Tiefen Dunkel auf y −51, Tor aus verstärktem Deepslate, Gebäude, Sculk, Seelenlaternen, Kerzen, Truhen |
+| Pfadruinen | Vergrabene Terrakotta/Schlammziegel-Ruinen |
+| Vergrabener Schatz | Truhe unter Stränden |
+
+**Untergrund:** Schluchten (bis ~100 Blöcke lang), Amethystgeoden, Wasser- und
+Lavaseen, Fossilien, Verliese.
+
+## Nether
+
+Netherfestungen (Brücken über der Lava, Gänge mit Truhen, Lohen-Spawner,
+Netherwarzen-Räume) und Bastionen (Wohneinheiten, Ställe, Brücke, Schatzkammer mit
+Magma-Kern und Gold), Ruinenportale.
+
+## End (`vanilla_end`, für neue End-Welten)
+
+- Inselform nach der Vanilla-Formel: Hauptinsel (~100 Blöcke Radius), Leere,
+  Außeninseln ab 1024 Blöcken.
+- 10 Obsidiansäulen (Höhe 76–103, zwei mit Käfig), Kristalle wie bisher über den
+  Drachenkampf-Code, Ausgangsportal-Rahmen in der Mitte.
+- Ankunft auf der Obsidian-Plattform bei (100, 49, 0) wie in Vanilla.
+- Chorus-Pflanzen und End-Städte (Türme, Brücken, Truhen) mit End-Schiffen
+  (Schatztruhen, Drachenkopf).
+
+## Beute
+
+35 Beute-Tabellen nach Vanilla-Vorbild (Verlies, Mine, Tempel, Festung,
+Dorf-Berufe, Iglu, Schiffswrack, Schatz, Außenposten, Ruinenportal, Netherfestung,
+Bastion, End-Stadt, Antike Stadt, Anwesen, Ozeanruine). Truhen, Spawner, Betten,
+Öfen usw. bekommen ihre Tiles beim Laden des Chunks (neu: Tile-Daten werden vom
+Generator-Thread mitgeschickt).
+
+## Ehrliche Grenzen
+
+- Die Strukturen sind **nachgebaut** (eigener Code), nicht Mojangs Original-Vorlagen
+  (Ausnahme: die kleinen Dorfhäuser). Aussehen und Aufbau folgen Vanilla, Details
+  weichen ab.
+- **Fehlende Blöcke im Kern:** Moos, Tropfstein, Pulverschnee, Seegras, Seetang,
+  Sculk-Sensor/-Kreischer/-Katalysator, verdächtiger Sand/Kies, Komposter,
+  Schleifstein, Werfer, End-Gateway. Wo Vanilla sie nutzt, fehlen sie oder sind ersetzt.
+- **Fehlende Gegenstände im Kern:** Sattel, Pferderüstung, Karten, Armbrust, Leine,
+  Elytren. Sie werden in der Beute übersprungen; der Rahmen im End-Schiff bleibt leer.
+- **Keine Wesen beim Generieren:** Wächter, Shulker, Hexen, Plünderer,
+  Zombie-Dorfbewohner werden nicht gesetzt. Dorfbewohner erscheinen weiterhin über
+  das bestehende Spawn-System.
+- Nicht seedgleich mit Bedrock; die Drachensäulen sind in jeder Welt gleich angeordnet.
+- Getestet im Testaufbau ohne PocketMine-PHP-Erweiterungen (768 Chunks in 3
+  Dimensionen fehlerfrei, ca. 15–20 ms je Chunk). Kein Test mit einem echten Client.

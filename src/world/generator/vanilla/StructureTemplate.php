@@ -229,6 +229,18 @@ final class StructureTemplate{
 		}
 	}
 
+	/**
+	 * Same as {@link place()}, but through a structure canvas (writes are
+	 * clipped to the chunk being populated).
+	 */
+	public function placeOnCanvas(\pocketmine\world\generator\vanilla\structure\StructureCanvas $canvas, int $x, int $y, int $z, int $turns) : void{
+		$turns &= 3;
+		foreach($this->blocks as [$bx, $by, $bz, $block]){
+			[$rx, $rz] = $this->rotatePoint($bx, $bz, $turns);
+			$canvas->set($x + $rx, $y + $by, $z + $rz, $turns === 0 ? $block : self::rotateBlock(clone $block, $turns));
+		}
+	}
+
 	/** @return int[] */
 	private function rotatePoint(int $x, int $z, int $turns) : array{
 		$sx = $this->sizeX;

@@ -355,6 +355,87 @@ class Overworld extends Generator{
 
 		//7. surface rules
 		$this->buildSurface($chunk, $baseX, $baseZ, $yTop, $colH, $surfaceBiome, $random);
+
+		//8. ravines (canyon carver), carved after the surface like vanilla
+		$this->carveRavines($chunk, $chunkX, $chunkZ, $colH);
+	}
+
+	/**
+	 * Canyon carver: long, tall and narrow ravines. Every chunk has a 1% chance
+	 * to start one; a ravine can reach 8 chunks away, so the carver looks at all
+	 * starts within that range and carves the part inside this chunk.
+	 * @param float[][] $colH
+	 */
+	private function carveRavines(Chunk $chunk, int $chunkX, int $chunkZ, array $colH) : void{
+		$minX = $chunkX << 4;
+		$minZ = $chunkZ << 4;
+		for($cx = $chunkX - 8; $cx <= $chunkX + 8; ++$cx){
+			for($cz = $chunkZ - 8; $cz <= $chunkZ + 8; ++$cz){
+				$r = new Random(($this->seed ^ ($cx * 0x3C6EF35F) ^ ($cz * 0x47502932) ^ 0x52617669) & 0x7fffffffffff);
+				if($r->nextFloat() >= 0.01){
+					continue;
+				}
+				$x = ($cx << 4) + $r->nextBoundedInt(16);
+				$y = 10 + $r->nextBoundedInt(58);
+				$z = ($cz << 4) + $r->nextBoundedInt(16);
+				$yaw = $r->nextFloat() * M_PI * 2;
+				$pitch = ($r->nextFloat() - 0.5) * 0.25;
+				$width = ($r->nextFloat() * 2 + $r->nextFloat()) * 2;
+				$steps = 112 - $r->nextBoundedInt(28);
+				$yawChange = 0.0;
+				$pitchChange = 0.0;
+				for($i = 0; $i < $steps; ++$i){
+					$h = 1.5 + sin($i * M_PI / $steps) * $width;
+					$v = $h * 3.0;
+					$x += cos($yaw) * cos($pitch);
+					$y += sin($pitch);
+					$z += sin($yaw) * cos($pitch);
+					$pitch *= 0.7;
+					$pitch += $pitchChange * 0.05;
+					$yaw += $yawChange * 0.05;
+					$pitchChange = $pitchChange * 0.8 + ($r->nextFloat() - $r->nextFloat()) * $r->nextFloat() * 2;
+					$yawChange = $yawChange * 0.5 + ($r->nextFloat() - $r->nextFloat()) * $r->nextFloat() * 4;
+					if($x + $h < $minX || $x - $h > $minX + 15 || $z + $h < $minZ || $z - $h > $minZ + 15){
+						continue;
+					}
+					$this->carveEllipsoid($chunk, $minX, $minZ, $x, $y, $z, $h, $v, $colH);
+				}
+			}
+		}
+	}
+
+	/** @param float[][] $colH */
+	private function carveEllipsoid(Chunk $chunk, int $minX, int $minZ, float $cx, float $cy, float $cz, float $h, float $v, array $colH) : void{
+		$x1 = max(0, (int) floor($cx - $h) - $minX);
+		$x2 = min(15, (int) ceil($cx + $h) - $minX);
+		$z1 = max(0, (int) floor($cz - $h) - $minZ);
+		$z2 = min(15, (int) ceil($cz + $h) - $minZ);
+		$y1 = max(self::MIN_Y + 5, (int) floor($cy - $v));
+		$y2 = min(self::MAX_Y - 1, (int) ceil($cy + $v));
+		for($lx = $x1; $lx <= $x2; ++$lx){
+			$dx = ($lx + $minX + 0.5 - $cx) / $h;
+			for($lz = $z1; $lz <= $z2; ++$lz){
+				$dz = ($lz + $minZ + 0.5 - $cz) / $h;
+				$horizontal = $dx * $dx + $dz * $dz;
+				if($horizontal >= 1){
+					continue;
+				}
+				//never cut open the sea floor
+				$limit = $colH[$lx][$lz] < OverworldClimate::SEA_LEVEL ? $colH[$lx][$lz] - 6 : self::MAX_Y;
+				for($y = $y1; $y <= $y2 && $y < $limit; ++$y){
+					$dy = ($y + 0.5 - $cy) / $v;
+					//vanilla ravine walls get steeper towards the bottom
+					if($horizontal * (1 + max(0, -$dy) * 0.3) + $dy * $dy >= 1){
+						continue;
+					}
+					$id = $chunk->getBlockStateId($lx, $y, $lz);
+					if($id === $this->water || $id === $this->lava || $id === $this->bedrock || $id === $this->air){
+						continue;
+					}
+					$chunk->setBlockStateId($lx, $y, $lz, $y <= self::LAVA_LEVEL ? $this->lava : $this->air);
+				}
+			}
+		}
 	}
 
 	private static function bilerp(float $q00, float $q10, float $q01, float $q11, float $fx, float $fz) : float{

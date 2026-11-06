@@ -20,6 +20,11 @@ use pocketmine\world\generator\Generator;
 use pocketmine\world\generator\noise\Simplex;
 use pocketmine\world\generator\object\TreeFactory;
 use pocketmine\world\generator\object\TreeType;
+use pocketmine\world\generator\vanilla\structure\Bastion;
+use pocketmine\world\generator\vanilla\structure\NetherFortress;
+use pocketmine\world\generator\vanilla\structure\RuinedPortal;
+use pocketmine\world\generator\vanilla\structure\StructureContext;
+use pocketmine\world\generator\vanilla\structure\StructureManager;
 use function intdiv;
 use function max;
 use function min;
@@ -54,6 +59,7 @@ class VanillaNether extends Generator{
 	private int $basalt;
 	private int $blackstone;
 	private int $magma;
+	private StructureManager $structures;
 
 	public function __construct(int $seed, string $preset){
 		parent::__construct($seed, $preset);
@@ -76,6 +82,16 @@ class VanillaNether extends Generator{
 		$this->basalt = VanillaBlocks::BASALT()->getStateId();
 		$this->blackstone = VanillaBlocks::BLACKSTONE()->getStateId();
 		$this->magma = VanillaBlocks::MAGMA()->getStateId();
+		$ctx = new StructureContext($seed, fn(int $x, int $y, int $z) : int => $this->biomeAt($x, $z), fn(int $x, int $z) : int => 64);
+		$this->structures = new StructureManager($ctx, [
+			new NetherFortress(),
+			new Bastion(),
+			new RuinedPortal(true),
+		]);
+	}
+
+	public function getStructureManager() : StructureManager{
+		return $this->structures;
 	}
 
 	/**
@@ -264,6 +280,8 @@ class VanillaNether extends Generator{
 		$this->veins($w, $baseX, $baseZ, $r, $debris, 1, 2, 8, 119, true);
 		$this->veins($w, $baseX, $baseZ, $r, $this->gravel, 2, 33, 5, 41);
 		$this->veins($w, $baseX, $baseZ, $r, $this->blackstone, 2, 33, 5, 31);
+
+		$this->structures->populate($w, $chunkX, $chunkZ);
 
 		$biome = $w->getBiome($baseX + 8, 64, $baseZ + 8);
 
