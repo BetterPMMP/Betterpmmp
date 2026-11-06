@@ -648,6 +648,12 @@ class InGamePacketHandler extends PacketHandler{
 		return false;
 	}
 
+	/** BetterPMMP: the client wants the contents of a filled map. */
+	public function handleMapInfoRequest(\pocketmine\network\mcpe\protocol\MapInfoRequestPacket $packet) : bool{
+		\pocketmine\world\map\MapManager::handleRequest($this->player, $packet->mapId);
+		return true;
+	}
+
 	/** BetterPMMP: the driving client moves its vehicle (boats, horses, ...). */
 	public function handleMoveActorAbsolute(\pocketmine\network\mcpe\protocol\MoveActorAbsolutePacket $packet) : bool{
 		$vehicle = $this->player->getWorld()->getEntity($packet->actorRuntimeId);

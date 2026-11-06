@@ -372,6 +372,11 @@ class WorldManager{
 
 		if(++$this->naturalMobSpawnTicker >= 10){
 			$this->naturalMobSpawnTicker = 0;
+			try{
+				\pocketmine\world\map\MapManager::tick();
+			}catch(\Throwable $e){
+				$this->server->getLogger()->logException($e);
+			}
 			foreach($this->worlds as $world){
 				$this->naturalMobSpawner->tick($world);
 				if(EndDragonFight::isEndWorld($world)){

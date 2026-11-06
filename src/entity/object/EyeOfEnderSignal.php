@@ -25,7 +25,7 @@ use function sqrt;
  * stronghold is further away, hovers, and after 80 ticks drops back as an
  * item (4 in 5 times) or shatters, like vanilla.
  */
-class EyeOfEnderSignal extends Entity{
+class EyeOfEnderSignal extends Entity implements \pocketmine\entity\NeverSavedWithChunkEntity{
 
 	public static function getNetworkTypeId() : string{ return EntityIds::EYE_OF_ENDER_SIGNAL; }
 
