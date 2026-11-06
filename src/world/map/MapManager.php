@@ -82,6 +82,10 @@ final class MapManager{
 		$tag->setLong(self::TAG_UUID, $id);
 		$tag->setInt(self::TAG_SCALE, $scale);
 		$tag->setByte("map_display_players", 1);
+		// vanilla filled maps are marked as initialised, otherwise the client shows an empty map
+		$tag->setByte("map_is_init", 1);
+		$tag->setByte("map_is_scaling", 0);
+		$tag->setInt("map_name_index", 1);
 		$item->setNamedTag($tag);
 		return $item;
 	}

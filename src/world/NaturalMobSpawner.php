@@ -96,6 +96,9 @@ final class NaturalMobSpawner{
 			$this->tickPillagers($world, $eligiblePlayers);
 			$this->ensureOutpostGuards($world, $eligiblePlayers);
 		}
+		if($world->getDimensionId() === DimensionIds::OVERWORLD && \pocketmine\BetterPMMPConfig::spawns($world, "wandering-trader")){
+			$this->tickWanderingTrader($world, $eligiblePlayers);
+		}
 		if(\pocketmine\BetterPMMPConfig::spawns($world, "wardens")){
 			\pocketmine\world\SculkShriekers::tick($world, $eligiblePlayers);
 		}
@@ -341,6 +344,50 @@ final class NaturalMobSpawner{
 			++$spawned;
 		}
 		return $spawned;
+	}
+
+	/** @var array<int, array{int, int}> world id => [server tick of the next attempt, chance in %] */
+	private array $traderState = [];
+
+	/**
+	 * Vanilla WanderingTraderSpawner: every 20 minutes the chance of a wandering
+	 * trader (with two trader llamas) near a random player goes 25 -> 50 -> 75 %
+	 * until one spawns. Only one trader at a time.
+	 * @param Player[] $players
+	 */
+	private function tickWanderingTrader(World $world, array $players) : void{
+		$tick = $world->getServer()->getTick();
+		[$next, $chance] = $this->traderState[$world->getId()] ??= [$tick + 24000, 25];
+		if($tick < $next){
+			return;
+		}
+		foreach($world->getEntities() as $entity){
+			if($entity instanceof \pocketmine\entity\WanderingTraderMob && $entity->isAlive()){
+				$this->traderState[$world->getId()] = [$tick + 24000, $chance];
+				return;
+			}
+		}
+		if(mt_rand(1, 100) > $chance){
+			$this->traderState[$world->getId()] = [$tick + 24000, min(75, $chance + 25)];
+			return;
+		}
+		$player = $players[mt_rand(0, count($players) - 1)];
+		$center = $player->getPosition();
+		for($attempt = 0; $attempt < 10; ++$attempt){
+			$location = $this->surfaceSpawnPoint($world, $center->getFloorX() + mt_rand(-48, 48), $center->getFloorZ() + mt_rand(-48, 48));
+			if($location === null){
+				continue;
+			}
+			(new \pocketmine\entity\WanderingTraderMob($location))->spawnToAll();
+			for($i = 0; $i < 2; ++$i){
+				$llamaSpot = $this->surfaceSpawnPoint($world, $location->getFloorX() + mt_rand(-4, 4), $location->getFloorZ() + mt_rand(-4, 4));
+				if($llamaSpot !== null){
+					(new \pocketmine\entity\TraderLlamaMob($llamaSpot))->spawnToAll();
+				}
+			}
+			$this->traderState[$world->getId()] = [$tick + 24000, 25];
+			return;
+		}
 	}
 
 	/** Whether a position lies inside a nether fortress of a BetterPMMP vanilla Nether. */

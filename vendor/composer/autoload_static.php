@@ -188,6 +188,7 @@ class ComposerStaticInit01c34b5648e4177bfa963b48f7da5526
         'pocketmine\\item\\VehicleBoatItem' => __DIR__ . '/../..' . '/src/item/VehicleBoatItem.php',
         'pocketmine\\world\\map\\MapManager' => __DIR__ . '/../..' . '/src/world/map/MapManager.php',
         'pocketmine\\item\\EmptyMapItem' => __DIR__ . '/../..' . '/src/item/EmptyMapItem.php',
+        'pocketmine\\entity\\trade\\Trader' => __DIR__ . '/../..' . '/src/entity/trade/Trader.php',
         'pocketmine\\block\\ExtraVanillaBlocks' => __DIR__ . '/../..' . '/src/block/ExtraVanillaBlocks.php',
         'pocketmine\\block\\ExtraVanillaBlockNames' => __DIR__ . '/../..' . '/src/block/ExtraVanillaBlockNames.php',
         'pocketmine\\entity\\BossBarTracker' => __DIR__ . '/../..' . '/src/entity/BossBarTracker.php',

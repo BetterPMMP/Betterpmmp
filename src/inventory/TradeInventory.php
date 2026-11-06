@@ -22,7 +22,7 @@ final class TradeInventory extends SimpleInventory implements TemporaryInventory
 	public const SLOT_INGREDIENT_1 = 0;
 	public const SLOT_INGREDIENT_2 = 1;
 
-	public function __construct(private Villager $villager){
+	public function __construct(private \pocketmine\entity\trade\Trader $villager){
 		parent::__construct(2);
 	}
 
@@ -36,7 +36,7 @@ final class TradeInventory extends SimpleInventory implements TemporaryInventory
 		$this->villager->setTradingPlayer(null);
 	}
 
-	public function getVillager() : Villager{
+	public function getVillager() : \pocketmine\entity\trade\Trader{
 		return $this->villager;
 	}
 

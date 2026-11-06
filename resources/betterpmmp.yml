@@ -23,6 +23,7 @@ mob-spawning:
   village-residents: true # Dorfbewohner in generierten Dörfern
   pillagers: true         # Plünderer an Außenposten und Patrouillen
   wardens: true           # Warden aus Sculk-Kreischern im Tiefen Dunkel
+  wandering-trader: true  # Fahrender Händler mit Händler-Lamas
   # Vanilla-Limits pro Spieler
   max-monsters-per-player: 70
   max-animals-per-player: 10
