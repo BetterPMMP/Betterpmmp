@@ -38,12 +38,19 @@ use function sqrt;
 use function mt_rand;
 
 class Zombie extends Mob{
+	use \pocketmine\entity\ai\CombatAI;
+
+	protected function initEntity(\pocketmine\nbt\tag\CompoundTag $nbt) : void{
+		$this->setMaxHealth(20);
+		$this->setMovementSpeed(0.23);
+		parent::initEntity($nbt);
+	}
 	protected function burnsInDaylight() : bool{ return true; }
 
 	public static function getNetworkTypeId() : string{ return EntityIds::ZOMBIE; }
 
 	protected function getInitialSizeInfo() : EntitySizeInfo{
-		return new EntitySizeInfo(1.9, 0.6); //TODO: eye height ??
+		return new EntitySizeInfo(1.9, 0.6);
 	}
 
 	public function getName() : string{
@@ -78,39 +85,18 @@ class Zombie extends Mob{
 	}
 
 	protected function tickWandering(int $tickDiff) : void{
-		$target = null;
-		$targetDistanceSquared = 14 * 14;
-		foreach($this->getWorld()->getPlayers() as $player){
-			if(!$player->isAlive() || $player->isCreative() || $player->isSpectator()){
-				continue;
-			}
-			$distanceSquared = $this->getPosition()->distanceSquared($player->getPosition());
-			if($distanceSquared < $targetDistanceSquared){
-				$target = $player;
-				$targetDistanceSquared = $distanceSquared;
-			}
-		}
-
-		if(!$target instanceof Player){
+		$target = $this->updateCombatTarget($tickDiff);
+		if($target === null){
 			parent::tickWandering($tickDiff);
 			return;
 		}
+		$this->tickMelee($target, $tickDiff);
+	}
 
-		$dx = $target->getPosition()->x - $this->getPosition()->x;
-		$dz = $target->getPosition()->z - $this->getPosition()->z;
-		$distanceSquared = ($dx * $dx) + ($dz * $dz);
-		if($distanceSquared <= 2.25 && $this->attackTime <= 0){
-			$this->attackTime = 20;
-			$target->attack(new EntityDamageByEntityEvent($this, $target, EntityDamageEvent::CAUSE_ENTITY_ATTACK, 3));
-			return;
-		}
-
-		if($distanceSquared > 0.0001 && $this->isOnGround()){
-			$distance = sqrt($distanceSquared);
-			$speed = min(0.25, max(0.02, $this->getMovementSpeed()));
-			$directionX = $dx / $distance;
-			$directionZ = $dz / $distance;
-			$this->moveGroundToward($directionX, $directionZ, $speed);
+	public function attack(EntityDamageEvent $source) : void{
+		parent::attack($source);
+		if($this->isAlive()){
+			$this->onCombatHurt($source);
 		}
 	}
 

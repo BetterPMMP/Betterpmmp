@@ -14,7 +14,9 @@ use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataFlags;
 use pocketmine\player\Player;
 use pocketmine\world\particle\HappyVillagerParticle;
 use pocketmine\world\particle\HeartParticle;
+use function atan2;
 use function max;
+use function rad2deg;
 use function min;
 use function mt_rand;
 
@@ -83,8 +85,74 @@ trait AnimalBreedingTrait{
 		$this->consumeOneBreedingItem($player, $held);
 		$this->setLoveTicks(self::LOVE_DURATION_TICKS);
 		$this->showLoveParticle();
-		$partner = $this->findReadyPartner();
-		if($partner !== null){ $this->breedWith($partner); }
+		return true;
+	}
+
+	private int $animalGoalScan = 0;
+	private ?\pocketmine\entity\Entity $animalGoalTarget = null;
+
+	/**
+	 * Vanilla BreedGoal and TemptGoal: animals in love walk to a partner and
+	 * breed when close; others follow a player holding their food.
+	 * Returns true when it moved the animal this tick.
+	 */
+	protected function tickAnimalGoals(int $tickDiff) : bool{
+		if(!$this instanceof Mob){
+			return false;
+		}
+		$this->animalGoalScan -= $tickDiff;
+		if($this->animalGoalScan <= 0){
+			$this->animalGoalScan = 10;
+			$this->animalGoalTarget = null;
+			if($this->loveTicks > 0 && !$this->baby && $this->breedCooldownTicks === 0){
+				$partner = $this->findReadyPartner();
+				if($partner instanceof \pocketmine\entity\Entity){
+					$this->animalGoalTarget = $partner;
+				}
+			}
+			if($this->animalGoalTarget === null){
+				$closest = 100.0;
+				foreach($this->getWorld()->getPlayers() as $player){
+					if(!$player->isAlive() || $player->isSpectator()){
+						continue;
+					}
+					$distance = $player->getPosition()->distanceSquared($this->getPosition());
+					if($distance < $closest && $this->isBreedingFood($player->getInventory()->getItemInHand())){
+						$closest = $distance;
+						$this->animalGoalTarget = $player;
+					}
+				}
+			}
+		}
+		$target = $this->animalGoalTarget;
+		if($target === null || !$target->isAlive() || $target->isClosed() || $target->getWorld() !== $this->getWorld()){
+			$this->animalGoalTarget = null;
+			return false;
+		}
+		$navigator = $this->getNavigator();
+		$distance = $target->getPosition()->distanceSquared($this->getPosition());
+		if($target instanceof BreedableAnimal){
+			if($distance < 9.0){
+				$navigator->stop();
+				if($target->getLoveTicks() > 0 && $this->loveTicks > 0){
+					$this->breedWith($target);
+				}
+				$this->animalGoalTarget = null;
+				return true;
+			}
+			$navigator->moveTo($target->getPosition(), $this->getWalkSpeed(), 1.5);
+		}else{
+			// TemptGoal: follow, but stop 2.5 blocks away and look at the player
+			if($distance < 6.25){
+				$navigator->stop();
+			}else{
+				$navigator->moveTo($target->getPosition(), $this->getWalkSpeed() * 1.2, 2.5);
+			}
+			$dx = $target->getPosition()->x - $this->getPosition()->x;
+			$dz = $target->getPosition()->z - $this->getPosition()->z;
+			$this->setRotation(rad2deg(atan2(-$dx, $dz)), 0.0);
+		}
+		$navigator->tick($tickDiff);
 		return true;
 	}
 

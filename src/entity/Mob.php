@@ -18,6 +18,7 @@ use pocketmine\math\Vector3;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\world\World;
 use function atan2;
+use function ceil;
 use function cos;
 use function deg2rad;
 use function max;
@@ -45,6 +46,8 @@ abstract class Mob extends Living{
 	private bool $naturalSpawned = false;
 	private int $despawnCheckTicks = 0;
 	private int $daylightCheckTicks = 0;
+	private ?\pocketmine\entity\ai\Navigator $navigator = null;
+	private ?Vector3 $panicFrom = null;
 
 	protected function initEntity(CompoundTag $nbt) : void{
 		parent::initEntity($nbt);
@@ -132,7 +135,8 @@ abstract class Mob extends Living{
 	}
 
 	private function shouldDespawnNaturally(int $tickDiff) : bool{
-		if($this->getNameTag() !== ""){
+		// vanilla: animals are persistent, only monsters, bats and fish despawn
+		if($this->getNameTag() !== "" || $this instanceof BreedableAnimal){
 			return false;
 		}
 
@@ -156,41 +160,105 @@ abstract class Mob extends Living{
 		return $nearestDistanceSquared > 32 * 32 && mt_rand(1, 400) === 1;
 	}
 
+	/** Path following helper shared by all walking mobs. */
+	public function getNavigator() : \pocketmine\entity\ai\Navigator{
+		return $this->navigator ??= new \pocketmine\entity\ai\Navigator($this, max(1, (int) ceil($this->size->getHeight())), $this->canSwimInNavigation());
+	}
+
+	protected function canSwimInNavigation() : bool{ return true; }
+
+	/** Vanilla speed attribute of this mob (falls back to the PocketMine attribute). */
+	protected function baseSpeedAttribute() : float{
+		$stats = \pocketmine\entity\ai\MobStats::get(static::getNetworkTypeId());
+		return $stats !== null ? $stats[1] : $this->getMovementSpeed();
+	}
+
+	/** Ground speed in blocks per tick. */
+	public function getWalkSpeed(bool $chasing = false) : float{
+		$factor = $chasing ? \pocketmine\entity\ai\MobStats::CHASE_FACTOR : \pocketmine\entity\ai\MobStats::WANDER_FACTOR;
+		return min(0.4, max(0.02, $this->baseSpeedAttribute() * $factor));
+	}
+
+	protected function isPanicking() : bool{
+		return $this->fleeTicks > 0;
+	}
+
 	protected function tickWandering(int $tickDiff) : void{
 		if($this->fleeTicks > 0){
 			$this->fleeTicks = max(0, $this->fleeTicks - $tickDiff);
-			$speed = min(0.32, max(0.04, $this->getMovementSpeed() * 1.6));
-			$motion = $this->getMotion();
-			if($this->isOnGround()){
-				if(!$this->moveGroundToward($this->fleeX, $this->fleeZ, $speed)){
-					// Keep escape intent when the safe-path probe rejects every direction
-					// (for example, on a narrow ledge or beside a liquid block).
+			$navigator = $this->getNavigator();
+			if(!$navigator->isMoving() || $this->panicFrom === null){
+				// vanilla PanicGoal: run to a random spot 5-10 blocks away from the attacker at 1.25x speed
+				$target = $this->findRandomStandPos(10, 4, $this->fleeX, $this->fleeZ);
+				if($target !== null){
+					$navigator->moveTo($target, $this->getWalkSpeed(true) * 1.25, 1.0);
+					$this->panicFrom = $this->getPosition()->asVector3();
+				}
+			}
+			if(!$navigator->tick($tickDiff)){
+				$this->panicFrom = null;
+				$speed = $this->getWalkSpeed(true) * 1.25;
+				if($this->isOnGround() && !$this->moveGroundToward($this->fleeX, $this->fleeZ, $speed)){
+					$motion = $this->getMotion();
 					$this->setMotion(new Vector3($this->fleeX * $speed, max(0.18, $motion->y), $this->fleeZ * $speed));
 				}
-			}else{
-				// Continue steering after knockback instead of waiting motionless for landing.
-				$this->setMotion(new Vector3($this->fleeX * $speed, $motion->y, $this->fleeZ * $speed));
+			}
+			if($this->fleeTicks === 0){
+				$navigator->stop();
+				$this->panicFrom = null;
 			}
 			return;
 		}
 
+		$navigator = $this->getNavigator();
+		if($navigator->isMoving()){
+			$navigator->tick($tickDiff);
+			return;
+		}
+
+		// vanilla RandomStrollGoal: on average one stroll every 120 ticks
 		$this->wanderTicks -= $tickDiff;
-		if($this->wanderTicks > 0 || !$this->isOnGround()){
+		if($this->wanderTicks > 0){
 			return;
 		}
-
-		$this->wanderTicks = mt_rand(20, 60);
-		if(mt_rand(0, 3) === 0){
-			$motion = $this->getMotion();
-			$this->setMotion(new Vector3(0, $motion->y, 0));
-			return;
+		$this->wanderTicks = mt_rand(60, 180);
+		$target = $this->findRandomStandPos(10, 7);
+		if($target !== null){
+			$navigator->moveTo($target, $this->getWalkSpeed(), 1.0);
 		}
+	}
 
-		$angle = mt_rand(0, 359);
-		$directionX = sin(deg2rad((float) $angle));
-		$directionZ = cos(deg2rad((float) $angle));
-		$speed = min(0.25, max(0.02, $this->getMovementSpeed()));
-		$this->moveGroundToward($directionX, $directionZ, $speed);
+	/**
+	 * A random spot the mob can stand on, within $range blocks horizontally and
+	 * $vertical blocks vertically. With a direction, only spots that lie in that
+	 * direction are chosen (used to run away).
+	 */
+	protected function findRandomStandPos(int $range, int $vertical, ?float $dirX = null, ?float $dirZ = null) : ?Vector3{
+		$world = $this->getWorld();
+		$pos = $this->getPosition();
+		$finder = new \pocketmine\entity\ai\PathFinder($world, max(1, (int) ceil($this->size->getHeight())), $this->canSwimInNavigation());
+		for($attempt = 0; $attempt < 10; ++$attempt){
+			$ox = mt_rand(-$range, $range);
+			$oz = mt_rand(-$range, $range);
+			if($dirX !== null && $dirZ !== null){
+				$ox = (int) round($dirX * mt_rand((int) ($range / 2), $range)) + mt_rand(-2, 2);
+				$oz = (int) round($dirZ * mt_rand((int) ($range / 2), $range)) + mt_rand(-2, 2);
+			}
+			$x = $pos->getFloorX() + $ox;
+			$z = $pos->getFloorZ() + $oz;
+			if(!$world->isChunkLoaded($x >> 4, $z >> 4)){
+				continue;
+			}
+			$baseY = $pos->getFloorY();
+			for($dy = $vertical; $dy >= -$vertical; --$dy){
+				$y = $baseY + $dy;
+				$cost = $finder->standCost($x, $y, $z);
+				if($cost >= 0 && $cost < 4){
+					return new Vector3($x + 0.5, $y, $z + 0.5);
+				}
+			}
+		}
+		return null;
 	}
 
 	/**
