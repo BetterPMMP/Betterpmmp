@@ -2087,6 +2087,7 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 			return false;
 		}
 		$this->getWorld()->addSound($soundPos, new EntityAttackSound());
+		\pocketmine\entity\PetTargets::record($this, $entity); //BetterPMMP: tamed wolves join the fight
 		if($smash && $heldItem instanceof \pocketmine\item\Mace){
 			$heldItem->finishSmash($this, $entity, $smashFall);
 		}
@@ -2780,6 +2781,9 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		}
 		if($this->shieldBlocking && !$source->isCancelled() && \pocketmine\item\Shield::tryBlock($this, $source)){
 			$source->cancel();
+		}
+		if(!$source->isCancelled() && $source instanceof \pocketmine\event\entity\EntityDamageByEntityEvent && ($damager = $source->getDamager()) !== null){
+			\pocketmine\entity\PetTargets::record($this, $damager);
 		}
 
 		parent::attack($source);
