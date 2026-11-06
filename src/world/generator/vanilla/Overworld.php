@@ -92,6 +92,7 @@ class Overworld extends Generator{
 	private int $terracotta;
 	private int $calcite;
 	private int $mud;
+	private ?int $powderSnow;
 
 	public function __construct(int $seed, string $preset){
 		parent::__construct($seed, $preset);
@@ -132,6 +133,7 @@ class Overworld extends Generator{
 		$this->terracotta = VanillaBlocks::HARDENED_CLAY()->getStateId();
 		$this->calcite = VanillaBlocks::CALCITE()->getStateId();
 		$this->mud = VanillaBlocks::MUD()->getStateId();
+		$this->powderSnow = \pocketmine\block\ExtraVanillaBlocks::get("minecraft:powder_snow")?->getStateId();
 
 		$this->buildTerracottaBands(new Random($seed ^ 0x7E44AC07));
 		$this->populator = new OverworldPopulator($seed, $this->climate);
@@ -139,6 +141,10 @@ class Overworld extends Generator{
 
 	public function getClimate() : OverworldClimate{
 		return $this->climate;
+	}
+
+	public function getStructureManager() : structure\StructureManager{
+		return $this->populator->getStructureManager();
 	}
 
 	/** Vanilla-like badlands strata: mostly plain terracotta with coloured bands. */
@@ -667,6 +673,10 @@ class Overworld extends Generator{
 			case B::GROVE:
 				return [$steep ? $this->snowBlock : $this->grass, $this->dirt, null, true];
 			case B::SNOWY_SLOPES:
+				//powder snow pockets like vanilla
+				if($noise > 0.45 && !$steep && $this->powderSnow !== null){
+					return [$this->powderSnow, $this->snowBlock, null, false];
+				}
 				return [$this->snowBlock, $steep ? $this->stone : $this->snowBlock, null, false];
 			case B::FROZEN_PEAKS:
 				return [$noise > 0.2 ? $this->packedIce : $this->snowBlock, $steep ? $this->packedIce : $this->snowBlock, null, false];

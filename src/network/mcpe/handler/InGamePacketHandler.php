@@ -1012,4 +1012,16 @@ class InGamePacketHandler extends PacketHandler{
 		$this->player->emote($packet->getEmoteId());
 		return true;
 	}
+
+	/**
+	 * BetterPMMP: the client reports packets it could not process before it
+	 * disconnects with an error screen. Log them so such problems can be found.
+	 */
+	public function handlePacketViolationWarning(\pocketmine\network\mcpe\protocol\PacketViolationWarningPacket $packet) : bool{
+		$this->session->getLogger()->warning(sprintf(
+			"Client reported a packet violation: packet 0x%x, type %d, severity %d: %s",
+			$packet->getPacketId(), $packet->getType(), $packet->getSeverity(), $packet->getMessage()
+		));
+		return true;
+	}
 }

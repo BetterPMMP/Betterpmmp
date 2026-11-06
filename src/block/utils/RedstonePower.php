@@ -86,6 +86,9 @@ final class RedstonePower{
 	}
 
 	public static function weak(Block $source, int $towards, bool $includeWire = true) : int{
+		if($source instanceof DirectionalRedstoneSource){
+			return $source->getWeakPowerTowards($towards);
+		}
 		if($source instanceof Redstone){
 			return 15;
 		}
@@ -116,6 +119,9 @@ final class RedstonePower{
 
 	/** Input into a solid block; includeWire=false asks for strong power only. */
 	public static function intoConductor(Block $source, int $towards, bool $includeWire = true) : int{
+		if($source instanceof DirectionalRedstoneSource){
+			return $source->getStrongPowerTowards($towards);
+		}
 		if($source instanceof Lever){
 			return $towards === Facing::opposite($source->getFacing()->getFacing()) && $source->isActivated() ? 15 : 0;
 		}

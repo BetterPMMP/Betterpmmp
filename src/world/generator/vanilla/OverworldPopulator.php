@@ -241,6 +241,28 @@ final class OverworldPopulator{
 
 	//---------------------------------------------------------------- caves
 
+	/**
+	 * Stalagmite (growing up from $y) or stalactite (hanging down from $y):
+	 * base, middle and frustum segments ending in a tip, like vanilla.
+	 */
+	private function dripstone(BlockWriter $w, \pocketmine\block\GenericBedrockBlock $pointed, int $x, int $y, int $z, int $length, bool $hanging) : void{
+		$dir = $hanging ? -1 : 1;
+		$available = 0;
+		while($available < $length && $w->get($x, $y + $dir * $available, $z) === $this->air){
+			++$available;
+		}
+		for($i = 0; $i < $available; ++$i){
+			$fromTip = $available - 1 - $i;
+			$thickness = match(true){
+				$fromTip === 0 => "tip",
+				$fromTip === 1 => "frustum",
+				$i === 0 && $available > 3 => "base",
+				default => "middle",
+			};
+			$w->setBlock($x, $y + $dir * $i, $z, $pointed->withProperties(["dripstone_thickness" => $thickness, "hanging" => $hanging]));
+		}
+	}
+
 	/** Position-based pseudo random number (independent of population order). */
 	private function posRand(int $x, int $y, int $z, int $salt) : int{
 		//all products stay below 2^63, so PHP never falls back to floats
@@ -272,6 +294,14 @@ final class OverworldPopulator{
 		$clay = VanillaBlocks::CLAY()->getStateId();
 		$sculk = VanillaBlocks::SCULK()->getStateId();
 		$smallDripleaf = VanillaBlocks::SMALL_DRIPLEAF();
+		$extra = fn(string $name) => \pocketmine\block\ExtraVanillaBlocks::get($name);
+		$moss = $extra("minecraft:moss_block")?->getStateId() ?? $rooted;
+		$mossCarpet = $extra("minecraft:moss_carpet");
+		$dripstoneBlock = $extra("minecraft:dripstone_block")?->getStateId();
+		$pointed = $extra("minecraft:pointed_dripstone");
+		$sensor = $extra("minecraft:sculk_sensor");
+		$shrieker = $extra("minecraft:sculk_shrieker");
+		$catalyst = $extra("minecraft:sculk_catalyst");
 
 		for($x = 0; $x < 16; ++$x){
 			for($z = 0; $z < 16; ++$z){
@@ -291,8 +321,11 @@ final class OverworldPopulator{
 						$biome = $hasCaveBiome ? $w->getBiome($wx, $y, $wz) : -1;
 						if($biome === B::LUSH_CAVES){
 							$roll = $this->posRand($wx, $y, $wz, 1) % 100;
-							if($roll < 45){
-								$w->set($wx, $y - 1, $wz, $roll < 8 ? $clay : $rooted);
+							if($roll < 70){
+								$w->set($wx, $y - 1, $wz, $roll < 8 ? $clay : $moss);
+								if($roll >= 18 && $roll < 40 && $mossCarpet !== null && $w->get($wx, $y, $wz) === $this->air){
+									$w->setBlock($wx, $y, $wz, $mossCarpet);
+								}
 								if($roll >= 8 && $roll < 14){
 									$w->setBlock($wx, $y, $wz, $this->posRand($wx, $y, $wz, 2) % 2 === 0 ? $azalea : $floweringAzalea);
 								}elseif($roll >= 14 && $roll < 18 && $w->get($wx, $y + 1, $wz) === $this->air){
@@ -303,6 +336,22 @@ final class OverworldPopulator{
 						}elseif($biome === B::DEEP_DARK){
 							if($this->posRand($wx, $y, $wz, 3) % 3 !== 0){
 								$w->set($wx, $y - 1, $wz, $sculk);
+								$roll = $this->posRand($wx, $y, $wz, 10) % 200;
+								if($roll < 3 && $sensor !== null){
+									$w->setBlock($wx, $y, $wz, $sensor);
+								}elseif($roll < 5 && $shrieker !== null){
+									$w->setBlock($wx, $y, $wz, $shrieker->withProperties(["can_summon" => true]));
+								}elseif($roll < 6 && $catalyst !== null){
+									$w->setBlock($wx, $y - 1, $wz, $catalyst);
+								}
+							}
+						}elseif($biome === B::DRIPSTONE_CAVES && $dripstoneBlock !== null && $pointed !== null){
+							$roll = $this->posRand($wx, $y, $wz, 11) % 100;
+							if($roll < 35){
+								$w->set($wx, $y - 1, $wz, $dripstoneBlock);
+							}
+							if($roll < 7){
+								$this->dripstone($w, $pointed, $wx, $y, $wz, 1 + $this->posRand($wx, $y, $wz, 12) % 4, false);
 							}
 						}
 					}elseif($solidNow && $prev === $this->air){
@@ -313,6 +362,11 @@ final class OverworldPopulator{
 							for($d = 1; $d <= $len && $w->get($wx, $y - $d, $wz) === $this->air; ++$d){
 								$w->setBlock($wx, $y - $d, $wz, (clone $vines)->setHead($d === $len)->setBerries($this->posRand($wx, $y - $d, $wz, 6) % 4 === 0));
 							}
+						}elseif($biome === B::DRIPSTONE_CAVES && $pointed !== null && $this->posRand($wx, $y, $wz, 13) % 10 === 0){
+							if($dripstoneBlock !== null){
+								$w->set($wx, $y, $wz, $dripstoneBlock);
+							}
+							$this->dripstone($w, $pointed, $wx, $y - 1, $wz, 1 + $this->posRand($wx, $y, $wz, 14) % 5, true);
 						}elseif($biome === B::DEEP_DARK && $this->posRand($wx, $y, $wz, 7) % 4 === 0){
 							$w->set($wx, $y, $wz, $sculk);
 						}elseif($this->posRand($wx, $y, $wz, 8) % 40 === 0){

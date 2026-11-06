@@ -15,6 +15,7 @@ use pocketmine\block\BlockTypeIds;
 use pocketmine\block\VanillaBlocks;
 use pocketmine\data\bedrock\BiomeIds;
 use pocketmine\entity\BoggedMob;
+use pocketmine\entity\PillagerMob;
 use pocketmine\entity\BatMob;
 use pocketmine\entity\BlazeMob;
 use pocketmine\entity\CamelMob;
@@ -70,6 +71,10 @@ use function max;
 final class NaturalMobSpawner{
 	/** @var array<string, true> */
 	private array $villageResidentChunks = [];
+	/** @var array<int, \pocketmine\world\generator\vanilla\structure\StructureManager|null> */
+	private array $structureManagers = [];
+	/** @var int[] world id => server tick of the next patrol attempt */
+	private array $nextPatrolTick = [];
 
 	public function tick(World $world) : void{
 		$eligiblePlayers = [];
@@ -83,6 +88,7 @@ final class NaturalMobSpawner{
 			return;
 		}
 		$this->ensureVillageResidentsNearPlayers($world, $eligiblePlayers);
+		$this->tickPillagers($world, $eligiblePlayers);
 
 		$mobCount = 0;
 		foreach($world->getEntities() as $entity){
@@ -398,6 +404,110 @@ final class NaturalMobSpawner{
 					}
 					return;
 				}
+			}
+		}
+	}
+
+	/**
+	 * Structure locations of a world made with the BetterPMMP vanilla generator
+	 * (the same deterministic layout the generator used).
+	 */
+	private function structuresFor(World $world) : ?\pocketmine\world\generator\vanilla\structure\StructureManager{
+		$id = $world->getId();
+		if(!array_key_exists($id, $this->structureManagers)){
+			$manager = null;
+			try{
+				if($world->getDimensionId() === DimensionIds::OVERWORLD && strtolower($world->getProvider()->getWorldData()->getGenerator()) === "vanilla"){
+					$manager = (new \pocketmine\world\generator\vanilla\Overworld($world->getSeed(), ""))->getStructureManager();
+				}
+			}catch(\Throwable){
+				$manager = null;
+			}
+			$this->structureManagers[$id] = $manager;
+		}
+		return $this->structureManagers[$id];
+	}
+
+	/** Ground position for a mob in a column: solid floor with two free blocks above. */
+	private function surfaceSpawnPoint(World $world, int $x, int $z) : ?Location{
+		if(!$world->isChunkLoaded($x >> 4, $z >> 4)){
+			return null;
+		}
+		$y = $world->getHighestBlockAt($x, $z);
+		if($y === null || $y + 2 >= $world->getMaxY()){
+			return null;
+		}
+		$floor = $world->getBlockAt($x, $y, $z);
+		if(!$floor->isSolid() || $floor->getTypeId() === BlockTypeIds::WATER || $floor->getTypeId() === BlockTypeIds::LAVA || $floor instanceof \pocketmine\block\Leaves){
+			return null;
+		}
+		if($world->getBlockAt($x, $y + 1, $z)->isSolid() || $world->getBlockAt($x, $y + 2, $z)->isSolid()){
+			return null;
+		}
+		return new Location($x + 0.5, $y + 1, $z + 0.5, $world, (float) mt_rand(0, 359), 0.0);
+	}
+
+	/**
+	 * Pillagers, like vanilla: they keep spawning inside pillager outposts and,
+	 * from the fifth day on, patrols of 2-5 pillagers roam near players.
+	 * @param Player[] $players
+	 */
+	private function tickPillagers(World $world, array $players) : void{
+		if($world->getDimensionId() !== DimensionIds::OVERWORLD || count($players) === 0){
+			return;
+		}
+		$player = $players[mt_rand(0, count($players) - 1)];
+		$center = $player->getPosition();
+
+		//outposts
+		$structures = $this->structuresFor($world);
+		if($structures !== null && mt_rand(0, 3) === 0){
+			$x = $center->getFloorX() + mt_rand(-48, 48);
+			$z = $center->getFloorZ() + mt_rand(-48, 48);
+			if($world->isChunkLoaded($x >> 4, $z >> 4)){
+				foreach($structures->startsIn($x >> 4, $z >> 4) as $start){
+					if($start->type !== "pillager_outpost" || !$start->containsColumn($x, $z)){
+						continue;
+					}
+					$cx = ($start->minX + $start->maxX) / 2;
+					$cz = ($start->minZ + $start->maxZ) / 2;
+					$nearby = 0;
+					foreach($world->getEntities() as $entity){
+						if($entity instanceof PillagerMob && ($entity->getPosition()->x - $cx) ** 2 + ($entity->getPosition()->z - $cz) ** 2 < 48 * 48){
+							++$nearby;
+						}
+					}
+					if($nearby < 6 && ($location = $this->surfaceSpawnPoint($world, $x, $z)) !== null){
+						$this->spawnNaturalMob(PillagerMob::class, $location);
+					}
+					break;
+				}
+			}
+		}
+
+		//patrols
+		$id = $world->getId();
+		$tick = $world->getServer()->getTick();
+		$this->nextPatrolTick[$id] ??= $tick + 12000 + mt_rand(0, 1200);
+		if($tick < $this->nextPatrolTick[$id]){
+			return;
+		}
+		$this->nextPatrolTick[$id] = $tick + 12000 + mt_rand(0, 1200);
+		if($world->getTime() < 5 * World::TIME_FULL || mt_rand(0, 4) !== 0){
+			return; //vanilla: no patrols before day 5, then 20% per attempt
+		}
+		$angle = mt_rand(0, 359) / 180 * M_PI;
+		$distance = mt_rand(24, 48);
+		$x = (int) ($center->x + cos($angle) * $distance);
+		$z = (int) ($center->z + sin($angle) * $distance);
+		if($world->getBiomeId($x, $center->getFloorY(), $z) === \pocketmine\data\bedrock\BiomeIds::MUSHROOM_ISLAND){
+			return;
+		}
+		$size = 2 + mt_rand(0, 3);
+		for($i = 0; $i < $size; ++$i){
+			$location = $this->surfaceSpawnPoint($world, $x + mt_rand(-3, 3), $z + mt_rand(-3, 3));
+			if($location !== null){
+				$this->spawnNaturalMob(PillagerMob::class, $location);
 			}
 		}
 	}

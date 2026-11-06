@@ -59,6 +59,15 @@ final class BlockStateReader{
 		$this->unusedStates = $this->data->getStates();
 	}
 
+	/**
+	 * BetterPMMP: returns the complete state data and marks every property as
+	 * read (used by the generic handler for block types without a core class).
+	 */
+	public function readAllStates() : BlockStateData{
+		$this->unusedStates = [];
+		return $this->data;
+	}
+
 	public function missingOrWrongTypeException(string $name, ?Tag $tag) : BlockStateDeserializeException{
 		return new BlockStateDeserializeException("Property \"$name\" " . ($tag !== null ? "has unexpected type " . get_class($tag) : "is missing"));
 	}

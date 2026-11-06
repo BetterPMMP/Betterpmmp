@@ -325,6 +325,7 @@ class InventoryManager{
 			$inventory instanceof CraftingTableInventory => UIInventorySlotOffset::CRAFTING3X3_INPUT,
 			$inventory instanceof CartographyTableInventory => UIInventorySlotOffset::CARTOGRAPHY_TABLE,
 			$inventory instanceof SmithingTableInventory => UIInventorySlotOffset::SMITHING_TABLE,
+			$inventory instanceof \pocketmine\inventory\TradeInventory => UIInventorySlotOffset::TRADE2_INGREDIENT,
 			default => null,
 		};
 	}
@@ -337,6 +338,14 @@ class InventoryManager{
 				$windowId = $this->addComplexDynamic($slotMap, $inventory);
 			}else{
 				$windowId = $this->addDynamic($inventory);
+			}
+
+			//BetterPMMP: villager trading opens with UpdateTradePacket instead of ContainerOpen
+			if($inventory instanceof \pocketmine\inventory\TradeInventory){
+				$this->session->sendDataPacket($this->createTradePacket($windowId, $inventory));
+				$this->currentWindowType = WindowTypes::TRADING;
+				$this->syncContents($inventory);
+				return;
 			}
 
 			foreach($this->containerOpenCallbacks as $callback){
@@ -357,6 +366,41 @@ class InventoryManager{
 			}
 			throw new \LogicException("Unsupported inventory type");
 		});
+	}
+
+	private function createTradePacket(int $windowId, \pocketmine\inventory\TradeInventory $inventory) : \pocketmine\network\mcpe\protocol\UpdateTradePacket{
+		$villager = $inventory->getVillager();
+		$recipes = new \pocketmine\nbt\tag\ListTag();
+		foreach($villager->getOffers() as $index => $offer){
+			$recipes->push($offer->toNbt($index + 1));
+		}
+		$tiers = new \pocketmine\nbt\tag\ListTag();
+		foreach(\pocketmine\entity\trade\VillagerTrades::LEVEL_XP as $tier => $xp){
+			$tiers->push(\pocketmine\nbt\tag\CompoundTag::create()->setInt((string) $tier, $xp));
+		}
+		$root = \pocketmine\nbt\tag\CompoundTag::create()
+			->setTag("Recipes", $recipes)
+			->setTag("TierExpRequirements", $tiers);
+		return \pocketmine\network\mcpe\protocol\UpdateTradePacket::create(
+			$windowId,
+			WindowTypes::TRADING,
+			0,
+			$villager->getLevel(),
+			$villager->getId(),
+			$this->player->getId(),
+			$villager->getName(),
+			true,
+			false,
+			new \pocketmine\network\mcpe\protocol\types\CacheableNbt($root)
+		);
+	}
+
+	/** Re-sends the offers of an open trade window (after a trade, level up or restock). */
+	public function syncTradeWindow(\pocketmine\inventory\TradeInventory $inventory) : void{
+		$windowId = $this->getWindowId($inventory);
+		if($windowId !== null){
+			$this->session->sendDataPacket($this->createTradePacket($windowId, $inventory));
+		}
 	}
 
 	/** @phpstan-return ObjectSet<ContainerOpenClosure> */
@@ -383,6 +427,7 @@ class InventoryManager{
 				$inv instanceof BrewingStandInventory => WindowTypes::BREWING_STAND,
 				$inv instanceof AnvilInventory => WindowTypes::ANVIL,
 				$inv instanceof HopperInventory => WindowTypes::HOPPER,
+				$inv instanceof \pocketmine\block\inventory\DispenserInventory => $inv->isDropper() ? WindowTypes::DROPPER : WindowTypes::DISPENSER,
 				$inv instanceof CraftingTableInventory => WindowTypes::WORKBENCH,
 				$inv instanceof StonecutterInventory => WindowTypes::STONECUTTER,
 				$inv instanceof CartographyTableInventory => WindowTypes::CARTOGRAPHY,
