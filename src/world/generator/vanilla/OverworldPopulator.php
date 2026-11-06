@@ -243,9 +243,12 @@ final class OverworldPopulator{
 
 	/** Position-based pseudo random number (independent of population order). */
 	private function posRand(int $x, int $y, int $z, int $salt) : int{
-		$h = ($x * 0x1F1F1F1F) ^ ($y * 0x2E3D4C5B) ^ ($z * 0x3B5A7C9D) ^ ($this->seed * 31) ^ ($salt * 0x6A09E667);
+		//all products stay below 2^63, so PHP never falls back to floats
+		$h = (($x & 0xffffffff) * 0x1F1F1F1F) ^ ((($y + 2048) & 0xffff) * 0x2E3D4C5B) ^ (($z & 0xffffffff) * 0x3B5A7C9D)
+			^ (($this->seed & 0xffffffff) * 31) ^ (($salt & 0xffff) * 0x6A09E667);
+		$h &= 0xffffffff;
 		$h ^= $h >> 13;
-		$h = ($h * 0x5BD1E995) & 0x7fffffff;
+		$h = ($h * 0x5BD1E995) & 0xffffffff;
 		$h ^= $h >> 15;
 		return $h & 0x7fffffff;
 	}
