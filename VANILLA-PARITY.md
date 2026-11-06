@@ -43,7 +43,8 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 | Vorhandene Mobs | 🟡 | Huhn, Kuh, Schwein, Schaf, Tintenfisch, Zombie, Dorfbewohner, Kupfergolem |
 | Mob-KI (Pfadfindung, Ziele) | 🟡 | einfache KI, kein Vanilla-Goal-System |
 | Natürliches Spawning nach Licht/Biom/Mob-Cap | ❌/🟡 | |
-| Übrige ~70 Mobs, Bosse (Wither, Wächter …) | ❌ | |
+| Wither | ✅/🟡 | **4.6**: Beschwörung, Aufladen + Explosion, Bossbar, 600 HP, Fernangriff (ohne Projektil) |
+| Übrige Mobs, Wächter-Boss | ❌/🟡 | |
 | Handel, Dorf-Mechaniken | ❌ | |
 
 ## Survival

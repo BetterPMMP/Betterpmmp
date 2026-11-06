@@ -140,6 +140,7 @@ class ComposerStaticInit01c34b5648e4177bfa963b48f7da5526
     );
 
     public static $classMap = array (
+        'pocketmine\\entity\\BossBarTracker' => __DIR__ . '/../..' . '/src/entity/BossBarTracker.php',
         'pocketmine\\world\\generator\\vanilla\\VanillaEnd' => __DIR__ . '/../..' . '/src/world/generator/vanilla/VanillaEnd.php',
         'pocketmine\\world\\generator\\vanilla\\structure\\EndCity' => __DIR__ . '/../..' . '/src/world/generator/vanilla/structure/EndCity.php',
         'pocketmine\\world\\generator\\vanilla\\structure\\Bastion' => __DIR__ . '/../..' . '/src/world/generator/vanilla/structure/Bastion.php',

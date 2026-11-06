@@ -161,3 +161,16 @@ Generator-Thread mitgeschickt).
 - Nicht seedgleich mit Bedrock; die Drachensäulen sind in jeder Welt gleich angeordnet.
 - Getestet im Testaufbau ohne PocketMine-PHP-Erweiterungen (768 Chunks in 3
   Dimensionen fehlerfrei, ca. 15–20 ms je Chunk). Kein Test mit einem echten Client.
+
+## Bosse und Bossbar (4.6)
+
+- **Wither** wie in Vanilla beschwörbar: T aus 4 Seelensand/Seelenerde, darauf 3
+  Witherskelett-Schädel (die unteren Ecken müssen frei sein). Der Wither lädt sich
+  ca. 11 Sekunden auf (unverwundbar, Leben füllt sich), explodiert dann (Stärke 7)
+  und kämpft: 600 Lebenspunkte wie Bedrock, heilt 1 Leben pro Sekunde, Fernangriff
+  alle 2 Sekunden mit 8 Schaden und Wither-Effekt, richtige Größe (3,5 Blöcke).
+- **Bossbar** für den Wither (lila, Spieler im Umkreis von 64 Blöcken), zusätzlich
+  zur bestehenden Enderdrachen-Bossbar. Wiederverwendbare `BossBarTracker`-Klasse.
+- Witherskelette lassen mit 2,5 % ihren Schädel fallen.
+- Grenze: Der Fernangriff ist ein Sofort-Treffer, keine fliegenden Wither-Schädel
+  (Projektil-Entity fehlt im Kern).
