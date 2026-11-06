@@ -482,7 +482,8 @@ final class VillageStructure extends Structure{
 				$t->set(1, 2, $back - 1, VanillaBlocks::IRON_BARS());
 				$t->set($w - 2, 1, $back, VanillaBlocks::FURNACE()->setFacing($t->facing(Facing::NORTH)));
 				$t->set($w - 3, 1, $back, VanillaBlocks::FURNACE()->setFacing($t->facing(Facing::NORTH)));
-				$t->set($w - 2, 1, 2, VanillaBlocks::ANVIL());
+				$grindstone = \pocketmine\block\ExtraVanillaBlocks::get("minecraft:grindstone");
+				$t->set($w - 2, 1, 2, $grindstone ?? VanillaBlocks::ANVIL()); //weaponsmith job site
 				$chest($w - 2, 1, "village_weaponsmith");
 				break;
 			case "toolsmith":
@@ -565,6 +566,9 @@ final class VillageStructure extends Structure{
 					$t->set($lx, 0, $lz, $p["frame"]);
 				}elseif($lx === intdiv($w, 2)){
 					$t->set($lx, 0, $lz, VanillaBlocks::WATER());
+				}elseif($lx === 1 && $lz === 1 && ($composter = \pocketmine\block\ExtraVanillaBlocks::get("minecraft:composter")) !== null){
+					$t->set($lx, 0, $lz, VanillaBlocks::DIRT());
+					$t->set($lx, 1, $lz, $composter); //farmer job site
 				}else{
 					$t->set($lx, 0, $lz, VanillaBlocks::FARMLAND()->setWetness(7));
 					$t->set($lx, 1, $lz, (clone $crop)->setAge($r->nextBoundedInt(8)));

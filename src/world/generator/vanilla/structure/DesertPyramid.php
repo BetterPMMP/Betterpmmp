@@ -90,6 +90,13 @@ final class DesertPyramid extends SimpleStructure{
 			foreach([[8, 8], [8, 12], [12, 8], [12, 12]] as [$cx, $cz]){
 				$t->set($cx, -12, $cz, $chiseled);
 			}
+			//suspicious sand (archaeology) hidden in the sand around the hall, like 1.20+
+			$suspicious = \pocketmine\block\ExtraVanillaBlocks::get("minecraft:suspicious_sand");
+			if($suspicious !== null){
+				for($i = 0; $i < 4; ++$i){
+					$t->set(5 + $r->nextBoundedInt(11), -1, 5 + $r->nextBoundedInt(11), $suspicious);
+				}
+			}
 		}, $random->nextInt()));
 		return true;
 	}

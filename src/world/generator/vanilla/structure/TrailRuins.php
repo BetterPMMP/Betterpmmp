@@ -51,7 +51,11 @@ final class TrailRuins extends SimpleStructure{
 								$b = $r->nextBoundedInt(4) === 0 ? VanillaBlocks::MUD_BRICKS() : ($r->nextBoundedInt(3) === 0 ? VanillaBlocks::HARDENED_CLAY() : VanillaBlocks::STAINED_CLAY()->setColor($color));
 								$c->set($rx + $dx, $top + $dy, $rz + $dz, $b);
 							}else{
-								$c->set($rx + $dx, $top + $dy, $rz + $dz, $dy === -6 && $r->nextBoundedInt(3) === 0 ? VanillaBlocks::STAINED_CLAY()->setColor($color) : $gravel);
+								$fill = $dy === -6 && $r->nextBoundedInt(3) === 0 ? VanillaBlocks::STAINED_CLAY()->setColor($color) : $gravel;
+								if($fill === $gravel && $r->nextBoundedInt(12) === 0 && ($suspicious = \pocketmine\block\ExtraVanillaBlocks::get("minecraft:suspicious_gravel")) !== null){
+									$fill = $suspicious;
+								}
+								$c->set($rx + $dx, $top + $dy, $rz + $dz, $fill);
 							}
 						}
 					}

@@ -58,6 +58,7 @@ final class GlobalBlockStateHandlers{
 			$serializer = new BlockObjectToStateSerializer();
 			self::$registrar = new BlockSerializerDeserializerRegistrar($deserializer, $serializer);
 			VanillaBlockMappings::init(self::$registrar);
+			\pocketmine\block\ExtraVanillaBlocks::ensureMapped();
 		}
 		return self::$registrar;
 	}

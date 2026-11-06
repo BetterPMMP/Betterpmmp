@@ -91,6 +91,10 @@ class RuntimeBlockStateRegistry{
 		foreach(VanillaBlocks::getAll() as $block){
 			$this->register($block);
 		}
+		//BetterPMMP: Bedrock block types without a dedicated core class
+		foreach(ExtraVanillaBlocks::getAll() as $block){
+			$this->register($block);
+		}
 	}
 
 	/**

@@ -295,7 +295,7 @@ class ItemStackRequestExecutor{
 	 * @throws ItemStackRequestProcessException
 	 */
 	private function assertDoingCrafting() : void{
-		if(!$this->specialTransaction instanceof CraftingTransaction && !$this->specialTransaction instanceof EnchantingTransaction){
+		if(!$this->specialTransaction instanceof CraftingTransaction && !$this->specialTransaction instanceof EnchantingTransaction && !$this->specialTransaction instanceof \pocketmine\inventory\transaction\TradingTransaction){
 			if($this->specialTransaction === null){
 				throw new ItemStackRequestProcessException("Expected CraftRecipe or CraftRecipeAuto action to precede this action");
 			}else{
@@ -340,6 +340,23 @@ class ItemStackRequestExecutor{
 			}
 
 			$this->setNextCreatedItem($item, true);
+		}elseif(($action instanceof CraftRecipeStackRequestAction || $action instanceof CraftRecipeAutoStackRequestAction) && ($tradeWindow = $this->player->getCurrentWindow()) instanceof \pocketmine\inventory\TradeInventory){
+			//BetterPMMP: villager trade, the recipe id is the offer's network id
+			$offer = $tradeWindow->getOfferByNetId($action->getRecipeId());
+			if($offer === null){
+				throw new ItemStackRequestProcessException("No such trade offer: " . $action->getRecipeId());
+			}
+			if($this->specialTransaction !== null){
+				throw new ItemStackRequestProcessException("Another special transaction is already in progress");
+			}
+			$times = $action->getRepetitions();
+			if($times < 1 || !$offer->canTrade($times)){
+				throw new ItemStackRequestProcessException("Trade offer is out of stock");
+			}
+			$this->specialTransaction = new \pocketmine\inventory\transaction\TradingTransaction($this->player, $tradeWindow, $offer, $times);
+			$result = $offer->getSell();
+			$result->setCount($result->getCount() * $times);
+			$this->setNextCreatedItem($result);
 		}elseif($action instanceof CraftRecipeStackRequestAction){
 			$window = $this->player->getCurrentWindow();
 			if($window instanceof EnchantInventory){

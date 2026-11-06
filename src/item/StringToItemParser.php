@@ -40,6 +40,7 @@ use pocketmine\utils\SingletonTrait;
 use pocketmine\utils\StringToTParser;
 use function array_keys;
 use function count;
+use function str_replace;
 use function strtolower;
 
 /**
@@ -55,6 +56,16 @@ final class StringToItemParser extends StringToTParser{
 
 		self::registerDynamicBlocks($result);
 		self::registerBlocks($result);
+		//BetterPMMP: Bedrock blocks without a dedicated core class
+		foreach(\pocketmine\block\ExtraVanillaBlocks::getAll() as $bedrockName => $block){
+			if(!$block->hasItemForm()){
+				continue;
+			}
+			$alias = str_replace("minecraft:", "", $bedrockName);
+			if($result->parse($alias) === null){
+				$result->registerBlock($alias, fn() => clone $block);
+			}
+		}
 		self::registerDynamicItems($result);
 		self::registerItems($result);
 		foreach(VanillaMobTypes::additional() as $definition){

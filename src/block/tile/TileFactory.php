@@ -55,6 +55,9 @@ final class TileFactory{
 		$this->register(Beacon::class, ["Beacon", "minecraft:beacon"]);
 		$this->register(Bed::class, ["Bed", "minecraft:bed"]);
 		$this->register(Bell::class, ["Bell", "minecraft:bell"]);
+		$this->register(Dispenser::class, ["Dispenser", "minecraft:dispenser"]);
+		$this->register(Dropper::class, ["Dropper", "minecraft:dropper"]);
+		$this->register(PistonArm::class, ["PistonArm", "minecraft:piston_arm"]);
 		$this->register(BlastFurnace::class, ["BlastFurnace", "minecraft:blast_furnace"]);
 		$this->register(BrewingStand::class, ["BrewingStand", "minecraft:brewing_stand"]);
 		$this->register(Campfire::class, ["Campfire", "minecraft:campfire"]);
@@ -86,14 +89,11 @@ final class TileFactory{
 		//TODO: ChemistryTable
 		//TODO: CommandBlock
 		//TODO: Conduit
-		//TODO: Dispenser
-		//TODO: Dropper
 		//TODO: EndGateway
 		//TODO: EndPortal
 		//TODO: JigsawBlock
 		//TODO: MovingBlock
 		//TODO: NetherReactor
-		//TODO: PistonArm
 		//TODO: StructureBlock
 	}
 

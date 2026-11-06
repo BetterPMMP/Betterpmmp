@@ -133,3 +133,21 @@ Grenzen: Die Flankenzustände von Türen/Notenblöcken liegen im Speicher und ge
 Neustart verloren (Bedrock-Blockzustände haben dafür kein Bit). Nach einem Neustart
 gilt ein bereits versorgter Verbraucher beim nächsten Update als „neu versorgt“.
 Kein Live-Test mit Client; nur statische Analyse (PHPStan Level 6) der geänderten Dateien.
+
+## 4.7 — Kolben, Beobachter, Werfer/Spender, Zielblock
+
+- **Kolben / Klebekolben** (`VanillaPiston`, Tile `PistonArm`): Bedrock-Verhalten ohne
+  Quasi-Konnektivität. Versorgung von jeder Seite außer vorne. Schiebt bis zu 12 Blöcke,
+  Schleim- und Honigblöcke nehmen Nachbarn mit (aber nicht gegenseitig). Unbeweglich:
+  Obsidian, Grundgestein, Endportalrahmen, Tiefenschiefer (verstärkt), ausgefahrene Kolben
+  und Blöcke mit Block-Entity (Truhen, Öfen …). Nicht feste Blöcke (Fackeln, Staub, Blumen)
+  werden zerstört und droppen. Klebekolben ziehen beim Einfahren zurück. Bewegung dauert
+  2 Spielticks; der Kopf wird über das `PistonArm`-Tile dargestellt.
+- **Beobachter** (`VanillaObserver`): erkennt jede Zustandsänderung des beobachteten Blocks,
+  feuert nach 2 Spielticks einen 2-Tick-Impuls nach hinten (stark).
+- **Werfer / Spender** (`VanillaDispenser`, Tiles `Dispenser`/`Dropper`): steigende Flanke,
+  4 Spielticks Verzögerung, zufälliger Slot. Inventarfenster wie in Vanilla.
+- **Zielblock** (`VanillaTarget`): Signalstärke nach Abstand des Treffers zur Mitte.
+
+Getestet mit einer Testwelt, die die echte Block-Logik und die Update-Reihenfolge von
+`World` nachbildet: 13 Grundschaltungen und 15 Kolben/Beobachter/Werfer-Fälle.
