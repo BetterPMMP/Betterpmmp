@@ -229,6 +229,7 @@ abstract class Projectile extends Entity{
 			$ev->call();
 			$this->onHit($ev);
 			$specificHitFunc();
+			\pocketmine\world\SculkVibrations::emit($this->getWorld(), $rayTraceResult->getHitVector()); //BetterPMMP: landing projectiles vibrate
 
 			$this->isCollided = $this->onGround = true;
 			if($motionBeforeOnHit->equals($this->motion)){

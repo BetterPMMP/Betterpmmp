@@ -619,6 +619,20 @@ class InGamePacketHandler extends PacketHandler{
 		return $result ? $executor->getItemStackResponseBuilder() : null;
 	}
 
+	/** BetterPMMP: clicking an empty crafter slot disables / enables it. */
+	public function handlePlayerToggleCrafterSlotRequest(\pocketmine\network\mcpe\protocol\PlayerToggleCrafterSlotRequestPacket $packet) : bool{
+		$p = $packet->getPosition();
+		$pos = new Vector3($p->getX(), $p->getY(), $p->getZ());
+		if($this->player->getPosition()->distanceSquared($pos) > 64){
+			return true;
+		}
+		$tile = $this->player->getWorld()->getTile($pos);
+		if($tile instanceof \pocketmine\block\tile\Crafter){
+			$tile->toggleSlot($packet->getSlot(), $packet->isDisabled());
+		}
+		return true;
+	}
+
 	public function handleItemStackRequest(ItemStackRequestPacket $packet) : bool{
 		$responses = [];
 		if(count($packet->getRequests()) > 80){

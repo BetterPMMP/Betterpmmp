@@ -57,6 +57,7 @@ final class TileFactory{
 		$this->register(Bell::class, ["Bell", "minecraft:bell"]);
 		$this->register(Dispenser::class, ["Dispenser", "minecraft:dispenser"]);
 		$this->register(Dropper::class, ["Dropper", "minecraft:dropper"]);
+		$this->register(Crafter::class, ["Crafter", "minecraft:crafter"]);
 		$this->register(PistonArm::class, ["PistonArm", "minecraft:piston_arm"]);
 		$this->register(BlastFurnace::class, ["BlastFurnace", "minecraft:blast_furnace"]);
 		$this->register(BrewingStand::class, ["BrewingStand", "minecraft:brewing_stand"]);
