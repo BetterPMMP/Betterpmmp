@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.15-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.16-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -37,6 +37,13 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 | End | ✅/🟡 | **4.6**: Vanilla-Inselform, Säulen, Außeninseln, Chorus, End-Städte und -Schiffe (ohne Shulker) |
 | Drachenkampf | ✅/🟡 | **neu in 4.9**: Kampf-Manager wie Vanilla (Zustand im Weltordner), 10 Kristalle einmalig, genau ein Drache, Bossbar für alle im Kampfgebiet, Flugphasen (Kreisen, Sturzflug, Feuerball-Wolke, Landung auf dem Portal mit Atem-Angriff, Abheben), Heilung durch Kristalle, Flügel-Rückstoß, 10 s Todesanimation mit 12000/500 EP, Ausgangsportal, Drachenei beim ersten Sieg, End-Gateways zu den Außeninseln (mit Rück-Gateway) |
 | Portale (Nether/End) | ✅/🟡 | Nether/End werden beim Serverstart angelegt; Ankunft im End auf der Obsidian-Plattform; **4.9/5.0**: Enderauge fliegt direkt zum Portalraum der nächsten Festung (jede Festung hat ein vollständiges Portal, geprüft) |
+
+## Happy Ghast (1.21.90)
+
+| System | Stand |
+|---|---|
+| Ausgetrockneter Ghast | ✅ **neu in 5.16**: quillt in 4 Stufen (~20 min) auf, wenn Wasser angrenzt (Wasserbindung gibt es im Kern noch nicht), trocknet sonst wieder aus, wird zum Ghastling |
+| Happy Ghast | ✅ **neu in 5.16**: Ghastling wächst in 20 min heran (Schneebälle: −10 %, heilen), Geschirr in allen Farben anlegen (sichtbar), bis zu 4 Spieler reiten oben, der erste fliegt in Blickrichtung (Springen: hoch), Schere nimmt das Geschirr ab, folgt Spielern mit Schneebällen, anleinbar, kein Fallschaden, greift nie an |
 
 ## Blassgarten (1.21.4)
 

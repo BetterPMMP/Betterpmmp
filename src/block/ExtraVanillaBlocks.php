@@ -70,6 +70,7 @@ final class ExtraVanillaBlocks{
 		"minecraft:trial_spawner" => [VanillaTrialSpawner::class, null],
 		"minecraft:vault" => [VanillaVault::class, null],
 		"minecraft:creaking_heart" => [VanillaCreakingHeart::class, null],
+		"minecraft:dried_ghast" => [VanillaDriedGhast::class, null],
 		"minecraft:open_eyeblossom" => [VanillaEyeblossom::class, null],
 		"minecraft:closed_eyeblossom" => [VanillaEyeblossom::class, null],
 	];

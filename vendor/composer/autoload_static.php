@@ -223,6 +223,7 @@ class ComposerStaticInit01c34b5648e4177bfa963b48f7da5526
         'pocketmine\\entity\\RaiderTrait' => __DIR__ . '/../..' . '/src/entity/RaiderTrait.php',
         'pocketmine\\block\\VanillaCreakingHeart' => __DIR__ . '/../..' . '/src/block/VanillaCreakingHeart.php',
         'pocketmine\\block\\VanillaEyeblossom' => __DIR__ . '/../..' . '/src/block/VanillaEyeblossom.php',
+        'pocketmine\\block\\VanillaDriedGhast' => __DIR__ . '/../..' . '/src/block/VanillaDriedGhast.php',
         'pocketmine\\block\\ExtraVanillaBlocks' => __DIR__ . '/../..' . '/src/block/ExtraVanillaBlocks.php',
         'pocketmine\\block\\ExtraVanillaBlockNames' => __DIR__ . '/../..' . '/src/block/ExtraVanillaBlockNames.php',
         'pocketmine\\entity\\BossBarTracker' => __DIR__ . '/../..' . '/src/entity/BossBarTracker.php',

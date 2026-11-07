@@ -1012,6 +1012,19 @@ abstract class Living extends Entity{
 		$this->setRotation($yaw, $pitch);
 	}
 
+	/** BetterPMMP: the body equipment slot (harness of a happy ghast, wolf/horse armor), air by default. */
+	public function getBodyArmor() : Item{
+		return \pocketmine\item\VanillaItems::AIR();
+	}
+
+	/** Sends the armor and body slot to all viewers again. */
+	public function broadcastEquipment() : void{
+		NetworkBroadcastUtils::broadcastEntityEvent(
+			$this->getViewers(),
+			fn(EntityEventBroadcaster $broadcaster, array $recipients) => $broadcaster->onMobArmorChange($recipients, $this)
+		);
+	}
+
 	protected function sendSpawnPacket(Player $player) : void{
 		parent::sendSpawnPacket($player);
 

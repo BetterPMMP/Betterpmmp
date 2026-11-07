@@ -1031,12 +1031,147 @@ class GuardianMob extends GenericHostileSwimmingMob{
 	protected const WIDTH = 0.6;
 }
 
-class HappyGhastMob extends GenericFlyingAnimalMob{
+/**
+ * BetterPMMP: vanilla happy ghast (1.21.90). A ghastling grows up in 20
+ * minutes (snowballs speed it up by 10 % and heal it). A grown happy ghast
+ * takes a harness (any colour); with it up to four players ride on top and
+ * the first one flies it in the looking direction (jump: up). Shears take the
+ * harness off again. It follows players holding snowballs and never attacks.
+ */
+class HappyGhastMob extends GenericFlyingAnimalMob implements \pocketmine\entity\riding\Rideable{
+	use \pocketmine\entity\riding\RideableTrait;
 	protected const ENTITY_ID = EntityIds::HAPPY_GHAST;
 	protected const DISPLAY_NAME = "Happy Ghast";
 	protected const SPAWN_EGG_GETTER = "HAPPY_GHAST_SPAWN_EGG";
-	protected const HEIGHT = 1.8;
-	protected const WIDTH = 0.6;
+	protected const HEIGHT = 4.0;
+	protected const WIDTH = 4.0;
+	protected const GRAVITY = 0.0;
+	private const GROW_TICKS = 24000;
+	private bool $ghastling = false;
+	private int $growTicks = 0;
+	private ?Item $harness = null;
+	protected function getInitialSizeInfo() : EntitySizeInfo{ return new EntitySizeInfo(4.0, 4.0); }
+	protected function initEntity(CompoundTag $nbt) : void{
+		parent::initEntity($nbt);
+		$this->setMaxHealth(20);
+		$this->setGhastling($nbt->getByte("BetterPMMPGhastling", 0) === 1);
+		$this->growTicks = $nbt->getInt("BetterPMMPGrowTicks", $this->ghastling ? self::GROW_TICKS : 0);
+		$harness = $nbt->getCompoundTag("BetterPMMPHarness");
+		if($harness !== null){ try{ $this->harness = Item::nbtDeserialize($harness); }catch(\Exception){ $this->harness = null; } }
+		$this->setPersistent();
+	}
+	public function saveNBT() : CompoundTag{
+		$nbt = parent::saveNBT()->setByte("BetterPMMPGhastling", $this->ghastling ? 1 : 0)->setInt("BetterPMMPGrowTicks", $this->growTicks);
+		if($this->harness !== null){ $nbt->setTag("BetterPMMPHarness", $this->harness->nbtSerialize()); }
+		return $nbt;
+	}
+	public function isGhastling() : bool{ return $this->ghastling; }
+	public function setGhastling(bool $baby) : void{
+		$this->ghastling = $baby;
+		$this->growTicks = $baby ? self::GROW_TICKS : 0;
+		$this->setScale($baby ? 0.2375 : 1.0);
+		$this->networkPropertiesDirty = true;
+	}
+	public function getBodyArmor() : Item{ return $this->harness ?? VanillaItems::AIR(); }
+	private static function isHarness(Item $item) : bool{ return $item instanceof \pocketmine\item\GenericBedrockItem && str_ends_with($item->getBedrockName(), "_harness"); }
+	private static function isSnowball(Item $item) : bool{ return $item->getTypeId() === VanillaItems::SNOWBALL()->getTypeId(); }
+
+	public function getMaxRiders() : int{ return 4; }
+	public function getSeatPosition(int $seat) : \pocketmine\math\Vector3{
+		return match($seat){ 0 => new \pocketmine\math\Vector3(0, 4.0, 1.0), 1 => new \pocketmine\math\Vector3(1.0, 4.0, 0), 2 => new \pocketmine\math\Vector3(0, 4.0, -1.0), default => new \pocketmine\math\Vector3(-1.0, 4.0, 0) };
+	}
+	public function isControlledByDriver() : bool{ return $this->harness !== null && \pocketmine\entity\riding\RidingManager::getDriver($this) instanceof Player; }
+	public function canBeLeashed() : bool{ return true; }
+
+	public function getInteractButtonText(Player $player) : string{
+		$held = $player->getInventory()->getItemInHand();
+		if($this->ghastling){ return self::isSnowball($held) ? "action.interact.feed" : ""; }
+		if($this->harness === null){ return self::isHarness($held) ? "action.interact.equipharness" : ""; }
+		if($held->getTypeId() === VanillaItems::SHEARS()->getTypeId() && count(\pocketmine\entity\riding\RidingManager::getRiders($this)) === 0){ return "action.interact.removeharness"; }
+		return \pocketmine\entity\riding\RidingManager::getVehicle($player) === $this ? "" : "action.interact.ride.horse";
+	}
+
+	public function onInteract(Player $player, \pocketmine\math\Vector3 $clickPos) : bool{
+		$held = $player->getInventory()->getItemInHand();
+		if(self::isSnowball($held) && ($this->ghastling || $this->getHealth() < $this->getMaxHealth())){
+			if($player->hasFiniteResources()){ $held->pop(); $player->getInventory()->setItemInHand($held); }
+			$this->heal(new \pocketmine\event\entity\EntityRegainHealthEvent($this, 1, \pocketmine\event\entity\EntityRegainHealthEvent::CAUSE_EATING));
+			if($this->ghastling){ $this->growTicks = max(0, $this->growTicks - (int) (self::GROW_TICKS * 0.1)); }
+			$this->getWorld()->addParticle($this->getPosition()->add(0, 1, 0), new \pocketmine\world\particle\HappyVillagerParticle());
+			return true;
+		}
+		if($this->ghastling){ return false; }
+		if($this->harness === null && self::isHarness($held)){
+			$this->harness = (clone $held)->setCount(1);
+			if($player->hasFiniteResources()){ $held->pop(); $player->getInventory()->setItemInHand($held); }
+			$this->broadcastEquipment();
+			$this->networkPropertiesDirty = true;
+			return true;
+		}
+		if($this->harness !== null && $held->getTypeId() === VanillaItems::SHEARS()->getTypeId() && count(\pocketmine\entity\riding\RidingManager::getRiders($this)) === 0){
+			$this->getWorld()->dropItem($this->getPosition()->add(0, 1, 0), $this->harness);
+			$this->harness = null;
+			$this->broadcastEquipment();
+			$this->networkPropertiesDirty = true;
+			return true;
+		}
+		if($this->harness !== null && !$player->isSneaking() && \pocketmine\entity\riding\RidingManager::getVehicle($player) !== $this){
+			return \pocketmine\entity\riding\RidingManager::mount($player, $this);
+		}
+		return false;
+	}
+
+	protected function entityBaseTick(int $tickDiff = 1) : bool{
+		$update = parent::entityBaseTick($tickDiff);
+		if($this->ghastling && $this->isAlive() && ($this->growTicks -= $tickDiff) <= 0){
+			$this->setGhastling(false);
+		}
+		return $update;
+	}
+
+	protected function tickWandering(int $tickDiff) : void{
+		$driver = \pocketmine\entity\riding\RidingManager::getDriver($this);
+		if($driver instanceof Player && $this->harness !== null){
+			if($this->isClientDriven()){ return; }
+			$location = $driver->getLocation();
+			if($this->driverForward !== 0.0 || $this->driverStrafe !== 0.0 || $this->driverJumping){
+				$dir = $driver->getDirectionVector();
+				$yaw = deg2rad($this->driverYaw);
+				$speed = 0.18;
+				$vx = ($dir->x * $this->driverForward + cos($yaw) * $this->driverStrafe) * $speed;
+				$vz = ($dir->z * $this->driverForward + sin($yaw) * $this->driverStrafe) * $speed;
+				$vy = $dir->y * $this->driverForward * $speed + ($this->driverJumping ? 0.15 : 0.0);
+				$this->setMotion(new \pocketmine\math\Vector3($vx, $vy, $vz));
+				$this->setRotation($location->getYaw(), 0.0);
+			}else{
+				$m = $this->getMotion(); $this->setMotion($m->multiply(0.8));
+			}
+			return;
+		}
+		if(count(\pocketmine\entity\riding\RidingManager::getRiders($this)) > 0){
+			$this->setMotion(new \pocketmine\math\Vector3(0, 0, 0)); // passengers without a harnessed driver: hover
+			return;
+		}
+		// follow players holding snowballs
+		foreach($this->getWorld()->getPlayers() as $player){
+			if(self::isSnowball($player->getInventory()->getItemInHand()) && ($d = $player->getPosition()->distance($this->getPosition())) < 16 && $d > 3){
+				$to = $player->getPosition()->add(0, 2, 0)->subtractVector($this->getPosition());
+				$this->setMotion($to->multiply(0.06 / max(0.1, $to->length()) * 1.5));
+				return;
+			}
+		}
+		parent::tickWandering($tickDiff);
+	}
+
+	protected function syncNetworkData(EntityMetadataCollection $properties) : void{
+		parent::syncNetworkData($properties);
+		$properties->setGenericFlag(EntityMetadataFlags::BABY, $this->ghastling);
+		$properties->setGenericFlag(EntityMetadataFlags::SADDLED, $this->harness !== null);
+		$properties->setGenericFlag(EntityMetadataFlags::WASD_CONTROLLED, $this->isControlledByDriver());
+	}
+
+	public function getDrops() : array{ return $this->harness !== null ? [$this->harness] : []; }
+	protected function calculateFallDamage(float $fallDistance) : float{ return 0.0; }
 }
 
 class HoglinMob extends GenericHostileMob{
