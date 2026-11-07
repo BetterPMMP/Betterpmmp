@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.23-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.24-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -37,6 +37,17 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 | End | ✅/🟡 | **4.6**: Vanilla-Inselform, Säulen, Außeninseln, Chorus, End-Städte und -Schiffe (ohne Shulker) |
 | Drachenkampf | ✅/🟡 | **neu in 4.9**: Kampf-Manager wie Vanilla (Zustand im Weltordner), 10 Kristalle einmalig, genau ein Drache, Bossbar für alle im Kampfgebiet, Flugphasen (Kreisen, Sturzflug, Feuerball-Wolke, Landung auf dem Portal mit Atem-Angriff, Abheben), Heilung durch Kristalle, Flügel-Rückstoß, 10 s Todesanimation mit 12000/500 EP, Ausgangsportal, Drachenei beim ersten Sieg, End-Gateways zu den Außeninseln (mit Rück-Gateway) |
 | Portale (Nether/End) | ✅/🟡 | Nether/End werden beim Serverstart angelegt; Ankunft im End auf der Obsidian-Plattform; **4.9/5.0**: Enderauge fliegt direkt zum Portalraum der nächsten Festung (jede Festung hat ein vollständiges Portal, geprüft) |
+
+## Neu in 5.24
+
+| System | Stand |
+|---|---|
+| Redstone-Schienen | ✅ Antriebs- und Aktivierungsschienen werden durch Redstone geschaltet und leiten den Strom bis zu 8 Schienen weiter; Sensorschiene gibt mit Lore darauf Signal 15 (stark nach unten) |
+| Karten speichern | ✅ Karten werden zusätzlich im Serverordner `betterpmmp_maps/` gespeichert und von dort geladen; fehlt eine, steht in der Konsole wo gesucht wurde |
+| Pferderüstung | ✅ Leder/Kupfer/Eisen/Gold/Diamant/Netherit am gezähmten Pferd, sichtbar, Rüstungswert 3/4/5/7/11/19, gespeichert, fällt beim Tod |
+| Wolfsrüstung | ✅ am eigenen Wolf, nimmt den Schaden statt des Wolfs (64 Haltbarkeit), Hornschild repariert +8, Schere nimmt sie ab |
+| TNT-Lore | ✅ zündet auf aktivierter Aktivierungsschiene, durch Feuer und Explosionen (4 s), explodiert sofort wenn sie schnell zerstört wird, Sprengkraft je nach Tempo |
+| Pulverschnee-Eimer, bunte Eier | ✅ Pulverschnee platzieren; blaue und braune Eier werfen (1 : 8 Küken) |
 
 ## Neu in 5.20
 

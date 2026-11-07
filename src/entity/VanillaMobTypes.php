@@ -2223,12 +2223,52 @@ class WitherSkeletonMob extends GenericHostileMob{
 }
 
 class WolfMob extends GenericAnimalMob implements TameablePet{
+	/** BetterPMMP: wolf armor (64 durability) takes the damage instead of the wolf; scutes repair it, the owner removes it with shears */
+	private ?Item $wolfArmor = null;
+	private int $wolfArmorDurability = 0;
+	public function getBodyArmor() : Item{ return $this->wolfArmor ?? VanillaItems::AIR(); }
+	private static function isWolfArmor(Item $item) : bool{ return $item instanceof \pocketmine\item\GenericBedrockItem && $item->getBedrockName() === "minecraft:wolf_armor"; }
+	private static function isScute(Item $item) : bool{ return $item instanceof \pocketmine\item\GenericBedrockItem && $item->getBedrockName() === "minecraft:armadillo_scute"; }
+	private function wolfArmorInteract(Player $player) : bool{
+		if(!$this->isTamed() || !$this->isOwnedBy($player)){ return false; }
+		$held = $player->getInventory()->getItemInHand();
+		if($this->wolfArmor === null && self::isWolfArmor($held) && !$this->isBaby()){
+			$this->wolfArmor = (clone $held)->setCount(1);
+			$this->wolfArmorDurability = 64 - $held->getNamedTag()->getInt("BetterPMMPDamage", 0);
+			if($player->hasFiniteResources()){ $held->pop(); $player->getInventory()->setItemInHand($held); }
+			$this->broadcastEquipment();
+			return true;
+		}
+		if($this->wolfArmor !== null && self::isScute($held) && $this->wolfArmorDurability < 64){
+			$this->wolfArmorDurability = min(64, $this->wolfArmorDurability + 8);
+			if($player->hasFiniteResources()){ $held->pop(); $player->getInventory()->setItemInHand($held); }
+			return true;
+		}
+		if($this->wolfArmor !== null && $held->getTypeId() === VanillaItems::SHEARS()->getTypeId()){
+			$armor = $this->wolfArmor;
+			$tag = $armor->getNamedTag(); $tag->setInt("BetterPMMPDamage", 64 - $this->wolfArmorDurability); $armor->setNamedTag($tag);
+			$this->getWorld()->dropItem($this->getPosition(), $armor);
+			$this->wolfArmor = null;
+			$this->broadcastEquipment();
+			return true;
+		}
+		return false;
+	}
 	protected const ENTITY_ID = EntityIds::WOLF;
 	use TameableTrait;
-	protected function initEntity(CompoundTag $nbt) : void{ parent::initEntity($nbt); $this->initTameable($nbt); }
-	public function saveNBT() : CompoundTag{ return $this->saveTameable(parent::saveNBT()); }
+	protected function initEntity(CompoundTag $nbt) : void{
+		parent::initEntity($nbt); $this->initTameable($nbt);
+		$armor = $nbt->getCompoundTag("BetterPMMPWolfArmor");
+		if($armor !== null){ try{ $this->wolfArmor = Item::nbtDeserialize($armor); $this->wolfArmorDurability = $nbt->getInt("BetterPMMPWolfArmorDurability", 64); }catch(\Exception){ $this->wolfArmor = null; } }
+	}
+	public function saveNBT() : CompoundTag{
+		$nbt = $this->saveTameable(parent::saveNBT());
+		if($this->wolfArmor !== null){ $nbt->setTag("BetterPMMPWolfArmor", $this->wolfArmor->nbtSerialize()); $nbt->setInt("BetterPMMPWolfArmorDurability", $this->wolfArmorDurability); }
+		return $nbt;
+	}
+	public function getDrops() : array{ $drops = parent::getDrops(); if($this->wolfArmor !== null){ $drops[] = $this->wolfArmor; } return $drops; }
 	protected function syncNetworkData(EntityMetadataCollection $properties) : void{ parent::syncNetworkData($properties); $this->syncTameable($properties); }
-	public function onInteract(Player $player, \pocketmine\math\Vector3 $clickPos) : bool{ return $this->tameableInteract($player) ?? parent::onInteract($player, $clickPos); }
+	public function onInteract(Player $player, \pocketmine\math\Vector3 $clickPos) : bool{ return $this->wolfArmorInteract($player) || ($this->tameableInteract($player) ?? parent::onInteract($player, $clickPos)); }
 	protected function getTamingItems() : array{ return [VanillaItems::BONE()]; }
 	protected function getTameChance() : int{ return 3; }
 	protected function getTamedMaxHealth() : int{ return 40; }
@@ -2238,6 +2278,16 @@ class WolfMob extends GenericAnimalMob implements TameablePet{
 	protected function shouldFleeFromAttacker(\pocketmine\event\entity\EntityDamageByEntityEvent $source) : bool{ return false; }
 	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{
 		if($this->isSitting() && !$source->isCancelled() && $source instanceof \pocketmine\event\entity\EntityDamageByEntityEvent){ $this->setSitting(false); }
+		if($this->wolfArmor !== null && !$source->isCancelled() && !in_array($source->getCause(), [\pocketmine\event\entity\EntityDamageEvent::CAUSE_STARVATION, \pocketmine\event\entity\EntityDamageEvent::CAUSE_DROWNING, \pocketmine\event\entity\EntityDamageEvent::CAUSE_VOID, \pocketmine\event\entity\EntityDamageEvent::CAUSE_MAGIC], true)){
+			// the armor takes the hit
+			$this->wolfArmorDurability -= max(1, (int) ceil($source->getFinalDamage()));
+			$source->cancel();
+			if($this->wolfArmorDurability <= 0){
+				$this->wolfArmor = null;
+				$this->broadcastEquipment();
+				$this->getWorld()->addSound($this->getPosition(), new \pocketmine\world\sound\ItemBreakSound());
+			}
+		}
 		parent::attack($source);
 		if($this->isAlive() && $source instanceof \pocketmine\event\entity\EntityDamageByEntityEvent && ($damager = $source->getDamager()) instanceof Living){
 			if($this->isTamed() && $damager instanceof Player && $this->isOwnedBy($damager)){ return; }

@@ -112,6 +112,9 @@ final class EntityFactory{
 		$this->register(\pocketmine\entity\object\MinecartEntity::class, function(World $world, CompoundTag $nbt) : \pocketmine\entity\object\MinecartEntity{
 			return new \pocketmine\entity\object\MinecartEntity(Helper::parseLocation($nbt, $world), $nbt);
 		}, ['MinecartRideable', 'minecraft:minecart']);
+		$this->register(\pocketmine\entity\object\TntMinecartEntity::class, function(World $world, CompoundTag $nbt) : \pocketmine\entity\object\TntMinecartEntity{
+			return new \pocketmine\entity\object\TntMinecartEntity(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['MinecartTNT', 'minecraft:tnt_minecart']);
 
 		$this->register(EndCrystal::class, function(World $world, CompoundTag $nbt) : EndCrystal{
 			return new EndCrystal(Helper::parseLocation($nbt, $world), $nbt);

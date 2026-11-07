@@ -41,6 +41,30 @@ trait MountableAnimalTrait{
 	private int $temper = 0;
 	private int $tameCheckTicks = 0;
 	private bool $wasControlled = false;
+	/** BetterPMMP: horse armor in the body slot */
+	private ?Item $horseArmor = null;
+
+	private const HORSE_ARMOR_POINTS = ["leather" => 3, "copper" => 4, "iron" => 5, "golden" => 7, "diamond" => 11, "netherite" => 19];
+
+	private static function horseArmorPoints(?Item $item) : int{
+		if(!$item instanceof \pocketmine\item\GenericBedrockItem){
+			return 0;
+		}
+		foreach(self::HORSE_ARMOR_POINTS as $material => $points){
+			if($item->getBedrockName() === "minecraft:{$material}_horse_armor"){
+				return $points;
+			}
+		}
+		return 0;
+	}
+
+	public function getBodyArmor() : Item{
+		return $this->horseArmor ?? \pocketmine\item\VanillaItems::AIR();
+	}
+
+	public function getArmorPoints() : int{
+		return parent::getArmorPoints() + self::horseArmorPoints($this->horseArmor);
+	}
 
 	abstract protected function mountKind() : string;
 
@@ -49,6 +73,10 @@ trait MountableAnimalTrait{
 		$this->saddled = $nbt->getByte("Saddled", 0) !== 0;
 		$this->tamed = $nbt->getByte("Tamed", $this->mountKind() === "skeleton_horse" ? 1 : 0) !== 0;
 		$this->temper = $nbt->getInt("Temper", 0);
+		$armor = $nbt->getCompoundTag("BetterPMMPHorseArmor");
+		if($armor !== null){
+			try{ $this->horseArmor = Item::nbtDeserialize($armor); }catch(\Exception){ $this->horseArmor = null; }
+		}
 	}
 
 	public function saveNBT() : CompoundTag{
@@ -56,6 +84,9 @@ trait MountableAnimalTrait{
 		$nbt->setByte("Saddled", $this->saddled ? 1 : 0);
 		$nbt->setByte("Tamed", $this->tamed ? 1 : 0);
 		$nbt->setInt("Temper", $this->temper);
+		if($this->horseArmor !== null){
+			$nbt->setTag("BetterPMMPHorseArmor", $this->horseArmor->nbtSerialize());
+		}
 		return $nbt;
 	}
 
@@ -116,6 +147,18 @@ trait MountableAnimalTrait{
 	public function onInteract(Player $player, Vector3 $clickPos) : bool{
 		$held = $player->getInventory()->getItemInHand();
 		$baby = $this->isBaby();
+		if(!$baby && $this->tamed && $this->mountKind() === "horse" && self::horseArmorPoints($held) > 0){
+			if($this->horseArmor !== null){
+				$this->getWorld()->dropItem($this->getPosition(), $this->horseArmor);
+			}
+			$this->horseArmor = (clone $held)->setCount(1);
+			if($player->hasFiniteResources()){
+				$held->pop();
+				$player->getInventory()->setItemInHand($held);
+			}
+			$this->broadcastEquipment();
+			return true;
+		}
 		if(!$baby && !$this->saddled && self::isSaddle($held) && ($this->tamed || in_array($this->mountKind(), ["pig", "strider", "camel"], true))){
 			$this->saddled = true;
 			if($player->hasFiniteResources()){
@@ -229,6 +272,9 @@ trait MountableAnimalTrait{
 
 	public function getDrops() : array{
 		$drops = parent::getDrops();
+		if($this->horseArmor !== null){
+			$drops[] = $this->horseArmor;
+		}
 		if($this->saddled && ($saddle = ExtraVanillaItems::get("minecraft:saddle")) !== null){
 			$drops[] = $saddle;
 		}
