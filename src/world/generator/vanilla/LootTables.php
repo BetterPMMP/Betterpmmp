@@ -138,7 +138,7 @@ final class LootTables{
 			[2, 5, [["iron_nugget", 1, 10, 50], ["gold_nugget", 1, 10, 10], ["lapis_lazuli", 1, 10, 20]]],
 		],
 		"shipwreck_map" => [
-			[1, 1, [["compass", 1, 1, 1]]], //treasure maps are not implemented in the core
+			[1, 1, [["explorer:buried_treasure", 1, 1, 1]]], //BetterPMMP: buried treasure map
 			[3, 3, [["compass", 1, 1, 1], ["map", 1, 1, 1], ["clock", 1, 1, 1], ["paper", 1, 10, 20], ["feather", 1, 5, 10], ["book", 1, 5, 5]]],
 		],
 		"buried_treasure" => [
@@ -270,6 +270,9 @@ final class LootTables{
 	private static function makeItem(StringToItemParser $parser, string $name, Random $random) : ?Item{
 		if($name === "air"){
 			return null;
+		}
+		if(str_starts_with($name, "explorer:")){
+			return \pocketmine\world\map\ExplorerMaps::placeholder(substr($name, 9));
 		}
 		if($name === "enchanted_book"){
 			$book = VanillaItems::ENCHANTED_BOOK();

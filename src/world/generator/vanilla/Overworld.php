@@ -94,6 +94,12 @@ class Overworld extends Generator{
 	private int $mud;
 	private ?int $powderSnow;
 
+	/** BetterPMMP: biome at a column from the climate (no chunk needed). */
+	public function biomeAt(int $x, int $z) : int{
+		[$t, $h, $c, $e, $w] = $this->climate->sample($x, $z);
+		return OverworldBiomeBuilder::pick($t, $h, $c, $e, $w);
+	}
+
 	public function __construct(int $seed, string $preset){
 		parent::__construct($seed, $preset);
 		$this->climate = new OverworldClimate($seed);

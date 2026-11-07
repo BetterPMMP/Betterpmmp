@@ -56,7 +56,7 @@ final class MapManager{
 	public const TAG_UUID = "map_uuid";
 	public const TAG_SCALE = "map_scale";
 
-	/** @var array<int, array{world: string, x: int, z: int, scale: int, pixels: string}> */
+	/** @var array<int, array{world: string, x: int, z: int, scale: int, pixels: string, target?: array{int, int, int, bool}|null}> */
 	private static array $maps = [];
 	/** @var array<int, int> state id => rgb */
 	private static array $colorCache = [];
@@ -91,6 +91,33 @@ final class MapManager{
 		return $item;
 	}
 
+	/**
+	 * BetterPMMP: an explorer / treasure map centred on a target with its
+	 * marker (icon: 4 = red X, 14 = mansion, 15 = monument).
+	 */
+	public static function createTargetMap(World $world, int $targetX, int $targetZ, int $scale, int $icon, bool $treasure) : ?Item{
+		$item = ExtraVanillaItems::get("minecraft:filled_map");
+		if($item === null){
+			return null;
+		}
+		$size = 128 << $scale;
+		$cx = (int) (floor(($targetX + 64) / $size) * $size + intdiv($size, 2) - 64);
+		$cz = (int) (floor(($targetZ + 64) / $size) * $size + intdiv($size, 2) - 64);
+		$id = mt_rand(1, 0x7fffffff) * 4096 + mt_rand(0, 4095);
+		self::$maps[$id] = ["world" => $world->getFolderName(), "x" => $cx, "z" => $cz, "scale" => $scale, "pixels" => str_repeat("\0", 128 * 128 * 3), "target" => [$targetX, $targetZ, $icon, !$treasure]];
+		self::render($id, $world, 0, 0, 127, 127);
+		self::save($id, $world);
+		$tag = $item->getNamedTag();
+		$tag->setLong(self::TAG_UUID, $id);
+		$tag->setInt(self::TAG_SCALE, $scale);
+		$tag->setByte("map_display_players", 1);
+		$tag->setByte("map_is_init", 1);
+		$tag->setByte("map_is_scaling", 0);
+		$tag->setInt("map_name_index", 1);
+		$item->setNamedTag($tag);
+		return $item;
+	}
+
 	private static function mapFile(World $world, int $id) : string{
 		return $world->getProvider()->getPath() . "/betterpmmp_maps/" . $id . ".json";
 	}
@@ -104,7 +131,7 @@ final class MapManager{
 		if(!is_dir($dir)){
 			@mkdir($dir, 0777, true);
 		}
-		@file_put_contents(self::mapFile($world, $id), json_encode(["world" => $data["world"], "x" => $data["x"], "z" => $data["z"], "scale" => $data["scale"], "pixels" => base64_encode($data["pixels"])]));
+		@file_put_contents(self::mapFile($world, $id), json_encode(["world" => $data["world"], "x" => $data["x"], "z" => $data["z"], "scale" => $data["scale"], "pixels" => base64_encode($data["pixels"]), "target" => $data["target"] ?? null]));
 	}
 
 	/** Loads a map from any loaded world's folder. */
@@ -128,6 +155,7 @@ final class MapManager{
 				"z" => (int) ($data["z"] ?? 0),
 				"scale" => (int) ($data["scale"] ?? 0),
 				"pixels" => $pixels !== false && strlen($pixels) === 128 * 128 * 3 ? $pixels : str_repeat("\0", 128 * 128 * 3),
+				"target" => is_array($data["target"] ?? null) && count($data["target"]) === 4 ? [(int) $data["target"][0], (int) $data["target"][1], (int) $data["target"][2], (bool) $data["target"][3]] : null,
 			];
 			return true;
 		}
@@ -285,6 +313,14 @@ final class MapManager{
 			$rotation = ((int) floor($player->getLocation()->getYaw() * 16 / 360 + 0.5)) & 0x0f;
 			$result[] = new MapDecoration(0, $rotation, ((int) ($dx * 2)) & 0xff, ((int) ($dz * 2)) & 0xff, "", new Color(255, 255, 255));
 		}
+		$target = $map["target"] ?? null;
+		if($target !== null){
+			$dx = ($target[0] - $map["x"]) / $step;
+			$dz = ($target[1] - $map["z"]) / $step;
+			if($dx >= -64 && $dx < 64 && $dz >= -64 && $dz < 64){
+				$result[] = new MapDecoration($target[2], 8, ((int) ($dx * 2)) & 0xff, ((int) ($dz * 2)) & 0xff, "", new Color(255, 255, 255));
+			}
+		}
 		return $result;
 	}
 
@@ -337,6 +373,15 @@ final class MapManager{
 			if(!$player->isConnected() || !$player->isAlive()){
 				continue;
 			}
+			$hand = $player->getInventory()->getItemInHand();
+			if(ExplorerMaps::isUnresolved($hand)){
+				$resolved = ExplorerMaps::resolve($player, $hand);
+				if($resolved !== null){
+					$resolved->setCount($hand->getCount());
+					$player->getInventory()->setItemInHand($resolved);
+				}
+				continue;
+			}
 			foreach([$player->getInventory()->getItemInHand(), $player->getOffHandInventory()->getItem(0)] as $item){
 				$id = $item->getNamedTag()->getTag(self::TAG_UUID)?->getValue();
 				if(!is_int($id) || !self::load($id)){
@@ -346,6 +391,13 @@ final class MapManager{
 				$world = $player->getWorld();
 				if($world->getFolderName() !== $map["world"]){
 					continue;
+				}
+				// a buried treasure is dug in when its finder comes close
+				$target = $map["target"] ?? null;
+				if($target !== null && !$target[3] && $player->getPosition()->distanceSquared(new \pocketmine\math\Vector3($target[0], $player->getPosition()->y, $target[1])) < 48 * 48
+					&& ExplorerMaps::placeTreasure($world, $target[0], $target[1])){
+					self::$maps[$id]["target"][3] = true;
+					self::save($id, $world);
 				}
 				// vanilla servers only send map data for maps the client has asked for
 				if(!isset(self::$requested[$player->getId()][$id])){

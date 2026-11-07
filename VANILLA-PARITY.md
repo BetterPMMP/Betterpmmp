@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.17-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.18-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -37,6 +37,13 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 | End | ✅/🟡 | **4.6**: Vanilla-Inselform, Säulen, Außeninseln, Chorus, End-Städte und -Schiffe (ohne Shulker) |
 | Drachenkampf | ✅/🟡 | **neu in 4.9**: Kampf-Manager wie Vanilla (Zustand im Weltordner), 10 Kristalle einmalig, genau ein Drache, Bossbar für alle im Kampfgebiet, Flugphasen (Kreisen, Sturzflug, Feuerball-Wolke, Landung auf dem Portal mit Atem-Angriff, Abheben), Heilung durch Kristalle, Flügel-Rückstoß, 10 s Todesanimation mit 12000/500 EP, Ausgangsportal, Drachenei beim ersten Sieg, End-Gateways zu den Außeninseln (mit Rück-Gateway) |
 | Portale (Nether/End) | ✅/🟡 | Nether/End werden beim Serverstart angelegt; Ankunft im End auf der Obsidian-Plattform; **4.9/5.0**: Enderauge fliegt direkt zum Portalraum der nächsten Festung (jede Festung hat ein vollständiges Portal, geprüft) |
+
+## Neu in 5.18
+
+| System | Stand |
+|---|---|
+| Schatzkarten | ✅ in Schiffswrack-Kartentruhen; beim ersten In-die-Hand-Nehmen wird der nächste Strand gesucht, die Karte zeigt das rote X, die Schatztruhe wird eingegraben, sobald man in die Nähe kommt (vanilla Schatz-Beute) |
+| Entdeckerkarten | ✅ Kartograf (Lehrling: Ozean-Entdeckerkarte für 13 Smaragde + Kompass, Prüfungs-Entdeckerkarte für 12; Geselle: Waldland-Entdeckerkarte für 14) – zeigen den nächsten Ozeanmonument / das Waldanwesen / die Prüfungskammer mit Symbol |
 
 ## Neu in 5.17
 

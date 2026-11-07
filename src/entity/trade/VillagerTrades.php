@@ -114,8 +114,8 @@ final class VillagerTrades{
 		],
 		self::CARTOGRAPHER => [
 			[["paper", 24, "emerald", 1, 16, 2], ["emerald", 7, "compass", 1, 12, 1]],
-			[["glass_pane", 11, "emerald", 1, 16, 10], ["emerald", 1, "paper", 4, 12, 5]],
-			[["compass", 1, "emerald", 1, 12, 20], ["emerald", 2, "glass_pane", 8, 12, 10]],
+			[["glass_pane", 11, "emerald", 1, 16, 10], ["emerald", 13, "explorer:monument", 1, 12, 5, "compass", 1], ["emerald", 12, "explorer:trial_chambers", 1, 12, 5, "compass", 1]],
+			[["compass", 1, "emerald", 1, 12, 20], ["emerald", 14, "explorer:mansion", 1, 12, 10, "compass", 1]],
 			[["emerald", 7, "item_frame", 1, 12, 15], ["emerald", 3, "white_banner", 1, 12, 15]],
 			[["emerald", 8, "item_frame", 2, 12, 30]],
 		],
@@ -217,6 +217,9 @@ final class VillagerTrades{
 	}
 
 	private static function item(string $name, int $count, Random $random) : ?Item{
+		if(str_starts_with($name, "explorer:")){
+			return \pocketmine\world\map\ExplorerMaps::placeholder(substr($name, 9)); //BetterPMMP: explorer maps
+		}
 		if($name === "enchanted_book"){
 			$book = VanillaItems::ENCHANTED_BOOK();
 			$all = VanillaEnchantments::getAll();
