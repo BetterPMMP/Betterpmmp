@@ -17,6 +17,7 @@ use pocketmine\item\Item;
 use pocketmine\network\mcpe\protocol\ClientboundMapItemDataPacket;
 use pocketmine\network\mcpe\protocol\types\BlockPosition;
 use pocketmine\network\mcpe\protocol\types\MapDecoration;
+use pocketmine\network\mcpe\protocol\types\MapTrackedObject;
 use pocketmine\network\mcpe\protocol\types\MapImage;
 use pocketmine\player\Player;
 use pocketmine\Server;
@@ -363,11 +364,17 @@ final class MapManager{
 		return new MapImage($rows);
 	}
 
-	/** @return MapDecoration[] */
+	/**
+	 * Markers with the tracked objects they belong to. The 26.60 protocol pairs
+	 * every decoration with a tracked actor (same list length) - sending markers
+	 * without them makes the client disconnect.
+	 * @return array{MapDecoration[], MapTrackedObject[]}
+	 */
 	private static function decorations(int $id, World $world) : array{
 		$map = self::$maps[$id];
 		$step = 1 << $map["scale"];
-		$result = [];
+		$decorations = [];
+		$tracked = [];
 		foreach($world->getPlayers() as $player){
 			$pos = $player->getPosition();
 			$dx = ($pos->x - $map["x"]) / $step;
@@ -376,17 +383,25 @@ final class MapManager{
 				continue;
 			}
 			$rotation = ((int) floor($player->getLocation()->getYaw() * 16 / 360 + 0.5)) & 0x0f;
-			$result[] = new MapDecoration(0, $rotation, ((int) ($dx * 2)) & 0xff, ((int) ($dz * 2)) & 0xff, "", new Color(255, 255, 255));
+			$decorations[] = new MapDecoration(0, $rotation, ((int) ($dx * 2)) & 0xff, ((int) ($dz * 2)) & 0xff, "", new Color(255, 255, 255));
+			$object = new MapTrackedObject();
+			$object->type = MapTrackedObject::TYPE_ENTITY;
+			$object->actorUniqueId = $player->getId();
+			$tracked[] = $object;
 		}
 		$target = $map["target"] ?? null;
 		if($target !== null){
 			$dx = ($target[0] - $map["x"]) / $step;
 			$dz = ($target[1] - $map["z"]) / $step;
 			if($dx >= -64 && $dx < 64 && $dz >= -64 && $dz < 64){
-				$result[] = new MapDecoration($target[2], 8, ((int) ($dx * 2)) & 0xff, ((int) ($dz * 2)) & 0xff, "", new Color(255, 255, 255));
+				$decorations[] = new MapDecoration($target[2], 8, ((int) ($dx * 2)) & 0xff, ((int) ($dz * 2)) & 0xff, "", new Color(255, 255, 255));
+				$object = new MapTrackedObject();
+				$object->type = MapTrackedObject::TYPE_BLOCK;
+				$object->blockPosition = new BlockPosition($target[0], 64, $target[1]);
+				$tracked[] = $object;
 			}
 		}
-		return $result;
+		return [$decorations, $tracked];
 	}
 
 	private static function packet(int $id, World $world, ?array $region = null) : ClientboundMapItemDataPacket{
@@ -397,7 +412,7 @@ final class MapManager{
 		$packet->dimensionId = $world->getDimensionId();
 		$packet->origin = new BlockPosition($map["x"], 0, $map["z"]);
 		$packet->scale = $map["scale"];
-		$packet->decorations = self::decorations($id, $world);
+		[$packet->decorations, $packet->trackedEntities] = self::decorations($id, $world);
 		$packet->xOffset = $x1;
 		$packet->yOffset = $y1;
 		$packet->colors = self::image($id, $x1, $y1, $x2, $y2);
