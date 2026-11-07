@@ -35,3 +35,12 @@ mob-spawning:
 mob-ai:
   # Millisekunden Wegfindung pro Server-Tick für alle Mobs zusammen
   pathfinding-ms-per-tick: 6
+
+# ---------------------------------------------------------------
+# Karten (Fehlersuche)
+# ---------------------------------------------------------------
+# Wenn Spieler beim Erstellen oder Halten einer Karte rausfliegen:
+# nacheinander auf false stellen und testen, welcher Schalter es behebt.
+maps:
+  send-creation-packet: true  # Paket "Karte erstellt" vor dem ersten Bild
+  send-images: true           # Kartenbild (Pixel und Markierungen)

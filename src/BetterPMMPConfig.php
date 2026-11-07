@@ -98,6 +98,11 @@ final class BetterPMMPConfig{
 		return self::bool("mob-spawning", $category, true);
 	}
 
+	/** A yes/no switch from betterpmmp.yml (missing keys use the default). */
+	public static function flag(string $section, string $key, bool $default) : bool{
+		return self::bool($section, $key, $default);
+	}
+
 	public static function pathfindingSecondsPerTick() : float{
 		return max(1, self::int("mob-ai", "pathfinding-ms-per-tick", 6)) / 1000;
 	}
