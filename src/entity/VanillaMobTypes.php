@@ -905,6 +905,11 @@ class EndermiteMob extends GenericHostileMob{
 }
 
 class EvokerMob extends GenericHostileMob{
+	use RaiderTrait;
+	protected function initEntity(CompoundTag $nbt) : void{ parent::initEntity($nbt); $this->initRaider($nbt); }
+	public function saveNBT() : CompoundTag{ return $this->saveRaider(parent::saveNBT()); }
+	public function getDrops() : array{ return $this->raiderDrops(parent::getDrops()); }
+	protected function tickWandering(int $tickDiff) : void{ if($this->getCombatTarget() !== null || !$this->tickRaidMarch($tickDiff)){ parent::tickWandering($tickDiff); } }
 	protected const ENTITY_ID = EntityIds::EVOCATION_ILLAGER;
 	protected const DISPLAY_NAME = "Evoker";
 	protected const SPAWN_EGG_GETTER = "EVOKER_SPAWN_EGG";
@@ -1182,6 +1187,11 @@ class PiglinBruteMob extends GenericHostileMob{
 }
 
 class PillagerMob extends GenericRangedHostileMob{
+	use RaiderTrait;
+	protected function initEntity(CompoundTag $nbt) : void{ parent::initEntity($nbt); $this->initRaider($nbt); }
+	public function saveNBT() : CompoundTag{ return $this->saveRaider(parent::saveNBT()); }
+	public function getDrops() : array{ return $this->raiderDrops(parent::getDrops()); }
+	protected function tickWandering(int $tickDiff) : void{ if($this->getCombatTarget() !== null || !$this->tickRaidMarch($tickDiff)){ parent::tickWandering($tickDiff); } }
 	protected const ENTITY_ID = EntityIds::PILLAGER;
 	protected const DISPLAY_NAME = "Pillager";
 	protected const SPAWN_EGG_GETTER = "PILLAGER_SPAWN_EGG";
@@ -1215,6 +1225,11 @@ class RabbitMob extends GenericAnimalMob{
 }
 
 class RavagerMob extends GenericHostileMob{
+	use RaiderTrait;
+	protected function initEntity(CompoundTag $nbt) : void{ parent::initEntity($nbt); $this->initRaider($nbt); }
+	public function saveNBT() : CompoundTag{ return $this->saveRaider(parent::saveNBT()); }
+	public function getDrops() : array{ return $this->raiderDrops(parent::getDrops()); }
+	protected function tickWandering(int $tickDiff) : void{ if($this->getCombatTarget() !== null || !$this->tickRaidMarch($tickDiff)){ parent::tickWandering($tickDiff); } }
 	protected const ENTITY_ID = EntityIds::RAVAGER;
 	protected const DISPLAY_NAME = "Ravager";
 	protected const SPAWN_EGG_GETTER = "RAVAGER_SPAWN_EGG";
@@ -1363,6 +1378,11 @@ class VexMob extends GenericHostileFlyingMob{
 }
 
 class VindicatorMob extends GenericHostileMob{
+	use RaiderTrait;
+	protected function initEntity(CompoundTag $nbt) : void{ parent::initEntity($nbt); $this->initRaider($nbt); }
+	public function saveNBT() : CompoundTag{ return $this->saveRaider(parent::saveNBT()); }
+	public function getDrops() : array{ return $this->raiderDrops(parent::getDrops()); }
+	protected function tickWandering(int $tickDiff) : void{ if($this->getCombatTarget() !== null || !$this->tickRaidMarch($tickDiff)){ parent::tickWandering($tickDiff); } }
 	protected const ENTITY_ID = EntityIds::VINDICATOR;
 	protected const DISPLAY_NAME = "Vindicator";
 	protected const SPAWN_EGG_GETTER = "VINDICATOR_SPAWN_EGG";

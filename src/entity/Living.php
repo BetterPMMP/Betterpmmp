@@ -380,6 +380,9 @@ abstract class Living extends Entity{
 	}
 
 	protected function calculateFallDamage(float $fallDistance) : float{
+		if($this->effectManager->has(\pocketmine\entity\effect\ExtraEffects::get("slow_falling"))){
+			return 0; //BetterPMMP: slow falling
+		}
 		return ceil($fallDistance - 3 - (($jumpBoost = $this->effectManager->get(VanillaEffects::JUMP_BOOST())) !== null ? $jumpBoost->getEffectLevel() : 0));
 	}
 
@@ -551,6 +554,12 @@ abstract class Living extends Entity{
 	}
 
 	public function attack(EntityDamageEvent $source) : void{
+		//BetterPMMP: Infested - 10 % chance per hit to release 1-2 silverfish
+		if($this->isAlive() && !$source->isCancelled() && $this->effectManager->has(\pocketmine\entity\effect\ExtraEffects::get("infested")) && mt_rand(0, 9) === 0){
+			for($i = mt_rand(1, 2); $i > 0; --$i){
+				(new SilverfishMob(Location::fromObject($this->location->add(0, 0.2, 0), $this->getWorld())))->spawnToAll();
+			}
+		}
 		if($this->noDamageTicks > 0 && $source->getCause() !== EntityDamageEvent::CAUSE_SUICIDE){
 			$source->cancel();
 		}
@@ -642,7 +651,34 @@ abstract class Living extends Entity{
 		}
 	}
 
+	/** BetterPMMP: the 1.21 potion effects that act when their bearer dies. */
+	private function applyDeathEffects() : void{
+		$world = $this->getWorld();
+		$pos = $this->location;
+		$effects = $this->effectManager;
+		if($effects->has(\pocketmine\entity\effect\ExtraEffects::get("wind_charged"))){
+			$charge = new \pocketmine\entity\projectile\WindCharge(Location::fromObject($pos->add(0, 0.5, 0), $world), null);
+			$charge->burst($pos->add(0, 0.5, 0));
+			$charge->flagForDespawn();
+		}
+		if($effects->has(\pocketmine\entity\effect\ExtraEffects::get("weaving"))){
+			for($i = mt_rand(2, 3); $i > 0; --$i){
+				$x = $pos->getFloorX() + mt_rand(-1, 1); $z = $pos->getFloorZ() + mt_rand(-1, 1); $y = $pos->getFloorY();
+				if($world->getBlockAt($x, $y, $z)->canBeReplaced()){
+					$world->setBlockAt($x, $y, $z, \pocketmine\block\VanillaBlocks::COBWEB());
+				}
+			}
+		}
+		if($effects->has(\pocketmine\entity\effect\ExtraEffects::get("oozing"))){
+			for($i = 0; $i < 2; ++$i){
+				$slime = new SlimeMob(Location::fromObject($pos->add(mt_rand(-5, 5) / 10, 0, mt_rand(-5, 5) / 10), $world));
+				$slime->spawnToAll();
+			}
+		}
+	}
+
 	protected function onDeath() : void{
+		$this->applyDeathEffects();
 		$ev = new EntityDeathEvent($this, $this->applyLooting($this->getDrops()), $this->getXpDropAmount());
 		$ev->call();
 		foreach($ev->getDrops() as $item){

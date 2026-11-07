@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.13-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.14-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -46,7 +46,9 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 | Prüfungs-Spawner | ✅ **neu in 5.13**: wacht bei Spielern in 14 Blöcken auf, 6 Mobs (+2 pro weiterem Spieler), max. 2 gleichzeitig (+1), feste Mob-Art pro Spawner (Zombie, Wüstenzombie, Skelett, Eiswanderer, Spinne, Höhlenspinne, Schleim, Silberfischchen, Breeze, Sumpfskelett), Belohnung pro Teilnehmer (Prüfungsschlüssel, Essen, Pfeile, Smaragde …), 30 min Abklingzeit (gespeichert) |
 | Tresor | ✅ **neu in 5.13**: mit Prüfungsschlüssel öffnen, 1–3 Gegenstände (Smaragde, Windkugeln, Diamanten, Armbrust, Schild, Verzauberte Bücher, Goldäpfel, Schallplatte „Precipice“ …), einmal pro Spieler und Tresor (gespeichert) |
 | Breeze, Windkugel | ✅ **neu in 5.13**: Breeze springt umher, schießt alle 2 s Windkugeln, Pfeile prallen ab, kein Fallschaden, lässt Breeze-Ruten fallen; Windkugel werfbar (Abklingzeit 0,5 s), Rückstoß, Spieler schleudern sich hoch, kein Fallschaden, öffnet Türen/Falltüren/Zauntore, schaltet Hebel und Knöpfe |
-| Unheilvolle Prüfungen | 🟡 fehlt noch (Unheilvolle Flasche, Prüfungs-Omen, unheilvoller Tresor mit schwerem Kern) |
+| Unheilvolle Prüfungen | ✅ **neu in 5.14**: Böses Omen an einem Prüfungs-Spawner wird zum Prüfungs-Omen (15 min pro Stufe), Spawner werden unheilvoll (+4 Mobs, unheilvolle Prüfungsschlüssel, bessere Belohnung), ein Drittel der Tresore ist unheilvoll und braucht den unheilvollen Schlüssel: dort gibt es den **schweren Kern** (8 %), Verzauberte Goldäpfel, Flow-Rüstungsbesatz, Schallplatte „Creator“, Diamant- und Smaragdblöcke |
+| Überfälle | ✅ **neu in 5.14**: Unheilvolle Flasche (Böses Omen I–V, 100 min) – im Dorf wird daraus Überfalls-Omen (30 s), dann beginnt der Überfall: 3/5/7 Wellen (Leicht/Normal/Schwer) + Bonuswelle ab Stufe II, Plünderer, Diener, Verwüster, Hexen, Magier nach der Vanilla-Tabelle, Horn, rote Bossleiste „Raid“, 15 s Pause zwischen Wellen, Sieg gibt **Held des Dorfes** (Rabatt 30 % + 6,25 % pro Stufe bei Dorfbewohnern), Niederlage wenn kein Dorfbewohner mehr lebt. Patrouillen-Anführer und Außenposten-Hauptleute tragen das unheilvolle Banner und lassen eine Unheilvolle Flasche fallen |
+| Neue Effekte | ✅ **neu in 5.14**: sanfter Fall (kein Fallschaden), Böses Omen, Held des Dorfes, Prüfungs-Omen, Überfalls-Omen, Windgeladen (Windstoß beim Tod), Weben (Spinnweben beim Tod), Schleimig (2 Schleime beim Tod), Befallen (Silberfischchen bei Treffern), alle auch per `/effect` |
 
 ## Wetter
 

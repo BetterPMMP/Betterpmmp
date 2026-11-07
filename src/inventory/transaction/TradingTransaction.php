@@ -73,7 +73,7 @@ final class TradingTransaction extends InventoryTransaction{
 			throw new TransactionValidationException("Received items do not match the trade result");
 		}
 
-		$buyA = $this->offer->getBuyA();
+		$buyA = $this->offer->getBuyAFor($this->source);
 		$buyB = $this->offer->getBuyB();
 		$paidA = self::countMatching($inputs, $buyA);
 		$paidB = $buyB !== null ? self::countMatching($inputs, $buyB) : 0;

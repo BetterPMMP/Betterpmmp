@@ -153,7 +153,8 @@ final class TrialChamber extends SimpleStructure{
 	private function vault(StructureCanvas $c, Random $r, int $x, int $y, int $z) : void{
 		$block = ExtraVanillaBlocks::get("minecraft:vault");
 		if($block !== null){
-			$c->set($x, $y, $z, $block->withProperties(["vault_state" => "active"]));
+			// a third of the vaults are ominous (opened with ominous trial keys, may hold the heavy core)
+			$c->set($x, $y, $z, $block->withProperties(["vault_state" => "active", "ominous" => $r->nextBoundedInt(3) === 0]));
 		}
 	}
 }

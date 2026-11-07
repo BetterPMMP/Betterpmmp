@@ -115,7 +115,7 @@ class VanillaSuspiciousBlock extends GenericBedrockBlock{
 				: ["archer_pottery_sherd", "miner_pottery_sherd", "prize_pottery_sherd", "skull_pottery_sherd", "diamond", "emerald", "gunpowder", "tnt"],
 			$underWater => ["coal", "emerald", "wheat", "wooden_hoe", "gold_nugget", "angler_pottery_sherd", "shelter_pottery_sherd", "snort_pottery_sherd", "sniffer_egg", "iron_axe"],
 			mt_rand(0, 9) === 0 => ["burn_pottery_sherd", "danger_pottery_sherd", "friend_pottery_sherd", "heart_pottery_sherd", "heartbreak_pottery_sherd",
-				"howl_pottery_sherd", "sheaf_pottery_sherd", "music_disc_relic", "flow_banner_pattern", "guster_banner_pattern"],
+				"howl_pottery_sherd", "sheaf_pottery_sherd", "record_relic", "flow_banner_pattern", "guster_banner_pattern"],
 			default => ["emerald", "wheat", "wooden_hoe", "clay_ball", "brick", "yellow_dye", "blue_dye", "light_blue_dye", "white_dye", "orange_dye",
 				"red_candle", "green_candle", "purple_candle", "brown_candle", "magenta_stained_glass_pane", "pink_stained_glass_pane", "blue_stained_glass_pane",
 				"light_blue_stained_glass_pane", "red_stained_glass_pane", "yellow_stained_glass_pane", "purple_stained_glass_pane", "spruce_hanging_sign",

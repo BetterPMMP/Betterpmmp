@@ -440,7 +440,7 @@ final class NaturalMobSpawner{
 						for($i = 0, $tries = 0; $i < $count && $tries < 40; ++$tries){
 							$location = $this->surfaceSpawnPoint($world, $mx + mt_rand(-10, 10), $mz + mt_rand(-10, 10));
 							if($location !== null){
-								$this->spawnNaturalMob(PillagerMob::class, $location);
+								$this->spawnNaturalMob(PillagerMob::class, $location, $i === 0);
 								++$i;
 							}
 						}
@@ -698,7 +698,7 @@ final class NaturalMobSpawner{
 		for($i = 0; $i < $size; ++$i){
 			$location = $this->surfaceSpawnPoint($world, $x + mt_rand(-3, 3), $z + mt_rand(-3, 3));
 			if($location !== null){
-				$this->spawnNaturalMob(PillagerMob::class, $location);
+				$this->spawnNaturalMob(PillagerMob::class, $location, $i === 0);
 			}
 		}
 	}
@@ -725,9 +725,12 @@ final class NaturalMobSpawner{
 	}
 
 	/** @param class-string<Entity> $class */
-	private function spawnNaturalMob(string $class, Location $location) : void{
+	private function spawnNaturalMob(string $class, Location $location, bool $captain = false) : void{
 		$mob = new $class($location);
 		if($mob instanceof Entity){
+			if($captain && $mob instanceof PillagerMob){
+				$mob->setCaptain(); // vanilla: the patrol leader / outpost captain carries the ominous banner
+			}
 			if($mob instanceof Mob || $mob instanceof Squid){
 				$mob->markNaturalSpawned();
 			}

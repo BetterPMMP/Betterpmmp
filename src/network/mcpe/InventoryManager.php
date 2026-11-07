@@ -373,7 +373,7 @@ class InventoryManager{
 		$villager = $inventory->getVillager();
 		$recipes = new \pocketmine\nbt\tag\ListTag();
 		foreach($villager->getOffers() as $index => $offer){
-			$recipes->push($offer->toNbt($index + 1));
+			$recipes->push($offer->toNbt($index + 1, $this->player));
 		}
 		$tiers = new \pocketmine\nbt\tag\ListTag();
 		foreach(\pocketmine\entity\trade\VillagerTrades::LEVEL_XP as $tier => $xp){
