@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.16-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.17-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -37,6 +37,15 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 | End | ✅/🟡 | **4.6**: Vanilla-Inselform, Säulen, Außeninseln, Chorus, End-Städte und -Schiffe (ohne Shulker) |
 | Drachenkampf | ✅/🟡 | **neu in 4.9**: Kampf-Manager wie Vanilla (Zustand im Weltordner), 10 Kristalle einmalig, genau ein Drache, Bossbar für alle im Kampfgebiet, Flugphasen (Kreisen, Sturzflug, Feuerball-Wolke, Landung auf dem Portal mit Atem-Angriff, Abheben), Heilung durch Kristalle, Flügel-Rückstoß, 10 s Todesanimation mit 12000/500 EP, Ausgangsportal, Drachenei beim ersten Sieg, End-Gateways zu den Außeninseln (mit Rück-Gateway) |
 | Portale (Nether/End) | ✅/🟡 | Nether/End werden beim Serverstart angelegt; Ankunft im End auf der Obsidian-Plattform; **4.9/5.0**: Enderauge fliegt direkt zum Portalraum der nächsten Festung (jede Festung hat ein vollständiges Portal, geprüft) |
+
+## Neu in 5.17
+
+| System | Stand |
+|---|---|
+| Crafter | ✅ Redstone-Impuls stellt ein Teil nach dem Rezept im 3x3-Raster her (alle Werkbank-Rezepte), gibt es nach vorn aus (in einen Behälter oder als Gegenstand), Eimer/Flaschen bleiben zurück, Plätze per Klick sperren (gespeichert), Ausrichtung beim Platzieren |
+| Sculk-Sensor | ✅ Vibrationen durch Laufen (nicht Schleichen), Abbauen, Bauen, Treffer und landende Geschosse; Reichweite 8 (kalibriert 16), Signal 15 minus Entfernung, 30 Ticks aktiv, 10 Ticks Abklingzeit, Töne. Fehlt: Wolle dämpft nicht, Frequenzen des kalibrierten Sensors |
+| Hexe | ✅ wirft Wurftränke (Langsamkeit, Gift, Schwäche, Schaden nach Vanilla-Regeln), trinkt Heilung/Feuerschutz/Wasseratmung, nur 15 % Magieschaden |
+| Papagei auf der Schulter | ✅ gezähmte, stehende Papageien springen dem Besitzer auf die Schulter (max. 2), springen ab beim Springen/Fallen, Schwimmen, Fliegen, Schlafen |
 
 ## Happy Ghast (1.21.90)
 

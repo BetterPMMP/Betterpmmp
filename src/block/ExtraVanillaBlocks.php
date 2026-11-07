@@ -71,6 +71,9 @@ final class ExtraVanillaBlocks{
 		"minecraft:vault" => [VanillaVault::class, null],
 		"minecraft:creaking_heart" => [VanillaCreakingHeart::class, null],
 		"minecraft:dried_ghast" => [VanillaDriedGhast::class, null],
+		"minecraft:sculk_sensor" => [VanillaSculkSensor::class, null],
+		"minecraft:crafter" => [VanillaCrafter::class, \pocketmine\block\tile\Crafter::class],
+		"minecraft:calibrated_sculk_sensor" => [VanillaSculkSensor::class, null],
 		"minecraft:open_eyeblossom" => [VanillaEyeblossom::class, null],
 		"minecraft:closed_eyeblossom" => [VanillaEyeblossom::class, null],
 	];

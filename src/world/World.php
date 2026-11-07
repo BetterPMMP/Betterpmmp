@@ -1014,6 +1014,7 @@ class World implements ChunkManager{
 		$this->getWeather()->tick();
 		$this->getTrialManager()->tick();
 		$this->getRaidManager()->tick();
+		SculkVibrations::tick($this);
 		$this->sunAnglePercentage = $this->computeSunAnglePercentage(); //Sun angle depends on the current time
 		$this->skyLightReduction = $this->computeSkyLightReduction(); //Sky light reduction depends on the sun angle
 

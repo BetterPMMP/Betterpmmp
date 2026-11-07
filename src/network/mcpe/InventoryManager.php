@@ -429,6 +429,7 @@ class InventoryManager{
 				$inv instanceof AnvilInventory => WindowTypes::ANVIL,
 				$inv instanceof \pocketmine\block\inventory\GrindstoneInventory => WindowTypes::GRINDSTONE,
 				$inv instanceof HopperInventory => WindowTypes::HOPPER,
+				$inv instanceof \pocketmine\block\inventory\CrafterInventory => WindowTypes::CRAFTER,
 				$inv instanceof \pocketmine\block\inventory\DispenserInventory => $inv->isDropper() ? WindowTypes::DROPPER : WindowTypes::DISPENSER,
 				$inv instanceof CraftingTableInventory => WindowTypes::WORKBENCH,
 				$inv instanceof StonecutterInventory => WindowTypes::STONECUTTER,

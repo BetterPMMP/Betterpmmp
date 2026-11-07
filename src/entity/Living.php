@@ -554,6 +554,10 @@ abstract class Living extends Entity{
 	}
 
 	public function attack(EntityDamageEvent $source) : void{
+		//BetterPMMP: getting hit vibrates (sculk sensors)
+		if($this->isAlive() && !$source->isCancelled() && $source instanceof EntityDamageByEntityEvent){
+			\pocketmine\world\SculkVibrations::emit($this->getWorld(), $this->location);
+		}
 		//BetterPMMP: Infested - 10 % chance per hit to release 1-2 silverfish
 		if($this->isAlive() && !$source->isCancelled() && $this->effectManager->has(\pocketmine\entity\effect\ExtraEffects::get("infested")) && mt_rand(0, 9) === 0){
 			for($i = mt_rand(1, 2); $i > 0; --$i){

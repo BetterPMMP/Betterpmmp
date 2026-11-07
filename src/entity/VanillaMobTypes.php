@@ -1335,7 +1335,60 @@ class ParrotMob extends GenericFlyingAnimalMob implements TameablePet{
 	protected function initEntity(CompoundTag $nbt) : void{ parent::initEntity($nbt); $this->initTameable($nbt); }
 	public function saveNBT() : CompoundTag{ return $this->saveTameable(parent::saveNBT()); }
 	protected function syncNetworkData(EntityMetadataCollection $properties) : void{ parent::syncNetworkData($properties); $this->syncTameable($properties); }
-	protected function tickWandering(int $tickDiff) : void{ if(!$this->tickPet($tickDiff)){ parent::tickWandering($tickDiff); } }
+	/** BetterPMMP: a tamed, standing parrot hops onto its owner's shoulder (max. 2) and leaves when the owner jumps, falls, swims, flies or sleeps. */
+	private ?Player $shoulder = null;
+	private int $shoulderCooldown = 0;
+	/** @var array<int, int> owner id => parrots on the shoulders */
+	private static array $onShoulders = [];
+	private function shoulderLink(int $type) : void{
+		if($this->shoulder === null){ return; }
+		$pk = \pocketmine\network\mcpe\protocol\SetActorLinkPacket::create(new \pocketmine\network\mcpe\protocol\types\entity\EntityLink($this->shoulder->getId(), $this->getId(), $type, true, false, 0.0));
+		foreach([$this->shoulder, ...$this->shoulder->getViewers()] as $viewer){ if($viewer->isConnected()){ $viewer->getNetworkSession()->sendDataPacket($pk); } }
+	}
+	private function leaveShoulder() : void{
+		if($this->shoulder === null){ return; }
+		$this->shoulderLink(\pocketmine\network\mcpe\protocol\types\entity\EntityLink::TYPE_REMOVE);
+		$id = $this->shoulder->getId();
+		self::$onShoulders[$id] = max(0, (self::$onShoulders[$id] ?? 1) - 1);
+		$this->shoulder = null;
+		$this->shoulderCooldown = 100;
+		$this->getNetworkProperties()->setGenericFlag(EntityMetadataFlags::RIDING, false);
+		$this->networkPropertiesDirty = true;
+	}
+	protected function tickWandering(int $tickDiff) : void{
+		$this->shoulderCooldown = max(0, $this->shoulderCooldown - $tickDiff);
+		$owner = $this->shoulder;
+		if($owner !== null){
+			if(!$owner->isConnected() || !$owner->isAlive() || $owner->getWorld() !== $this->getWorld() || $owner->getFallDistance() > 0.4 || $owner->isUnderwater() || $owner->isFlying() || $owner->isGliding() || $owner->isSleeping() || $this->isSitting()){
+				$this->leaveShoulder();
+			}else{
+				$this->teleport($owner->getPosition()->add(0, 1.4, 0));
+				return;
+			}
+		}
+		if($this->isTamed() && !$this->isSitting() && $this->shoulderCooldown === 0 && ($o = $this->getOwner()) !== null && $o->getWorld() === $this->getWorld()
+			&& $o->isOnGround() && !$o->isSneaking() && (self::$onShoulders[$o->getId()] ?? 0) < 2 && $o->getPosition()->distanceSquared($this->getPosition()) < 2.5 * 2.5){
+			$this->shoulder = $o;
+			self::$onShoulders[$o->getId()] = (self::$onShoulders[$o->getId()] ?? 0) + 1;
+			$this->getNetworkProperties()->setGenericFlag(EntityMetadataFlags::RIDING, true);
+			$this->networkPropertiesDirty = true;
+			$this->shoulderLink(\pocketmine\network\mcpe\protocol\types\entity\EntityLink::TYPE_PASSENGER);
+			return;
+		}
+		if(!$this->tickPet($tickDiff)){ parent::tickWandering($tickDiff); }
+	}
+	public function spawnTo(Player $player) : void{
+		parent::spawnTo($player);
+		if($this->shoulder !== null && $player !== $this->shoulder){
+			$player->getNetworkSession()->sendDataPacket(\pocketmine\network\mcpe\protocol\SetActorLinkPacket::create(new \pocketmine\network\mcpe\protocol\types\entity\EntityLink($this->shoulder->getId(), $this->getId(), \pocketmine\network\mcpe\protocol\types\entity\EntityLink::TYPE_PASSENGER, true, false, 0.0)));
+		}
+	}
+	protected function onDispose() : void{ $this->leaveShoulder(); parent::onDispose(); }
+	/** a parrot on a shoulder cannot be hit by its owner */
+	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{
+		if($this->shoulder !== null && $source instanceof \pocketmine\event\entity\EntityDamageByEntityEvent && $source->getDamager() === $this->shoulder){ $source->cancel(); }
+		parent::attack($source);
+	}
 	protected function getTamingItems() : array{ return [VanillaItems::WHEAT_SEEDS(), VanillaItems::MELON_SEEDS(), VanillaItems::PUMPKIN_SEEDS(), VanillaItems::BEETROOT_SEEDS(), VanillaItems::TORCHFLOWER_SEEDS()]; }
 	protected function getTameChance() : int{ return 10; }
 	/** a cookie poisons a parrot (vanilla) */
@@ -1759,12 +1812,68 @@ class WardenMob extends GenericHostileMob{
 	}
 }
 
+/**
+ * BetterPMMP: vanilla witch - keeps 6-8 blocks away and throws a splash
+ * potion every 3 s (slowness at range, poison while the target is healthy,
+ * weakness up close, otherwise harming), drinks healing when hurt, fire
+ * resistance when burning and water breathing under water, and takes only
+ * 15 % of magic damage.
+ */
 class WitchMob extends GenericHostileMob{
 	protected const ENTITY_ID = EntityIds::WITCH;
 	protected const DISPLAY_NAME = "Witch";
 	protected const SPAWN_EGG_GETTER = "WITCH_SPAWN_EGG";
 	protected const HEIGHT = 1.8;
 	protected const WIDTH = 0.6;
+	private int $throwCooldown = 40;
+	private int $drinkCooldown = 0;
+	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{
+		if($source->getCause() === \pocketmine\event\entity\EntityDamageEvent::CAUSE_MAGIC){
+			$source->setModifier(-$source->getFinalDamage() * 0.85, \pocketmine\event\entity\EntityDamageEvent::MODIFIER_RESISTANCE);
+		}
+		parent::attack($source);
+	}
+	private function drink(\pocketmine\item\PotionType $type) : void{
+		foreach($type->getEffects() as $effect){ $this->getEffects()->add($effect); }
+		if($type === \pocketmine\item\PotionType::HEALING()){ $this->heal(new \pocketmine\event\entity\EntityRegainHealthEvent($this, 4, \pocketmine\event\entity\EntityRegainHealthEvent::CAUSE_MAGIC)); }
+		$this->getWorld()->broadcastPacketToViewers($this->getPosition(), \pocketmine\network\mcpe\protocol\LevelSoundEventPacket::create(\pocketmine\network\mcpe\protocol\types\LevelSoundEvent::DRINK, $this->getPosition(), -1, EntityIds::WITCH, false, false, $this->getId(), null));
+		$this->drinkCooldown = 40;
+	}
+	protected function tickWandering(int $tickDiff) : void{
+		$this->throwCooldown = max(0, $this->throwCooldown - $tickDiff);
+		$this->drinkCooldown = max(0, $this->drinkCooldown - $tickDiff);
+		if($this->drinkCooldown === 0){
+			if($this->isUnderwater() && !$this->getEffects()->has(\pocketmine\entity\effect\VanillaEffects::WATER_BREATHING())){ $this->drink(\pocketmine\item\PotionType::WATER_BREATHING()); }
+			elseif($this->isOnFire() && !$this->getEffects()->has(\pocketmine\entity\effect\VanillaEffects::FIRE_RESISTANCE())){ $this->drink(\pocketmine\item\PotionType::FIRE_RESISTANCE()); }
+			elseif($this->getHealth() < $this->getMaxHealth() && mt_rand(0, 19) === 0){ $this->drink(\pocketmine\item\PotionType::HEALING()); }
+		}
+		$target = $this->findTarget($tickDiff);
+		if($target === null){ parent::tickWandering($tickDiff); return; }
+		$d = $target->getPosition()->subtractVector($this->getPosition());
+		$horizontal = sqrt($d->x * $d->x + $d->z * $d->z);
+		$this->setRotation(rad2deg(atan2(-$d->x, $d->z)), 0.0);
+		if($horizontal > 8 || !$this->canSeeEntity($target)){
+			$this->getNavigator()->moveTo($target->getPosition(), $this->getWalkSpeed(true), 6.0);
+			$this->getNavigator()->tick($tickDiff);
+		}else{
+			$this->getNavigator()->stop();
+		}
+		if($this->throwCooldown > 0 || $horizontal > 10 || !$this->canSeeEntity($target)){ return; }
+		$this->throwCooldown = 60;
+		$effects = $target->getEffects();
+		$type = match(true){
+			$horizontal >= 8 && !$effects->has(\pocketmine\entity\effect\VanillaEffects::SLOWNESS()) => \pocketmine\item\PotionType::SLOWNESS(),
+			$target->getHealth() >= 8 && !$effects->has(\pocketmine\entity\effect\VanillaEffects::POISON()) => \pocketmine\item\PotionType::POISON(),
+			$horizontal <= 3 && !$effects->has(\pocketmine\entity\effect\VanillaEffects::WEAKNESS()) && mt_rand(0, 3) === 0 => \pocketmine\item\PotionType::WEAKNESS(),
+			default => \pocketmine\item\PotionType::HARMING(),
+		};
+		$eye = $this->getPosition()->add(0, 1.4, 0);
+		$aim = new \pocketmine\math\Vector3($d->x, $target->getPosition()->y + 1.1 - $eye->y + $horizontal * 0.2, $d->z);
+		$potion = new \pocketmine\entity\projectile\SplashPotion(Location::fromObject($eye, $this->getWorld()), $this, $type);
+		$potion->setMotion($aim->normalize()->multiply(0.75));
+		$potion->spawnToAll();
+		$this->getWorld()->addSound($eye, new \pocketmine\world\sound\ThrowSound());
+	}
 }
 
 class WitherMob extends GenericHostileFlyingMob{
