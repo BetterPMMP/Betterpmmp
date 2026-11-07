@@ -42,4 +42,30 @@ class DetectorRail extends StraightOnlyRail implements RedstoneSignalEmitter{
 		return $this;
 	}
 	//TODO
+
+	/** BetterPMMP: a minecart on the rail powers it (checked every 20 ticks, like vanilla). */
+	public function onMinecartOn() : void{
+		$world = $this->position->getWorld();
+		if(!$this->activated){
+			$world->setBlock($this->position, $this->setActivated(true));
+			$world->notifyRedstoneChange($this->position);
+			$world->scheduleDelayedBlockUpdate($this->position, 20);
+		}
+	}
+
+	public function onScheduledUpdate() : void{
+		if(!$this->activated){
+			return;
+		}
+		$world = $this->position->getWorld();
+		$box = new \pocketmine\math\AxisAlignedBB($this->position->x + 0.125, $this->position->y, $this->position->z + 0.125, $this->position->x + 0.875, $this->position->y + 0.5, $this->position->z + 0.875);
+		foreach($world->getNearbyEntities($box) as $entity){
+			if($entity instanceof \pocketmine\entity\object\MinecartEntity){
+				$world->scheduleDelayedBlockUpdate($this->position, 20);
+				return;
+			}
+		}
+		$world->setBlock($this->position, $this->setActivated(false));
+		$world->notifyRedstoneChange($this->position);
+	}
 }

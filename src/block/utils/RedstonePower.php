@@ -95,6 +95,9 @@ final class RedstonePower{
 		if($source instanceof Lever){
 			return $source->isActivated() ? 15 : 0;
 		}
+		if($source instanceof \pocketmine\block\DetectorRail){
+			return $source->isActivated() ? 15 : 0;
+		}
 		if($source instanceof Button || $source instanceof SimplePressurePlate){
 			return $source->isPressed() ? 15 : 0;
 		}
@@ -133,6 +136,9 @@ final class RedstonePower{
 		}
 		if($source instanceof RedstoneTorch){
 			return $towards === Facing::UP && $source->isLit() ? 15 : 0;
+		}
+		if($source instanceof \pocketmine\block\DetectorRail){
+			return $towards === Facing::DOWN && $source->isActivated() ? 15 : 0;
 		}
 		if($source instanceof RedstoneWire){
 			return self::weak($source, $towards, $includeWire);

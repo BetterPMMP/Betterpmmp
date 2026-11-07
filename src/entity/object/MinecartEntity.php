@@ -56,6 +56,9 @@ class MinecartEntity extends Entity implements Rideable{
 	public static function getNetworkTypeId() : string{ return EntityIds::MINECART; }
 
 	protected function getInitialSizeInfo() : EntitySizeInfo{ return new EntitySizeInfo(0.7, 0.98); }
+
+	/** The item the cart drops when broken. */
+	protected function dropItemName() : ?string{ return null; }
 	protected function getInitialDragMultiplier() : float{ return 0.0; }
 	protected function getInitialGravity() : float{ return 0.04; }
 
@@ -87,7 +90,8 @@ class MinecartEntity extends Entity implements Rideable{
 		}
 		$this->hitDamage += $source->getFinalDamage() * 10;
 		if($this->hitDamage > 40){
-			$this->getWorld()->dropItem($this->location, VanillaItems::MINECART());
+			$name = $this->dropItemName();
+			$this->getWorld()->dropItem($this->location, $name !== null ? (\pocketmine\item\ExtraVanillaItems::get($name) ?? VanillaItems::MINECART()) : VanillaItems::MINECART());
 			$this->flagForDespawn();
 		}
 	}
@@ -134,6 +138,9 @@ class MinecartEntity extends Entity implements Rideable{
 		// on rails the cart is held at rail height: no gravity (it would pull the cart into the rail)
 		$this->keepMovement = true;
 		$this->gravityEnabled = false;
+		if($rail instanceof \pocketmine\block\DetectorRail){
+			$rail->onMinecartOn();
+		}
 		$this->followRail($rail);
 	}
 
@@ -247,12 +254,12 @@ class MinecartEntity extends Entity implements Rideable{
 		return max(0.0, min(1.0, $p));
 	}
 
-	public static function placeOnRail(Player $player, World $world, Vector3 $railPos) : bool{
+	public static function placeOnRail(Player $player, World $world, Vector3 $railPos, string $class = MinecartEntity::class) : bool{
 		$block = $world->getBlock($railPos);
 		if(!$block instanceof BaseRail){
 			return false;
 		}
-		$cart = new MinecartEntity(\pocketmine\entity\Location::fromObject($railPos->add(0.5, 0.0625, 0.5), $world, $player->getLocation()->getYaw(), 0.0));
+		$cart = new $class(\pocketmine\entity\Location::fromObject($railPos->add(0.5, 0.0625, 0.5), $world, $player->getLocation()->getYaw(), 0.0));
 		$cart->spawnToAll();
 		return true;
 	}

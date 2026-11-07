@@ -32,6 +32,8 @@ use function file_put_contents;
 use function floor;
 use function intdiv;
 use function is_array;
+use function array_map;
+use function dirname;
 use function is_int;
 use function is_dir;
 use function json_decode;
@@ -187,35 +189,61 @@ final class MapManager{
 		return $world->getProvider()->getPath() . "/betterpmmp_maps/" . $id . ".json";
 	}
 
+	/** BetterPMMP: maps are also kept in the server folder, so a world plugin or a moved world cannot lose them. */
+	private static function serverMapFile(int $id) : ?string{
+		try{
+			return Server::getInstance()->getDataPath() . "betterpmmp_maps/" . $id . ".json";
+		}catch(\RuntimeException){
+			return null;
+		}
+	}
+
 	private static function save(int $id, World $world) : void{
 		$data = self::$maps[$id] ?? null;
 		if($data === null){
 			return;
 		}
-		$dir = $world->getProvider()->getPath() . "/betterpmmp_maps";
-		if(!is_dir($dir)){
-			@mkdir($dir, 0777, true);
+		$json = json_encode(["world" => $data["world"], "x" => $data["x"], "z" => $data["z"], "scale" => $data["scale"], "pixels" => base64_encode($data["pixels"]), "target" => $data["target"] ?? null, "locked" => $data["locked"] ?? false]);
+		if($json === false){
+			return;
 		}
-		@file_put_contents(self::mapFile($world, $id), json_encode(["world" => $data["world"], "x" => $data["x"], "z" => $data["z"], "scale" => $data["scale"], "pixels" => base64_encode($data["pixels"]), "target" => $data["target"] ?? null, "locked" => $data["locked"] ?? false]));
+		foreach([self::mapFile($world, $id), self::serverMapFile($id)] as $file){
+			if($file === null){
+				continue;
+			}
+			$dir = dirname($file);
+			if(!is_dir($dir)){
+				@mkdir($dir, 0777, true);
+			}
+			if(@file_put_contents($file, $json) === false){
+				Server::getInstance()->getLogger()->warning("BetterPMMP Karte: konnte Karte $id nicht nach $file speichern");
+			}
+		}
 	}
 
-	/** Loads a map from any loaded world's folder. */
+	/** Loads a map from the server folder or any loaded world's folder. */
 	private static function load(int $id) : bool{
 		if(isset(self::$maps[$id])){
 			return true;
 		}
+		$files = [];
+		if(($central = self::serverMapFile($id)) !== null){
+			$files[] = [$central, null];
+		}
 		foreach(Server::getInstance()->getWorldManager()->getWorlds() as $world){
-			$file = self::mapFile($world, $id);
+			$files[] = [self::mapFile($world, $id), $world];
+		}
+		foreach($files as [$file, $world]){
 			if(!file_exists($file)){
 				continue;
 			}
 			$data = json_decode((string) file_get_contents($file), true);
 			if(!is_array($data)){
-				return false;
+				continue;
 			}
 			$pixels = base64_decode((string) ($data["pixels"] ?? ""), true);
 			self::$maps[$id] = [
-				"world" => (string) ($data["world"] ?? $world->getFolderName()),
+				"world" => (string) ($data["world"] ?? ($world?->getFolderName() ?? "world")),
 				"x" => (int) ($data["x"] ?? 0),
 				"z" => (int) ($data["z"] ?? 0),
 				"scale" => (int) ($data["scale"] ?? 0),
@@ -225,6 +253,7 @@ final class MapManager{
 			];
 			return true;
 		}
+		Server::getInstance()->getLogger()->info("BetterPMMP Karte: Karte $id nicht gefunden (gesucht: " . implode(", ", array_map(fn($f) => $f[0], $files)) . ")");
 		return false;
 	}
 
