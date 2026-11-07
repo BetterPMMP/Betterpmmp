@@ -73,6 +73,8 @@ final class ExtraVanillaBlocks{
 		"minecraft:dried_ghast" => [VanillaDriedGhast::class, null],
 		"minecraft:sculk_sensor" => [VanillaSculkSensor::class, null],
 		"minecraft:crafter" => [VanillaCrafter::class, \pocketmine\block\tile\Crafter::class],
+		"minecraft:frog_spawn" => [VanillaHatchable::class, null],
+		"minecraft:sniffer_egg" => [VanillaHatchable::class, null],
 		"minecraft:calibrated_sculk_sensor" => [VanillaSculkSensor::class, null],
 		"minecraft:open_eyeblossom" => [VanillaEyeblossom::class, null],
 		"minecraft:closed_eyeblossom" => [VanillaEyeblossom::class, null],

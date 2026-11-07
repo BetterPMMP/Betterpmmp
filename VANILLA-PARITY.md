@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.19-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.20-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -37,6 +37,17 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 | End | ✅/🟡 | **4.6**: Vanilla-Inselform, Säulen, Außeninseln, Chorus, End-Städte und -Schiffe (ohne Shulker) |
 | Drachenkampf | ✅/🟡 | **neu in 4.9**: Kampf-Manager wie Vanilla (Zustand im Weltordner), 10 Kristalle einmalig, genau ein Drache, Bossbar für alle im Kampfgebiet, Flugphasen (Kreisen, Sturzflug, Feuerball-Wolke, Landung auf dem Portal mit Atem-Angriff, Abheben), Heilung durch Kristalle, Flügel-Rückstoß, 10 s Todesanimation mit 12000/500 EP, Ausgangsportal, Drachenei beim ersten Sieg, End-Gateways zu den Außeninseln (mit Rück-Gateway) |
 | Portale (Nether/End) | ✅/🟡 | Nether/End werden beim Serverstart angelegt; Ankunft im End auf der Obsidian-Plattform; **4.9/5.0**: Enderauge fliegt direkt zum Portalraum der nächsten Festung (jede Festung hat ein vollständiges Portal, geprüft) |
+
+## Neu in 5.20
+
+| System | Stand |
+|---|---|
+| Gürteltier | ✅ rollt sich bei sprintenden Spielern/Untoten/Treffern ein (halber Schaden, bleibt stehen), wirft alle 5–10 min einen Hornschild ab, Pinsel bürstet einen ab (16 Haltbarkeit), vermehrt sich mit Spinnenaugen |
+| Ziege | ✅ melken mit Eimer, rammt Spieler ab und zu (Rückstoß, Schaden), verliert beim Rammen von Stamm/Stein/Erz/Packeis ein Ziegenhorn (2 Hörner, gespeichert) |
+| Frosch | ✅ Variante nach Biom (gemäßigt/kalt/warm), frisst Schleime (Schleimball) und Magmawürfel (Froschlicht in seiner Farbe), legt Froschlaich aufs Wasser statt Junge zu bekommen |
+| Froschlaich, Kaulquappe | ✅ Laich schlüpft zu 2–6 Kaulquappen, Kaulquappen werden in 20 min zu Fröschen (Schleimball: −10 %), im Eimer fangbar |
+| Schnüffler | ✅ gräbt etwa alle 8 min in Gras/Erde/Moos/Schlamm Fackelblumensamen oder Kannenpflanzenkapseln aus; Schnüffler-Ei bekommt Risse und schlüpft (auf Moos doppelt so schnell) |
+| Sumpfskelett, Eiswanderer | ✅ Giftpfeile (4 s) bzw. Langsamkeitspfeile (30 s) |
 
 ## Neu in 5.18
 

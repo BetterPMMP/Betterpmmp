@@ -146,6 +146,11 @@ class Arrow extends Projectile{
 		$this->broadcastAnimation(new ArrowShakeAnimation($this, 7));
 	}
 
+	/** BetterPMMP: effect given to the mob it hits (tipped arrows of bogged and strays) */
+	private ?\pocketmine\entity\effect\EffectInstance $hitEffect = null;
+
+	public function setHitEffect(?\pocketmine\entity\effect\EffectInstance $effect) : void{ $this->hitEffect = $effect; }
+
 	/** BetterPMMP: Piercing - passes through this many mobs (crossbow) */
 	protected int $piercing = 0;
 	/** @var array<int, true> */
@@ -166,6 +171,9 @@ class Arrow extends Projectile{
 		$this->pierced[$entityHit->getId()] = true;
 		$motion = clone $this->motion;
 		parent::onHitEntity($entityHit, $hitResult);
+		if($this->hitEffect !== null && $entityHit instanceof \pocketmine\entity\Living && $entityHit->isAlive()){
+			$entityHit->getEffects()->add(clone $this->hitEffect);
+		}
 		if(!$this->despawnsOnEntityHit()){
 			// keep flying through the mob (the hit handler only zeroes an unchanged motion)
 			$this->motion = $motion->multiply(0.999);
