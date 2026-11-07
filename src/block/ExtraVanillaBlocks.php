@@ -69,6 +69,9 @@ final class ExtraVanillaBlocks{
 		"minecraft:suspicious_gravel" => [VanillaSuspiciousBlock::class, null],
 		"minecraft:trial_spawner" => [VanillaTrialSpawner::class, null],
 		"minecraft:vault" => [VanillaVault::class, null],
+		"minecraft:creaking_heart" => [VanillaCreakingHeart::class, null],
+		"minecraft:open_eyeblossom" => [VanillaEyeblossom::class, null],
+		"minecraft:closed_eyeblossom" => [VanillaEyeblossom::class, null],
 	];
 
 	public static function getAll() : array{

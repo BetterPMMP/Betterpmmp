@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.14-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.15-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -37,6 +37,14 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 | End | ✅/🟡 | **4.6**: Vanilla-Inselform, Säulen, Außeninseln, Chorus, End-Städte und -Schiffe (ohne Shulker) |
 | Drachenkampf | ✅/🟡 | **neu in 4.9**: Kampf-Manager wie Vanilla (Zustand im Weltordner), 10 Kristalle einmalig, genau ein Drache, Bossbar für alle im Kampfgebiet, Flugphasen (Kreisen, Sturzflug, Feuerball-Wolke, Landung auf dem Portal mit Atem-Angriff, Abheben), Heilung durch Kristalle, Flügel-Rückstoß, 10 s Todesanimation mit 12000/500 EP, Ausgangsportal, Drachenei beim ersten Sieg, End-Gateways zu den Außeninseln (mit Rück-Gateway) |
 | Portale (Nether/End) | ✅/🟡 | Nether/End werden beim Serverstart angelegt; Ankunft im End auf der Obsidian-Plattform; **4.9/5.0**: Enderauge fliegt direkt zum Portalraum der nächsten Festung (jede Festung hat ein vollständiges Portal, geprüft) |
+
+## Blassgarten (1.21.4)
+
+| System | Stand |
+|---|---|
+| Blassgarten | ✅ **neu in 5.15**: Biom an der Vanilla-Stelle (Varianten-Hochebenen statt Dunkelwald), Blasseichen mit hängendem Blassmoos, Blassmoos und Moosteppiche am Boden, Augenblüten (öffnen sich nachts, schließen sich am Tag) |
+| Knarzherz | ✅ **neu in 5.15**: in jedem zehnten Baum, nur zwischen zwei Blasseichenstämmen aktiv, wacht nachts auf und ruft einen Knarz (16 Blöcke) sobald ein Spieler in 32 Blöcken ist, schläft am Tag (Knarz zerfällt), abgebaut tötet es seinen Knarz und gibt 1–3 Harzklumpen (Behutsamkeit: das Herz selbst) |
+| Knarz | ✅ **neu in 5.15**: bleibt stehen, solange ein Spieler ihn ansieht, sonst schleicht er heran (3 Schaden); vom Herz gerufen ist er unverwundbar – Treffer lassen am Herz Harz wachsen; aus dem Spawn-Ei ein normaler Mob |
 
 ## Prüfungskammern (1.21)
 

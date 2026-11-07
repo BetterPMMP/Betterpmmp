@@ -46,7 +46,7 @@ final class OverworldBiomeBuilder{
 	private const PLATEAU_VARIANT = [
 		[B::ICE_PLAINS_SPIKES, self::N, self::N, self::N, self::N],
 		[B::CHERRY_GROVE, self::N, B::MEADOW, B::MEADOW, B::MEGA_TAIGA],
-		[B::CHERRY_GROVE, B::CHERRY_GROVE, B::FOREST, B::BIRCH_FOREST, self::N],
+		[B::CHERRY_GROVE, B::CHERRY_GROVE, B::FOREST, B::BIRCH_FOREST, B::PALE_GARDEN], // 1.21.4: pale garden replaces dark forest in variant plateaus
 		[self::N, self::N, self::N, self::N, self::N],
 		[B::MESA_BRYCE, B::MESA_BRYCE, self::N, self::N, self::N],
 	];

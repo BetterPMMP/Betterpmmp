@@ -452,12 +452,70 @@ class CodMob extends GenericSwimmingAnimalMob{
 	protected const WIDTH = 0.3;
 }
 
+/**
+ * BetterPMMP: vanilla creaking - stands still while any player looks at it,
+ * otherwise stalks and hits for 3. One called by a creaking heart cannot be
+ * hurt (hits make the heart grow resin) and crumbles at day or when its heart
+ * is broken; one from a spawn egg is an ordinary mob.
+ */
 class CreakingMob extends GenericHostileMob{
 	protected const ENTITY_ID = EntityIds::CREAKING;
 	protected const DISPLAY_NAME = "Creaking";
 	protected const SPAWN_EGG_GETTER = "CREAKING_SPAWN_EGG";
-	protected const HEIGHT = 1.8;
-	protected const WIDTH = 0.6;
+	protected const HEIGHT = 2.7;
+	protected const WIDTH = 0.9;
+	private ?\pocketmine\math\Vector3 $heart = null;
+	private bool $frozen = false;
+	private int $hitCooldown = 0;
+	public function linkHeart(?\pocketmine\math\Vector3 $heart) : void{ $this->heart = $heart; }
+	/** a heart's creaking is not saved: the heart calls a new one */
+	public function canSaveWithChunk() : bool{ return $this->heart === null && parent::canSaveWithChunk(); }
+	protected function burnsInDaylight() : bool{ return false; }
+	private function heartBlock() : ?\pocketmine\block\VanillaCreakingHeart{
+		if($this->heart === null){ return null; }
+		$block = $this->getWorld()->getBlock($this->heart);
+		return $block instanceof \pocketmine\block\VanillaCreakingHeart ? $block : null;
+	}
+	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{
+		if($this->heart !== null && $source->getCause() !== \pocketmine\event\entity\EntityDamageEvent::CAUSE_VOID){
+			$heart = $this->heartBlock();
+			if($heart !== null){
+				$source->cancel();
+				if($source instanceof \pocketmine\event\entity\EntityDamageByEntityEvent && $this->hitCooldown === 0){
+					$this->hitCooldown = 10;
+					$heart->onCreakingHurt();
+				}
+				return;
+			}
+		}
+		parent::attack($source);
+	}
+	public function getDrops() : array{ return []; }
+	public function getXpDropAmount() : int{ return $this->heart === null ? 5 : 0; }
+	private function isWatched() : bool{
+		$pos = $this->getPosition()->add(0, 1.5, 0);
+		foreach($this->getWorld()->getPlayers() as $player){
+			if(!$player->isAlive() || $player->isSpectator() || $player->getPosition()->distanceSquared($pos) > 32 * 32){ continue; }
+			$eye = $player->getEyePos();
+			$to = $pos->subtractVector($eye);
+			$len = $to->length();
+			if($len < 0.01){ return true; }
+			if($player->getDirectionVector()->dot($to->divide($len)) > 0.8 && $this->canSeeEntity($player)){ return true; }
+		}
+		return false;
+	}
+	protected function tickWandering(int $tickDiff) : void{
+		$this->hitCooldown = max(0, $this->hitCooldown - $tickDiff);
+		if($this->heart !== null && $this->heartBlock() === null){ $this->heart = null; $this->kill(); return; }
+		$watched = $this->isWatched();
+		if($watched !== $this->frozen){ $this->frozen = $watched; }
+		if($this->frozen){
+			$this->getNavigator()->stop();
+			$m = $this->getMotion(); $this->setMotion(new \pocketmine\math\Vector3(0, $m->y, 0));
+			return;
+		}
+		parent::tickWandering($tickDiff);
+	}
 }
 
 class CreeperMob extends GenericCreeperMob{
