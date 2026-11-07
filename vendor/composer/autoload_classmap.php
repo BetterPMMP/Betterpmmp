@@ -87,6 +87,8 @@ return array(
     'pocketmine\\world\\raid\\Raid' => $baseDir . '/src/world/raid/Raid.php',
     'pocketmine\\item\\OminousBottle' => $baseDir . '/src/item/OminousBottle.php',
     'pocketmine\\entity\\RaiderTrait' => $baseDir . '/src/entity/RaiderTrait.php',
+    'pocketmine\\block\\VanillaCreakingHeart' => $baseDir . '/src/block/VanillaCreakingHeart.php',
+    'pocketmine\\block\\VanillaEyeblossom' => $baseDir . '/src/block/VanillaEyeblossom.php',
     'pocketmine\\block\\ExtraVanillaBlocks' => $baseDir . '/src/block/ExtraVanillaBlocks.php',
     'pocketmine\\block\\ExtraVanillaBlockNames' => $baseDir . '/src/block/ExtraVanillaBlockNames.php',
     'pocketmine\\entity\\BossBarTracker' => $baseDir . '/src/entity/BossBarTracker.php',

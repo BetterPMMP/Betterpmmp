@@ -437,6 +437,9 @@ final class OverworldPopulator{
 			case "dark_oak":
 				VanillaFeatures::darkOak($w, $x, $y, $z, $r);
 				return;
+			case "pale_oak":
+				VanillaFeatures::paleOak($w, $x, $y, $z, $r);
+				return;
 			case "mega_spruce":
 				VanillaFeatures::megaSpruce($w, $x, $y, $z, $r, false);
 				return;
@@ -502,6 +505,7 @@ final class OverworldPopulator{
 			B::FLOWER_FOREST => [6, [["oak", 8], ["birch", 2]], 4, $allFlowers, 40],
 			B::BIRCH_FOREST => [10, [["birch", 1]], 6, $basicFlowers, 3],
 			B::BIRCH_FOREST_MUTATED => [10, [["tall_birch", 3], ["birch", 1]], 6, $basicFlowers, 3],
+			B::PALE_GARDEN => [16, [["pale_oak", 1]], 2, array_filter([\pocketmine\block\ExtraVanillaBlocks::get("minecraft:closed_eyeblossom")]), 2],
 			B::ROOFED_FOREST => [16, [["dark_oak", 12], ["huge_red_mushroom", 1], ["huge_brown_mushroom", 1], ["oak", 2], ["birch", 2]], 4, $basicFlowers, 2],
 			B::TAIGA => [10, [["spruce", 1]], 8, $basicFlowers, 1],
 			B::COLD_TAIGA => [10, [["spruce", 1]], 4, [], 0],

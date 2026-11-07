@@ -88,6 +88,85 @@ final class VanillaFeatures{
 		return true;
 	}
 
+	/**
+	 * Pale oak (pale garden): 2x2 trunk like a dark oak with a wide canopy,
+	 * pale hanging moss below the leaves, pale moss on the ground around it and,
+	 * in about one tree in ten, a dormant natural creaking heart in the trunk.
+	 */
+	public static function paleOak(BlockWriter $w, int $x, int $y, int $z, Random $r) : bool{
+		$height = 6 + $r->nextBoundedInt(3);
+		if(!self::hasSpace($w, $x, $y, $z, 3, 1)){
+			return false;
+		}
+		$log = VanillaBlocks::PALE_OAK_LOG();
+		$leaves = VanillaBlocks::PALE_OAK_LEAVES();
+		for($dx = 0; $dx < 2; ++$dx){
+			for($dz = 0; $dz < 2; ++$dz){
+				$w->setBlock($x + $dx, $y, $z + $dz, VanillaBlocks::DIRT());
+				for($yy = 1; $yy <= $height; ++$yy){
+					self::log($w, $x + $dx, $y + $yy, $z + $dz, $log);
+				}
+			}
+		}
+		$top = $y + $height;
+		$moss = \pocketmine\block\ExtraVanillaBlocks::get("minecraft:pale_hanging_moss");
+		for($yy = -1; $yy <= 1; ++$yy){
+			$radius = $yy === 1 ? 2 : 3;
+			for($dx = -$radius; $dx <= $radius + 1; ++$dx){
+				for($dz = -$radius; $dz <= $radius + 1; ++$dz){
+					$edge = ($dx === -$radius || $dx === $radius + 1) && ($dz === -$radius || $dz === $radius + 1);
+					if($edge && ($yy !== -1 || $r->nextBoolean())){
+						continue;
+					}
+					self::leaf($w, $x + $dx, $top + $yy, $z + $dz, $leaves);
+					// hanging moss under the lowest leaves
+					if($yy === -1 && $moss !== null && $r->nextBoundedInt(5) === 0){
+						$length = 1 + $r->nextBoundedInt(3);
+						for($m = 1; $m <= $length; ++$m){
+							if(!self::canReplace($w, $x + $dx, $top - 1 - $m, $z + $dz) || $w->getBlock($x + $dx, $top - 1 - $m, $z + $dz)->getTypeId() !== \pocketmine\block\BlockTypeIds::AIR){
+								break;
+							}
+							$w->setBlock($x + $dx, $top - 1 - $m, $z + $dz, $moss->withProperties(["tip" => $m === $length]));
+						}
+					}
+				}
+			}
+		}
+		// pale moss around the trunk
+		$carpet = \pocketmine\block\ExtraVanillaBlocks::get("minecraft:pale_moss_carpet");
+		$mossBlock = \pocketmine\block\ExtraVanillaBlocks::get("minecraft:pale_moss_block");
+		if($carpet !== null && $mossBlock !== null){
+			for($i = 0; $i < 10; ++$i){
+				$mx = $x + $r->nextRange(-3, 4);
+				$mz = $z + $r->nextRange(-3, 4);
+				$ground = null;
+				for($gy = $y + 2; $gy >= $y - 2; --$gy){
+					if($w->getBlock($mx, $gy + 1, $mz)->getTypeId() === \pocketmine\block\BlockTypeIds::AIR && $w->getBlock($mx, $gy, $mz)->isSolid()){
+						$ground = $gy;
+						break;
+					}
+				}
+				if($ground === null){
+					continue;
+				}
+				$below = $w->getBlock($mx, $ground, $mz);
+				if($below->getTypeId() === \pocketmine\block\BlockTypeIds::GRASS || $below->getTypeId() === \pocketmine\block\BlockTypeIds::DIRT){
+					$w->setBlock($mx, $ground, $mz, $mossBlock);
+					if($w->getBlock($mx, $ground + 1, $mz)->getTypeId() === \pocketmine\block\BlockTypeIds::AIR && $r->nextBoolean()){
+						$w->setBlock($mx, $ground + 1, $mz, $carpet);
+					}
+				}
+			}
+		}
+		// natural creaking heart in one of ten trees
+		$heart = \pocketmine\block\ExtraVanillaBlocks::get("minecraft:creaking_heart");
+		if($heart !== null && $r->nextBoundedInt(10) === 0 && $height >= 5){
+			$hy = $y + 2 + $r->nextBoundedInt($height - 3);
+			$w->setBlock($x + $r->nextBoundedInt(2), $hy, $z + $r->nextBoundedInt(2), $heart->withProperties(["creaking_heart_state" => "dormant", "natural" => true, "pillar_axis" => "y"]));
+		}
+		return true;
+	}
+
 	/** Old growth (mega) spruce / pine: 2x2 trunk, tall, narrow conical canopy. */
 	public static function megaSpruce(BlockWriter $w, int $x, int $y, int $z, Random $r, bool $pine) : bool{
 		$height = 15 + $r->nextBoundedInt(12);
