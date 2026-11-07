@@ -414,7 +414,7 @@ final class MapManager{
 		$world = Server::getInstance()->getWorldManager()->getWorldByName(self::$maps[$id]["world"]) ?? $player->getWorld();
 		$first = !isset(self::$requested[$player->getId()][$id]);
 		self::$requested[$player->getId()][$id] = true;
-		if($first){
+		if($first && \pocketmine\BetterPMMPConfig::flag("maps", "send-creation-packet", true)){
 			// vanilla first sends the map "creation" (the map ids it is part of), then the image
 			$creation = new ClientboundMapItemDataPacket();
 			$creation->mapId = $id;
@@ -425,7 +425,10 @@ final class MapManager{
 			$player->getNetworkSession()->sendDataPacket($creation);
 			Server::getInstance()->getLogger()->info("BetterPMMP Karte: Erstellung von Karte $id an " . $player->getName() . " gesendet");
 		}
-		$player->getNetworkSession()->sendDataPacket(self::packet($id, $world));
+		if(\pocketmine\BetterPMMPConfig::flag("maps", "send-images", true)){
+			$player->getNetworkSession()->sendDataPacket(self::packet($id, $world));
+			Server::getInstance()->getLogger()->info("BetterPMMP Karte: Bild von Karte $id an " . $player->getName() . " gesendet");
+		}
 	}
 
 	/** Keeps drawing maps held by players and moves their markers (every 20 ticks). */
@@ -479,7 +482,9 @@ final class MapManager{
 					}
 				}
 				// full image (markers move every update)
-				$player->getNetworkSession()->sendDataPacket(self::packet($id, $world));
+				if(\pocketmine\BetterPMMPConfig::flag("maps", "send-images", true)){
+					$player->getNetworkSession()->sendDataPacket(self::packet($id, $world));
+				}
 			}
 		}
 	}
