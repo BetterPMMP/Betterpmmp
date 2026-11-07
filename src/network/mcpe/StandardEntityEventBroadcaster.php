@@ -134,7 +134,7 @@ final class StandardEntityEventBroadcaster implements EntityEventBroadcaster{
 			ItemStackWrapper::legacy($converter->coreItemStackToNet($inv->getChestplate())),
 			ItemStackWrapper::legacy($converter->coreItemStackToNet($inv->getLeggings())),
 			ItemStackWrapper::legacy($converter->coreItemStackToNet($inv->getBoots())),
-			new ItemStackWrapper(0, ItemStack::null())
+			($body = $mob->getBodyArmor())->isNull() ? new ItemStackWrapper(0, ItemStack::null()) : ItemStackWrapper::legacy($converter->coreItemStackToNet($body))
 		));
 	}
 
