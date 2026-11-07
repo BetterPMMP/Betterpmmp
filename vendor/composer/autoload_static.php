@@ -229,6 +229,7 @@ class ComposerStaticInit01c34b5648e4177bfa963b48f7da5526
         'pocketmine\\block\\inventory\\CrafterInventory' => __DIR__ . '/../..' . '/src/block/inventory/CrafterInventory.php',
         'pocketmine\\block\\tile\\Crafter' => __DIR__ . '/../..' . '/src/block/tile/Crafter.php',
         'pocketmine\\block\\VanillaCrafter' => __DIR__ . '/../..' . '/src/block/VanillaCrafter.php',
+        'pocketmine\\world\\map\\ExplorerMaps' => __DIR__ . '/../..' . '/src/world/map/ExplorerMaps.php',
         'pocketmine\\block\\ExtraVanillaBlocks' => __DIR__ . '/../..' . '/src/block/ExtraVanillaBlocks.php',
         'pocketmine\\block\\ExtraVanillaBlockNames' => __DIR__ . '/../..' . '/src/block/ExtraVanillaBlockNames.php',
         'pocketmine\\entity\\BossBarTracker' => __DIR__ . '/../..' . '/src/entity/BossBarTracker.php',
