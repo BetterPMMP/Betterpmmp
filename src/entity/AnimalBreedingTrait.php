@@ -164,6 +164,7 @@ trait AnimalBreedingTrait{
 			EntityIds::CAMEL => [\pocketmine\block\VanillaBlocks::CACTUS()->asItem()],
 			EntityIds::FOX => [VanillaItems::SWEET_BERRIES(), VanillaItems::GLOW_BERRIES()],
 			EntityIds::FROG => [VanillaItems::SLIMEBALL()],
+			EntityIds::ARMADILLO => [VanillaItems::SPIDER_EYE()],
 			EntityIds::PANDA => [\pocketmine\block\VanillaBlocks::BAMBOO()->asItem()],
 			EntityIds::SNIFFER => [VanillaItems::TORCHFLOWER_SEEDS()],
 			EntityIds::WOLF => [VanillaItems::RAW_BEEF(), VanillaItems::STEAK(), VanillaItems::RAW_PORKCHOP(), VanillaItems::COOKED_PORKCHOP(), VanillaItems::RAW_CHICKEN(), VanillaItems::COOKED_CHICKEN(), VanillaItems::RAW_MUTTON(), VanillaItems::COOKED_MUTTON(), VanillaItems::RAW_RABBIT(), VanillaItems::COOKED_RABBIT(), VanillaItems::ROTTEN_FLESH()],
@@ -196,9 +197,22 @@ trait AnimalBreedingTrait{
 		return null;
 	}
 
+	/** BetterPMMP: animals that do not give birth (frogs lay frogspawn) return true here. */
+	protected function layEggs(BreedableAnimal $partner) : bool{
+		return false;
+	}
+
 	private function breedWith(BreedableAnimal $partner) : void{
 		$position = $this->getPosition();
 		$other = $partner->getPosition();
+		if($this->layEggs($partner)){
+			$this->setLoveTicks(0);
+			$partner->setLoveTicks(0);
+			$this->setBreedCooldownTicks(self::BREED_COOLDOWN_TICKS);
+			$partner->setBreedCooldownTicks(self::BREED_COOLDOWN_TICKS);
+			$this->showLoveParticle();
+			return;
+		}
 		$child = new static(new Location(($position->x + $other->x) / 2, min($position->y, $other->y), ($position->z + $other->z) / 2, $this->getWorld(), (float) mt_rand(0, 359), 0.0));
 		$child->setBaby(true);
 		$child->spawnToAll();

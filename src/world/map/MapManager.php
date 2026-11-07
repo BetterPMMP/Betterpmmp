@@ -56,7 +56,7 @@ final class MapManager{
 	public const TAG_UUID = "map_uuid";
 	public const TAG_SCALE = "map_scale";
 
-	/** @var array<int, array{world: string, x: int, z: int, scale: int, pixels: string, target?: array{int, int, int, bool}|null}> */
+	/** @var array<int, array{world: string, x: int, z: int, scale: int, pixels: string, target?: array{int, int, int, bool}|null, locked?: bool}> */
 	private static array $maps = [];
 	/** @var array<int, int> state id => rgb */
 	private static array $colorCache = [];

@@ -236,6 +236,8 @@ abstract class GenericCreeperMob extends GenericHostileMob{
 }
 
 abstract class GenericRangedHostileMob extends GenericHostileMob{
+	/** BetterPMMP: tipped arrows (bogged: poison, stray: slowness). */
+	protected function decorateArrow(\pocketmine\entity\projectile\Arrow $arrow) : void{}
 	/** The weapon shown in the mob's hand. */
 	protected function heldWeapon() : Item{ return VanillaItems::BOW(); }
 	private int $strafeTicks = 0;
@@ -268,7 +270,7 @@ abstract class GenericRangedHostileMob extends GenericHostileMob{
 		else{ $navigator->stop(); if($horizontal < 5.0 && $this->isOnGround()){ $this->moveGroundToward(-$dx, -$dz, $this->getWalkSpeed(true)); } elseif($this->isOnGround()){ $this->strafeTicks += $tickDiff; if($this->strafeTicks >= 20){ $this->strafeTicks = 0; if(mt_rand(0, 9) < 3){ $this->strafeDirection = -$this->strafeDirection; } } $this->moveGroundToward(-$dz * $this->strafeDirection, $dx * $this->strafeDirection, $this->getWalkSpeed() * 0.6); } }
 		if($lineOfSight && $horizontal >= 5.0 && $horizontal <= 14.0 && $this->attackTime <= 0){
 			$origin = $this->getEyePos(); $targetEye = $target->getEyePos(); $aimX = $targetEye->x - $origin->x; $aimY = $targetEye->y - $origin->y + ($horizontal * 0.04); $aimZ = $targetEye->z - $origin->z; $yaw = rad2deg(atan2(-$aimX, $aimZ)); $pitch = rad2deg(-atan2($aimY, $horizontal));
-			$arrow = new \pocketmine\entity\projectile\Arrow(new \pocketmine\entity\Location($origin->x, $origin->y, $origin->z, $this->getWorld(), $yaw, $pitch), $this, false); $arrow->setBaseDamage(1.5); $arrow->setMotion((new \pocketmine\math\Vector3($aimX, $aimY, $aimZ))->normalize()->multiply(1.65)); $arrow->spawnToAll(); $this->attackTime = mt_rand(30, 45);
+			$arrow = new \pocketmine\entity\projectile\Arrow(new \pocketmine\entity\Location($origin->x, $origin->y, $origin->z, $this->getWorld(), $yaw, $pitch), $this, false); $this->decorateArrow($arrow); $arrow->setBaseDamage(1.5); $arrow->setMotion((new \pocketmine\math\Vector3($aimX, $aimY, $aimZ))->normalize()->multiply(1.65)); $arrow->spawnToAll(); $this->attackTime = mt_rand(30, 45);
 		}
 	}
 }
@@ -290,6 +292,47 @@ class AllayMob extends GenericFlyingAnimalMob{
 }
 
 class ArmadilloMob extends GenericAnimalMob{
+	/** BetterPMMP: vanilla armadillo - rolls up when threatened (takes half damage, stands still), sheds a scute every 5-10 min, brushing gives a scute */
+	private int $rolledTicks = 0;
+	private int $scuteTicks = 0;
+	private function scute() : ?Item{ return \pocketmine\item\ExtraVanillaItems::get("minecraft:armadillo_scute"); }
+	public function isRolledUp() : bool{ return $this->rolledTicks > 0; }
+	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{
+		if($this->rolledTicks > 0){ $source->setModifier(-$source->getFinalDamage() / 2, \pocketmine\event\entity\EntityDamageEvent::MODIFIER_ARMOR); }
+		parent::attack($source);
+		if($this->isAlive()){ $this->rolledTicks = 200; }
+	}
+	public function onInteract(Player $player, \pocketmine\math\Vector3 $clickPos) : bool{
+		$held = $player->getInventory()->getItemInHand();
+		if($held instanceof \pocketmine\item\Brush && !$this->isBaby() && ($scute = $this->scute()) !== null){
+			$this->getWorld()->dropItem($this->getPosition()->add(0, 0.5, 0), $scute);
+			if($player->hasFiniteResources()){ $held->applyDamage(16); $player->getInventory()->setItemInHand($held); }
+			$this->getWorld()->addSound($this->getPosition(), new \pocketmine\world\sound\VanillaSound(\pocketmine\network\mcpe\protocol\types\LevelSoundEvent::MOB_ARMADILLO_BRUSH));
+			return true;
+		}
+		return parent::onInteract($player, $clickPos);
+	}
+	protected function entityBaseTick(int $tickDiff = 1) : bool{
+		$update = parent::entityBaseTick($tickDiff);
+		if($this->isAlive() && !$this->isBaby()){
+			if($this->scuteTicks <= 0){ $this->scuteTicks = mt_rand(6000, 12000); }
+			elseif(($this->scuteTicks -= $tickDiff) <= 0 && ($scute = $this->scute()) !== null){ $this->getWorld()->dropItem($this->getPosition(), $scute); }
+		}
+		return $update;
+	}
+	protected function tickWandering(int $tickDiff) : void{
+		// a sprinting player or an undead mob nearby makes it roll up
+		foreach($this->getWorld()->getNearbyEntities($this->getBoundingBox()->expandedCopy(7, 2, 7), $this) as $e){
+			if(($e instanceof Player && $e->isSprinting() && !$e->isSpectator()) || $e instanceof Zombie || $e instanceof SkeletonMob){ $this->rolledTicks = max($this->rolledTicks, 100); }
+		}
+		if($this->rolledTicks > 0){
+			$this->rolledTicks -= $tickDiff;
+			$this->getNavigator()->stop();
+			$m = $this->getMotion(); $this->setMotion(new \pocketmine\math\Vector3(0, $m->y, 0));
+			return;
+		}
+		parent::tickWandering($tickDiff);
+	}
 	protected const ENTITY_ID = EntityIds::ARMADILLO;
 	protected const DISPLAY_NAME = "Armadillo";
 	protected const SPAWN_EGG_GETTER = "ARMADILLO_SPAWN_EGG";
@@ -330,6 +373,7 @@ class BlazeMob extends GenericHostileFlyingMob{
 }
 
 class BoggedMob extends GenericRangedHostileMob{
+	protected function decorateArrow(\pocketmine\entity\projectile\Arrow $arrow) : void{ $arrow->setHitEffect(new \pocketmine\entity\effect\EffectInstance(\pocketmine\entity\effect\VanillaEffects::POISON(), 80)); }
 	protected const ENTITY_ID = EntityIds::BOGGED;
 	protected const DISPLAY_NAME = "Bogged";
 	protected const SPAWN_EGG_GETTER = "BOGGED_SPAWN_EGG";
@@ -984,6 +1028,51 @@ class FoxMob extends GenericAnimalMob{
 }
 
 class FrogMob extends GenericAnimalMob{
+	/** BetterPMMP: vanilla frog - variant from the biome (temperate / cold / warm), eats small slimes (slimeball) and magma cubes (froglight of its colour), lays frogspawn on water instead of giving birth */
+	private int $variant = -1;
+	private int $tongueCooldown = 0;
+	protected function initEntity(CompoundTag $nbt) : void{
+		parent::initEntity($nbt);
+		$this->variant = $nbt->getInt("Variant", -1);
+		if($this->variant < 0){
+			$pos = $this->getPosition();
+			[$temperature] = \pocketmine\world\weather\Weather::biomeClimate($this->getWorld()->getBiomeId($pos->getFloorX(), $pos->getFloorY(), $pos->getFloorZ()));
+			$this->variant = $temperature < 0.2 ? 1 : ($temperature > 0.9 ? 2 : 0);
+		}
+	}
+	public function saveNBT() : CompoundTag{ return parent::saveNBT()->setInt("Variant", $this->variant); }
+	protected function syncNetworkData(EntityMetadataCollection $properties) : void{ parent::syncNetworkData($properties); $properties->setInt(EntityMetadataProperties::VARIANT, max(0, $this->variant)); }
+	protected function layEggs(\pocketmine\entity\BreedableAnimal $partner) : bool{
+		$world = $this->getWorld();
+		$spawn = \pocketmine\block\ExtraVanillaBlocks::get("minecraft:frog_spawn");
+		$pos = $this->getPosition();
+		for($i = 0; $i < 40 && $spawn !== null; ++$i){
+			$x = $pos->getFloorX() + mt_rand(-8, 8); $z = $pos->getFloorZ() + mt_rand(-8, 8); $y = $pos->getFloorY() + mt_rand(-2, 1);
+			$water = $world->getBlockAt($x, $y, $z);
+			if($water instanceof \pocketmine\block\Water && $water->isSource() && $world->getBlockAt($x, $y + 1, $z)->getTypeId() === \pocketmine\block\BlockTypeIds::AIR){
+				$world->setBlockAt($x, $y + 1, $z, $spawn);
+				return true;
+			}
+		}
+		return false;
+	}
+	protected function tickWandering(int $tickDiff) : void{
+		$this->tongueCooldown = max(0, $this->tongueCooldown - $tickDiff);
+		if($this->tongueCooldown === 0 && !$this->isBaby()){
+			foreach($this->getWorld()->getNearbyEntities($this->getBoundingBox()->expandedCopy(3, 2, 3), $this) as $e){
+				if(($e instanceof SlimeMob || $e instanceof MagmaCubeMob) && $e->isAlive()){
+					$this->tongueCooldown = 100;
+					$drop = $e instanceof MagmaCubeMob ? \pocketmine\item\StringToItemParser::getInstance()->parse(match($this->variant){ 1 => "verdant_froglight", 2 => "pearlescent_froglight", default => "ochre_froglight" }) : VanillaItems::SLIMEBALL();
+					$pos = $e->getPosition();
+					$e->flagForDespawn();
+					if($drop !== null){ $this->getWorld()->dropItem($pos, $drop); }
+					$this->getWorld()->broadcastPacketToViewers($this->getPosition(), \pocketmine\network\mcpe\protocol\LevelSoundEventPacket::create(\pocketmine\network\mcpe\protocol\types\LevelSoundEvent::EAT, $this->getPosition(), -1, EntityIds::FROG, false, false, $this->getId(), null));
+					return;
+				}
+			}
+		}
+		parent::tickWandering($tickDiff);
+	}
 	protected const ENTITY_ID = EntityIds::FROG;
 	protected const DISPLAY_NAME = "Frog";
 	protected const SPAWN_EGG_GETTER = "FROG_SPAWN_EGG";
@@ -1016,6 +1105,62 @@ class GlowSquidMob extends GenericSwimmingAnimalMob{
 }
 
 class GoatMob extends GenericAnimalMob{
+	/** BetterPMMP: vanilla goat - milked with a bucket, rams players now and then (knockback), and loses one of its two horns when it rams a log, stone, ore or packed ice */
+	private int $ramCooldown = 600;
+	private int $horns = 2;
+	private ?\pocketmine\math\Vector3 $ramDir = null;
+	private int $ramTicks = 0;
+	protected function initEntity(CompoundTag $nbt) : void{ parent::initEntity($nbt); $this->horns = $nbt->getByte("BetterPMMPHorns", 2); }
+	public function saveNBT() : CompoundTag{ return parent::saveNBT()->setByte("BetterPMMPHorns", $this->horns); }
+	public function onInteract(Player $player, \pocketmine\math\Vector3 $clickPos) : bool{
+		$held = $player->getInventory()->getItemInHand();
+		if(!$this->isBaby() && $held->getTypeId() === VanillaItems::BUCKET()->getTypeId()){
+			if($player->hasFiniteResources()){
+				$held->pop(); $player->getInventory()->setItemInHand($held->isNull() ? VanillaItems::MILK_BUCKET() : $held);
+				if(!$held->isNull()){ $player->getInventory()->addItem(VanillaItems::MILK_BUCKET()); }
+			}
+			$this->getWorld()->broadcastPacketToViewers($this->getPosition(), \pocketmine\network\mcpe\protocol\LevelSoundEventPacket::create(\pocketmine\network\mcpe\protocol\types\LevelSoundEvent::MILK, $this->getPosition(), -1, EntityIds::GOAT, false, false, $this->getId(), null));
+			return true;
+		}
+		return parent::onInteract($player, $clickPos);
+	}
+	protected function tickWandering(int $tickDiff) : void{
+		if($this->ramTicks > 0 && $this->ramDir !== null){
+			$this->ramTicks -= $tickDiff;
+			$this->setMotion(new \pocketmine\math\Vector3($this->ramDir->x * 0.4, $this->getMotion()->y, $this->ramDir->z * 0.4));
+			foreach($this->getWorld()->getNearbyEntities($this->getBoundingBox()->expandedCopy(0.4, 0.2, 0.4), $this) as $e){
+				if($e instanceof Living && !$e instanceof GoatMob){
+					$e->attack(new \pocketmine\event\entity\EntityDamageByEntityEvent($this, $e, \pocketmine\event\entity\EntityDamageEvent::CAUSE_ENTITY_ATTACK, $this->isBaby() ? 1 : 2));
+					$e->knockBack($this->ramDir->x, $this->ramDir->z, 1.2);
+					$this->ramTicks = 0;
+				}
+			}
+			if($this->isCollidedHorizontally && $this->horns > 0){
+				$front = $this->getPosition()->addVector($this->ramDir)->add(0, 0.5, 0);
+				$block = $this->getWorld()->getBlock($front);
+				$name = strtolower($block->getName());
+				if(str_contains($name, "log") || str_contains($name, "stone") || str_contains($name, "ore") || str_contains($name, "packed ice")){
+					$this->getWorld()->dropItem($front, VanillaItems::GOAT_HORN());
+					--$this->horns;
+				}
+				$this->ramTicks = 0;
+			}
+			return;
+		}
+		$this->ramCooldown -= $tickDiff;
+		if($this->ramCooldown <= 0 && !$this->isBaby()){
+			$this->ramCooldown = mt_rand(600, 6000);
+			foreach($this->getWorld()->getPlayers() as $p){
+				if(!$p->isSpectator() && !$p->isCreative() && ($d = $p->getPosition()->subtractVector($this->getPosition()))->lengthSquared() < 16 * 16 && $d->lengthSquared() > 4){
+					$this->ramDir = (new \pocketmine\math\Vector3($d->x, 0, $d->z))->normalize();
+					$this->ramTicks = 40;
+					$this->setRotation(rad2deg(atan2(-$d->x, $d->z)), 0.0);
+					return;
+				}
+			}
+		}
+		parent::tickWandering($tickDiff);
+	}
 	protected const ENTITY_ID = EntityIds::GOAT;
 	protected const DISPLAY_NAME = "Goat";
 	protected const SPAWN_EGG_GETTER = "GOAT_SPAWN_EGG";
@@ -1534,6 +1679,30 @@ class SlimeMob extends GenericHostileMob{
 }
 
 class SnifferMob extends GenericAnimalMob{
+	/** BetterPMMP: vanilla sniffer - every 8 minutes or so it digs into grass, dirt, moss or mud and brings up a torchflower seed or a pitcher pod */
+	private int $sniffCooldown = 2400;
+	private int $digTicks = 0;
+	protected function tickWandering(int $tickDiff) : void{
+		if($this->digTicks > 0){
+			$this->getNavigator()->stop();
+			if(($this->digTicks -= $tickDiff) <= 0){
+				$seed = mt_rand(0, 1) === 0 ? VanillaItems::TORCHFLOWER_SEEDS() : VanillaItems::PITCHER_POD();
+				$this->getWorld()->dropItem($this->getPosition()->addVector($this->getDirectionVector()->multiply(1.5))->add(0, 0.5, 0), $seed);
+			}
+			return;
+		}
+		if(!$this->isBaby() && ($this->sniffCooldown -= $tickDiff) <= 0){
+			$this->sniffCooldown = mt_rand(8400, 10800);
+			$pos = $this->getPosition();
+			$below = $this->getWorld()->getBlockAt($pos->getFloorX(), $pos->getFloorY() - 1, $pos->getFloorZ());
+			$name = strtolower($below->getName());
+			if(str_contains($name, "grass") || str_contains($name, "dirt") || str_contains($name, "moss") || str_contains($name, "mud") || str_contains($name, "podzol")){
+				$this->digTicks = 80;
+				return;
+			}
+		}
+		parent::tickWandering($tickDiff);
+	}
 	protected const ENTITY_ID = EntityIds::SNIFFER;
 	protected const DISPLAY_NAME = "Sniffer";
 	protected const SPAWN_EGG_GETTER = "SNIFFER_SPAWN_EGG";
@@ -1558,6 +1727,7 @@ class SpiderMob extends GenericSpiderMob{
 }
 
 class StrayMob extends GenericRangedHostileMob{
+	protected function decorateArrow(\pocketmine\entity\projectile\Arrow $arrow) : void{ $arrow->setHitEffect(new \pocketmine\entity\effect\EffectInstance(\pocketmine\entity\effect\VanillaEffects::SLOWNESS(), 600)); }
 	protected const ENTITY_ID = EntityIds::STRAY;
 	protected const DISPLAY_NAME = "Stray";
 	protected const SPAWN_EGG_GETTER = "STRAY_SPAWN_EGG";
@@ -1584,6 +1754,29 @@ class SulfurCubeMob extends GenericHostileMob{
 }
 
 class TadpoleMob extends GenericSwimmingAnimalMob{
+	/** BetterPMMP: tadpoles grow into frogs after 20 minutes (slimeballs: -10 %) and can be caught in a bucket */
+	private int $growTicks = 24000;
+	protected function initEntity(CompoundTag $nbt) : void{ parent::initEntity($nbt); $this->growTicks = $nbt->getInt("BetterPMMPGrowTicks", 24000); }
+	public function saveNBT() : CompoundTag{ return parent::saveNBT()->setInt("BetterPMMPGrowTicks", $this->growTicks); }
+	public function onInteract(Player $player, \pocketmine\math\Vector3 $clickPos) : bool{
+		$held = $player->getInventory()->getItemInHand();
+		if($held->getTypeId() === VanillaItems::SLIMEBALL()->getTypeId()){
+			if($player->hasFiniteResources()){ $held->pop(); $player->getInventory()->setItemInHand($held); }
+			$this->growTicks -= 2400;
+			$this->getWorld()->addParticle($this->getPosition(), new \pocketmine\world\particle\HappyVillagerParticle());
+			return true;
+		}
+		return parent::onInteract($player, $clickPos);
+	}
+	protected function entityBaseTick(int $tickDiff = 1) : bool{
+		$update = parent::entityBaseTick($tickDiff);
+		if($this->isAlive() && ($this->growTicks -= $tickDiff) <= 0){
+			$frog = new FrogMob(Location::fromObject($this->getPosition(), $this->getWorld(), $this->getLocation()->getYaw(), 0));
+			$frog->spawnToAll();
+			$this->flagForDespawn();
+		}
+		return $update;
+	}
 	protected const ENTITY_ID = EntityIds::TADPOLE;
 	protected const DISPLAY_NAME = "Tadpole";
 	protected const SPAWN_EGG_GETTER = "TADPOLE_SPAWN_EGG";
