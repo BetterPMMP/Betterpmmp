@@ -372,6 +372,13 @@ class World implements ChunkManager{
 
 	private ?\pocketmine\world\trial\TrialManager $trialManager = null;
 
+	private ?\pocketmine\world\raid\RaidManager $raidManager = null;
+
+	/** BetterPMMP: omens and raids. */
+	public function getRaidManager() : \pocketmine\world\raid\RaidManager{
+		return $this->raidManager ??= new \pocketmine\world\raid\RaidManager($this);
+	}
+
 	/** BetterPMMP: trial spawners and vaults. */
 	public function getTrialManager() : \pocketmine\world\trial\TrialManager{
 		return $this->trialManager ??= new \pocketmine\world\trial\TrialManager($this);
@@ -1006,6 +1013,7 @@ class World implements ChunkManager{
 
 		$this->getWeather()->tick();
 		$this->getTrialManager()->tick();
+		$this->getRaidManager()->tick();
 		$this->sunAnglePercentage = $this->computeSunAnglePercentage(); //Sun angle depends on the current time
 		$this->skyLightReduction = $this->computeSkyLightReduction(); //Sky light reduction depends on the sun angle
 

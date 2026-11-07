@@ -149,6 +149,7 @@ final class ExtraVanillaItems{
 			str_ends_with($name, "_boat") || str_ends_with($name, "_raft") => new VehicleBoatItem($id, $display, $name, 1),
 			in_array($name, FishBucket::BUCKETS, true) => new FishBucket($id, $display, $name, 1),
 			$name === "minecraft:wind_charge" => new WindChargeItem($id, "Wind Charge"),
+			$name === "minecraft:ominous_bottle" => new OminousBottle($id, "Ominous Bottle", $name, 64),
 			$name === "minecraft:lead" => new LeadItem($id, "Lead", $name, 64),
 			$name === "minecraft:empty_map" => new EmptyMapItem($id, "Empty Map", $name, 64),
 			default => new GenericBedrockItem($id, $display, $name, self::stackSize($name)),

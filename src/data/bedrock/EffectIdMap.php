@@ -59,9 +59,10 @@ final class EffectIdMap{
 		$this->register(EffectIds::LEVITATION, VanillaEffects::LEVITATION());
 		$this->register(EffectIds::FATAL_POISON, VanillaEffects::FATAL_POISON());
 		$this->register(EffectIds::CONDUIT_POWER, VanillaEffects::CONDUIT_POWER());
-		//TODO: SLOW_FALLING
-		//TODO: BAD_OMEN
-		//TODO: VILLAGE_HERO
 		$this->register(EffectIds::DARKNESS, VanillaEffects::DARKNESS());
+		//BetterPMMP: slow falling, omens, hero of the village and the 1.21 effects
+		foreach(\pocketmine\entity\effect\ExtraEffects::ids() as $name => $id){
+			$this->register($id, \pocketmine\entity\effect\ExtraEffects::get($name));
+		}
 	}
 }

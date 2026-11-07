@@ -11,6 +11,7 @@ namespace pocketmine\entity\trade;
 
 use pocketmine\item\Item;
 use pocketmine\nbt\tag\CompoundTag;
+use function floor;
 use function max;
 
 /**
@@ -31,6 +32,20 @@ final class TradeOffer{
 	){}
 
 	public function getBuyA() : Item{ return clone $this->buyA; }
+
+	/**
+	 * BetterPMMP: the price for this player - Hero of the Village lowers it by
+	 * 30 % + 6.25 % per further level (vanilla), never below 1.
+	 */
+	public function getBuyAFor(?\pocketmine\player\Player $player) : Item{
+		$buy = clone $this->buyA;
+		$hero = $player?->getEffects()->get(\pocketmine\entity\effect\ExtraEffects::get("village_hero"));
+		if($hero !== null){
+			$count = $buy->getCount();
+			$buy->setCount(max(1, $count - (int) floor($count * (0.3 + 0.0625 * $hero->getAmplifier()))));
+		}
+		return $buy;
+	}
 	public function getBuyB() : ?Item{ return $this->buyB !== null ? clone $this->buyB : null; }
 	public function getSell() : Item{ return clone $this->sell; }
 	public function getMaxUses() : int{ return $this->maxUses; }
@@ -55,10 +70,11 @@ final class TradeOffer{
 	}
 
 	/** Bedrock trade recipe NBT (used by the trade window). */
-	public function toNbt(int $netId) : CompoundTag{
+	public function toNbt(int $netId, ?\pocketmine\player\Player $player = null) : CompoundTag{
+		$buyA = $this->getBuyAFor($player);
 		$nbt = CompoundTag::create()
-			->setTag("buyA", $this->buyA->nbtSerialize())
-			->setInt("buyCountA", $this->buyA->getCount())
+			->setTag("buyA", $buyA->nbtSerialize())
+			->setInt("buyCountA", $buyA->getCount())
 			->setInt("buyCountB", $this->buyB?->getCount() ?? 0)
 			->setTag("sell", $this->sell->nbtSerialize())
 			->setInt("maxUses", $this->maxUses)

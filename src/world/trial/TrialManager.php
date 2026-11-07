@@ -169,11 +169,18 @@ final class TrialManager{
 		}
 	}
 
-	private function setSpawnerState(Vector3 $pos, int $state) : void{
+	/** @var array<string, bool> spawner pos => running an ominous trial */
+	private array $ominous = [];
+
+	private function setSpawnerState(Vector3 $pos, int $state, ?bool $ominous = null) : void{
 		$block = $this->world->getBlock($pos);
 		if($block instanceof GenericBedrockBlock && $block->getBedrockName() === "minecraft:trial_spawner"){
 			try{
-				$this->world->setBlock($pos, $block->withProperties(["trial_spawner_state" => $state]));
+				$properties = ["trial_spawner_state" => $state];
+				if($ominous !== null){
+					$properties["ominous"] = $ominous;
+				}
+				$this->world->setBlock($pos, $block->withProperties($properties));
 			}catch(\InvalidArgumentException){
 			}
 		}
@@ -224,9 +231,19 @@ final class TrialManager{
 				$this->active[$key] = [$pos, [], 0, 0, [], 0, 0];
 				return;
 			}
-			// wake up
-			$total = 6 + 2 * (count($participants) - 1);
-			$this->setSpawnerState($pos, 2);
+			// wake up; a player with Trial Omen makes it an ominous trial (more mobs, ominous rewards)
+			$ominous = false;
+			foreach($players as $player){
+				if($player->getEffects()->has(\pocketmine\entity\effect\ExtraEffects::get("trial_omen"))){
+					$ominous = true;
+				}
+			}
+			$this->ominous[$key] = $ominous;
+			$total = 6 + 2 * (count($participants) - 1) + ($ominous ? 4 : 0);
+			$this->setSpawnerState($pos, 2, $ominous);
+			if($ominous){
+				$this->world->addSound($pos, new VanillaSound(LevelSoundEvent::TRIAL_SPAWNER_CHARGE_ACTIVATE));
+			}
 			$this->world->addSound($pos, new VanillaSound(LevelSoundEvent::TRIAL_SPAWNER_DETECT_PLAYER));
 			$this->world->broadcastPacketToViewers($pos, LevelEventPacket::create(LevelEvent::PARTICLE_TRIAL_SPAWNER_DETECTION, count($players), $pos->add(0.5, 0.5, 0.5)));
 			$nextSpawn = $tick + 20;
@@ -263,14 +280,15 @@ final class TrialManager{
 			$this->setSpawnerState($pos, 4);
 			$this->world->addSound($pos, new VanillaSound(LevelSoundEvent::TRIAL_SPAWNER_OPEN_SHUTTER));
 			foreach(array_keys($participants) as $_){
-				foreach(self::spawnerReward() as $item){
+				foreach(self::spawnerReward($this->ominous[$key] ?? false) as $item){
 					$this->world->dropItem($pos->add(0.5, 1.2, 0.5), $item, new Vector3(mt_rand(-10, 10) / 100, 0.3, mt_rand(-10, 10) / 100));
 				}
 				$this->world->addSound($pos, new VanillaSound(LevelSoundEvent::TRIAL_SPAWNER_EJECT_ITEM));
 			}
 		}elseif($phaseTicks >= 60){
 			$this->world->addSound($pos, new VanillaSound(LevelSoundEvent::TRIAL_SPAWNER_CLOSE_SHUTTER));
-			$this->setSpawnerState($pos, 5);
+			$this->setSpawnerState($pos, 5, false);
+			unset($this->ominous[$key]);
 			$this->cooldowns[$key] = $time + self::COOLDOWN;
 			$this->dirty = true;
 			$this->active[$key] = [$pos, [], 0, 0, [], 0, 0];
@@ -318,11 +336,20 @@ final class TrialManager{
 	}
 
 	/** @return Item[] vanilla trial_chamber/consumables + key */
-	private static function spawnerReward() : array{
+	private static function spawnerReward(bool $ominous) : array{
 		$items = [];
-		$key = ExtraVanillaItems::get("minecraft:trial_key");
-		if($key !== null && mt_rand(0, 99) < 50){
+		$key = ExtraVanillaItems::get($ominous ? "minecraft:ominous_trial_key" : "minecraft:trial_key");
+		if($key !== null && mt_rand(0, 99) < ($ominous ? 30 : 50)){
 			$items[] = $key;
+		}
+		if($ominous){
+			// ominous trials also give better consumables
+			$parser = StringToItemParser::getInstance();
+			foreach([["diamond", 1, 2], ["emerald", 4, 10], ["golden_carrot", 3, 6], ["wind_charge", 6, 12]] as [$name, $min, $max]){
+				if(mt_rand(0, 2) === 0 && ($item = $parser->parse($name)) !== null){
+					$items[] = $item->setCount(mt_rand($min, $max));
+				}
+			}
 		}
 		$parser = StringToItemParser::getInstance();
 		$pick = ["cooked_chicken" => [1, 3], "bread" => [1, 3], "baked_potato" => [1, 3], "arrow" => [4, 8], "potion" => [1, 1], "emerald" => [1, 3], "honey_bottle" => [1, 2], "golden_carrot" => [1, 2]];
@@ -341,7 +368,13 @@ final class TrialManager{
 	public function useVault(Player $player, GenericBedrockBlock $vault, Item $held) : bool{
 		$name = $held instanceof \pocketmine\item\GenericBedrockItem ? $held->getBedrockName() : "";
 		$pos = $vault->getPosition();
-		if($name !== "minecraft:trial_key"){
+		$ominousTag = $vault->getStateData()->getStates()["ominous"] ?? null;
+		$ominous = $ominousTag !== null && (int) $ominousTag->getValue() === 1;
+		if($name !== ($ominous ? "minecraft:ominous_trial_key" : "minecraft:trial_key")){
+			if($name === "minecraft:trial_key" || $name === "minecraft:ominous_trial_key"){
+				$this->world->addSound($pos, new VanillaSound(LevelSoundEvent::VAULT_INSERT_ITEM_FAIL));
+				return true;
+			}
 			return false;
 		}
 		$key = self::key($pos);
@@ -361,7 +394,7 @@ final class TrialManager{
 			$this->world->setBlock($pos, $vault->withProperties(["vault_state" => "ejecting"]));
 		}catch(\InvalidArgumentException){
 		}
-		$rewards = self::vaultLoot();
+		$rewards = $ominous ? self::ominousVaultLoot() : self::vaultLoot();
 		foreach($rewards as $i => $item){
 			$this->world->dropItem($pos->add(0.5, 1.1, 0.5), $item, new Vector3(mt_rand(-5, 5) / 100, 0.25, mt_rand(-5, 5) / 100), 10 + 10 * $i);
 		}
@@ -379,7 +412,7 @@ final class TrialManager{
 			["ominous_bottle", 1, 1, 2], ["shield", 1, 1, 3], ["bolt_armor_trim_smithing_template", 1, 1, 1], ["golden_carrot", 1, 2, 3],
 			["diamond", 1, 2, 1], ["crossbow", 1, 1, 2], ["iron_axe", 1, 1, 2], ["iron_chestplate", 1, 1, 2], ["golden_apple", 1, 1, 1],
 			["enchanted_golden_apple", 1, 1, 0], ["diamond_axe", 1, 1, 1], ["diamond_chestplate", 1, 1, 1], ["trident", 1, 1, 0],
-			["music_disc_precipice", 1, 1, 1], ["guster_banner_pattern", 1, 1, 1], ["flow_banner_pattern", 1, 1, 1], ["book", 1, 1, 2],
+			["record_precipice", 1, 1, 1], ["guster_banner_pattern", 1, 1, 1], ["flow_banner_pattern", 1, 1, 1], ["book", 1, 1, 2],
 		];
 		$total = 0;
 		foreach($table as $row){
@@ -400,6 +433,35 @@ final class TrialManager{
 					}
 					break;
 				}
+			}
+		}
+		return $items;
+	}
+
+	/** @return Item[] vanilla trial_chambers/reward_ominous: the only source of the heavy core */
+	private static function ominousVaultLoot() : array{
+		$parser = StringToItemParser::getInstance();
+		$items = [];
+		$roll = mt_rand(1, 100);
+		$rare = match(true){
+			$roll <= 8 => "heavy_core",
+			$roll <= 11 => "enchanted_golden_apple",
+			$roll <= 19 => "flow_armor_trim_smithing_template",
+			$roll <= 27 => "record_creator",
+			$roll <= 35 => "flow_banner_pattern",
+			$roll <= 50 => "emerald_block",
+			$roll <= 65 => "diamond_block",
+			default => "diamond_axe",
+		};
+		if(($item = $parser->parse($rare)) !== null){
+			$items[] = $item;
+		}
+		foreach([["emerald", 4, 10], ["wind_charge", 8, 12], ["diamond", 2, 3], ["ominous_bottle", 1, 1], ["golden_apple", 1, 1], ["golden_carrot", 3, 6]] as [$name, $min, $max]){
+			if(mt_rand(0, 2) === 0 && ($item = $parser->parse($name)) !== null){
+				if($item instanceof \pocketmine\item\OminousBottle){
+					$item->setOmenLevel(mt_rand(2, 4));
+				}
+				$items[] = $item->setCount(mt_rand($min, $max));
 			}
 		}
 		return $items;
