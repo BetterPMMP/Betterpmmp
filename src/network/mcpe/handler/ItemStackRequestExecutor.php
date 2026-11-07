@@ -296,7 +296,8 @@ class ItemStackRequestExecutor{
 	 */
 	private function assertDoingCrafting() : void{
 		if(!$this->specialTransaction instanceof CraftingTransaction && !$this->specialTransaction instanceof EnchantingTransaction && !$this->specialTransaction instanceof \pocketmine\inventory\transaction\TradingTransaction
-			&& !$this->specialTransaction instanceof \pocketmine\inventory\transaction\AnvilTransaction && !$this->specialTransaction instanceof \pocketmine\inventory\transaction\GrindstoneTransaction){
+			&& !$this->specialTransaction instanceof \pocketmine\inventory\transaction\AnvilTransaction && !$this->specialTransaction instanceof \pocketmine\inventory\transaction\GrindstoneTransaction
+			&& !$this->specialTransaction instanceof \pocketmine\inventory\transaction\CartographyTransaction){
 			if($this->specialTransaction === null){
 				throw new ItemStackRequestProcessException("Expected CraftRecipe or CraftRecipeAuto action to precede this action");
 			}else{
@@ -383,6 +384,19 @@ class ItemStackRequestExecutor{
 			}
 			[$result, $cost, $used] = $calculated;
 			$this->specialTransaction = new \pocketmine\inventory\transaction\AnvilTransaction($this->player, $anvil, $result, $cost, $used);
+			$this->setNextCreatedItem($result);
+		}elseif($action instanceof \pocketmine\network\mcpe\protocol\types\inventory\stackrequest\CraftRecipeOptionalStackRequestAction && ($table = $this->player->getCurrentWindow()) instanceof \pocketmine\block\inventory\CartographyTableInventory){
+			//BetterPMMP: cartography table (zoom / copy / lock / rename maps)
+			if($this->specialTransaction !== null){
+				throw new ItemStackRequestProcessException("Another special transaction is already in progress");
+			}
+			$rename = $this->request->getFilterStrings()[$action->getFilterStringIndex()] ?? null;
+			$calculated = \pocketmine\inventory\transaction\CartographyTransaction::calculate($table->getItem(0), $table->getItem(1), $rename);
+			if($calculated === null){
+				throw new ItemStackRequestProcessException("Nothing can be done with these items at a cartography table");
+			}
+			[$result, $used] = $calculated;
+			$this->specialTransaction = new \pocketmine\inventory\transaction\CartographyTransaction($this->player, $table, $result, $used);
 			$this->setNextCreatedItem($result);
 		}elseif($action instanceof \pocketmine\network\mcpe\protocol\types\inventory\stackrequest\GrindstoneStackRequestAction && ($grindstone = $this->player->getCurrentWindow()) instanceof \pocketmine\block\inventory\GrindstoneInventory){
 			//BetterPMMP: grindstone (remove enchantments / combine durability)

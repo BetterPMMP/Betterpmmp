@@ -118,6 +118,70 @@ final class MapManager{
 		return $item;
 	}
 
+	/** Map id of a filled map item, or null. */
+	public static function idOf(Item $item) : ?int{
+		$id = $item->getNamedTag()->getTag(self::TAG_UUID)?->getValue();
+		return is_int($id) && self::load($id) ? $id : null;
+	}
+
+	public static function scaleOf(int $id) : int{
+		return self::$maps[$id]["scale"] ?? 0;
+	}
+
+	public static function isLocked(int $id) : bool{
+		return (bool) (self::$maps[$id]["locked"] ?? false);
+	}
+
+	/**
+	 * BetterPMMP cartography table: a new map derived from one - "zoom" (one
+	 * scale bigger, same area re-aligned, drawn while exploring) or "lock" (a
+	 * frozen copy). It is only saved by {@link persist()} when the player takes it.
+	 */
+	public static function derive(Item $map, string $mode) : ?Item{
+		$id = self::idOf($map);
+		if($id === null){
+			return null;
+		}
+		$data = self::$maps[$id];
+		$newId = mt_rand(1, 0x7fffffff) * 4096 + mt_rand(0, 4095);
+		if($mode === "zoom"){
+			if($data["scale"] >= 4){
+				return null;
+			}
+			$scale = $data["scale"] + 1;
+			$size = 128 << $scale;
+			$cx = (int) (floor(($data["x"] + 64) / $size) * $size + intdiv($size, 2) - 64);
+			$cz = (int) (floor(($data["z"] + 64) / $size) * $size + intdiv($size, 2) - 64);
+			self::$maps[$newId] = ["world" => $data["world"], "x" => $cx, "z" => $cz, "scale" => $scale, "pixels" => str_repeat("\0", 128 * 128 * 3), "target" => $data["target"] ?? null];
+			try{
+				$world = Server::getInstance()->getWorldManager()->getWorldByName($data["world"]);
+			}catch(\RuntimeException){
+				$world = null;
+			}
+			if($world !== null){
+				self::render($newId, $world, 0, 0, 127, 127);
+			}
+		}else{
+			self::$maps[$newId] = $data;
+			self::$maps[$newId]["locked"] = true;
+		}
+		$item = clone $map;
+		$tag = $item->getNamedTag();
+		$tag->setLong(self::TAG_UUID, $newId);
+		$tag->setInt(self::TAG_SCALE, self::$maps[$newId]["scale"]);
+		$tag->setByte("map_is_scaling", $mode === "zoom" ? 1 : 0);
+		$tag->setByte("map_locked", $mode === "lock" ? 1 : 0);
+		$item->setNamedTag($tag);
+		return $item->setCount(1);
+	}
+
+	public static function persist(Item $map) : void{
+		$id = $map->getNamedTag()->getTag(self::TAG_UUID)?->getValue();
+		if(is_int($id) && isset(self::$maps[$id]) && ($world = Server::getInstance()->getWorldManager()->getWorldByName(self::$maps[$id]["world"])) !== null){
+			self::save($id, $world);
+		}
+	}
+
 	private static function mapFile(World $world, int $id) : string{
 		return $world->getProvider()->getPath() . "/betterpmmp_maps/" . $id . ".json";
 	}
@@ -131,7 +195,7 @@ final class MapManager{
 		if(!is_dir($dir)){
 			@mkdir($dir, 0777, true);
 		}
-		@file_put_contents(self::mapFile($world, $id), json_encode(["world" => $data["world"], "x" => $data["x"], "z" => $data["z"], "scale" => $data["scale"], "pixels" => base64_encode($data["pixels"]), "target" => $data["target"] ?? null]));
+		@file_put_contents(self::mapFile($world, $id), json_encode(["world" => $data["world"], "x" => $data["x"], "z" => $data["z"], "scale" => $data["scale"], "pixels" => base64_encode($data["pixels"]), "target" => $data["target"] ?? null, "locked" => $data["locked"] ?? false]));
 	}
 
 	/** Loads a map from any loaded world's folder. */
@@ -155,6 +219,7 @@ final class MapManager{
 				"z" => (int) ($data["z"] ?? 0),
 				"scale" => (int) ($data["scale"] ?? 0),
 				"pixels" => $pixels !== false && strlen($pixels) === 128 * 128 * 3 ? $pixels : str_repeat("\0", 128 * 128 * 3),
+				"locked" => (bool) ($data["locked"] ?? false),
 				"target" => is_array($data["target"] ?? null) && count($data["target"]) === 4 ? [(int) $data["target"][0], (int) $data["target"][1], (int) $data["target"][2], (bool) $data["target"][3]] : null,
 			];
 			return true;
@@ -407,7 +472,7 @@ final class MapManager{
 				$px = (int) floor(($player->getPosition()->x - $map["x"]) / $step) + 64;
 				$py = (int) floor(($player->getPosition()->z - $map["z"]) / $step) + 64;
 				$changed = false;
-				if($px >= -16 && $px < 144 && $py >= -16 && $py < 144){
+				if(!self::isLocked($id) && $px >= -16 && $px < 144 && $py >= -16 && $py < 144){
 					$changed = self::render($id, $world, max(0, $px - 16), max(0, $py - 16), min(127, $px + 16), min(127, $py + 16));
 					if($changed){
 						self::save($id, $world);

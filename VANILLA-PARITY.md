@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.18-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.19-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -42,6 +42,7 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 
 | System | Stand |
 |---|---|
+| Kartentisch | ✅ **5.19**: Karte + Papier = eine Stufe größer (bis 4), + leere Karte = 2 Kopien, + Glasscheibe = gesperrte Karte (zeichnet nicht mehr weiter), Umbenennen, keine EP-Kosten |
 | Schatzkarten | ✅ in Schiffswrack-Kartentruhen; beim ersten In-die-Hand-Nehmen wird der nächste Strand gesucht, die Karte zeigt das rote X, die Schatztruhe wird eingegraben, sobald man in die Nähe kommt (vanilla Schatz-Beute) |
 | Entdeckerkarten | ✅ Kartograf (Lehrling: Ozean-Entdeckerkarte für 13 Smaragde + Kompass, Prüfungs-Entdeckerkarte für 12; Geselle: Waldland-Entdeckerkarte für 14) – zeigen den nächsten Ozeanmonument / das Waldanwesen / die Prüfungskammer mit Symbol |
 

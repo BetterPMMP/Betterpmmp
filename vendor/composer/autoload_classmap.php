@@ -96,6 +96,7 @@ return array(
     'pocketmine\\block\\tile\\Crafter' => $baseDir . '/src/block/tile/Crafter.php',
     'pocketmine\\block\\VanillaCrafter' => $baseDir . '/src/block/VanillaCrafter.php',
     'pocketmine\\world\\map\\ExplorerMaps' => $baseDir . '/src/world/map/ExplorerMaps.php',
+    'pocketmine\\inventory\\transaction\\CartographyTransaction' => $baseDir . '/src/inventory/transaction/CartographyTransaction.php',
     'pocketmine\\block\\ExtraVanillaBlocks' => $baseDir . '/src/block/ExtraVanillaBlocks.php',
     'pocketmine\\block\\ExtraVanillaBlockNames' => $baseDir . '/src/block/ExtraVanillaBlockNames.php',
     'pocketmine\\entity\\BossBarTracker' => $baseDir . '/src/entity/BossBarTracker.php',
