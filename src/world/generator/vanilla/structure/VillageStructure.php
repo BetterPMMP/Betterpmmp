@@ -166,21 +166,26 @@ final class VillageStructure extends Structure{
 		}
 
 		//buildings on the plots
+		// vanilla villages have many different job sites: every job once (shuffled) before one repeats
 		$jobs = ["weaponsmith", "toolsmith", "armorer", "butcher", "cartographer", "fletcher", "fisher", "library", "temple", "mason", "shepherd", "tannery"];
-		$jobIndex = $random->nextBoundedInt(count($jobs));
+		for($i = count($jobs) - 1; $i > 0; --$i){
+			$j = $random->nextBoundedInt($i + 1);
+			[$jobs[$i], $jobs[$j]] = [$jobs[$j], $jobs[$i]];
+		}
+		$jobIndex = 0;
 		$templateDir = dirname(__DIR__, 5) . "/resources/structures/village/" . $group . "/houses/";
 		foreach($plots as [$px, $pz, $side]){
 			$roll = $random->nextBoundedInt(100);
-			if($roll < 12){
+			if($roll < 6){
 				continue; //empty plot
 			}
-			if($roll < 30){
-				$type = "farm";
-			}elseif($roll < 38){
+			if($roll < 22){
+				$type = "farm"; // with a composter: farmer job site
+			}elseif($roll < 28){
 				$type = "pen";
-			}elseif($roll < 66){
+			}elseif($roll < 70){
 				$type = $jobs[$jobIndex++ % count($jobs)];
-			}elseif($roll < 82){
+			}elseif($roll < 84){
 				$type = "house_medium";
 			}else{
 				$type = "house_small";
@@ -427,8 +432,8 @@ final class VillageStructure extends Structure{
 				$ly = $height + 1 + $i;
 				for($lz = -1; $lz <= $d; ++$lz){
 					if($i === intdiv($w, 2) && $w % 2 === 1){
+						// ridge of an odd-width roof: slab in the middle, stairs on both sides (closes the top)
 						$t->set($i, $ly, $lz, $p["roof"] instanceof \pocketmine\block\Slab ? (clone $p["roof"])->setSlabType(SlabType::BOTTOM) : $p["roof"]);
-						continue;
 					}
 					if($stairs instanceof \pocketmine\block\Stair){
 						$t->set($i - 1, $ly, $lz, (clone $stairs)->setFacing($t->facing(Facing::EAST)));

@@ -576,7 +576,7 @@ final class NaturalMobSpawner{
 							continue;
 						}
 						$this->populatedVillages[$key] = true;
-						$wanted = max(3, min(10, intdiv(count($start->pieces), 3)));
+						$wanted = max(4, min(14, intdiv(count($start->pieces), 2))); // vanilla: about one villager per house
 						$existing = 0;
 						foreach($world->getEntities() as $entity){
 							$p = $entity->getPosition();
