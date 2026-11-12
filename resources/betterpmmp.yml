@@ -78,3 +78,4 @@ java-bridge:
   resource-pack-port: 25566         # Texture-Packs für Java (TCP freigeben), 0 = aus
   public-address: ""                # Adresse für Java-Clients, leer = öffentliche IP automatisch (z. B. "splashgames.nl")
   chat-forms: false                 # true = Formulare (UIs) für Java-Spieler als Chat-Menü statt Fenster
+  fast-build-fix: true              # false = gesetzte Blöcke wie im Original-ViaBedrock bestätigen (falls schnelles Bauen Probleme macht)

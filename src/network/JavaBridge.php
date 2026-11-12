@@ -144,6 +144,7 @@ final class JavaBridge{
 		self::$command = [
 			$java,
 			"-Xmx" . BetterPMMPConfig::string("java-bridge", "memory", "512M"),
+			"-Dbetterpmmp.fastBuildFix=" . (BetterPMMPConfig::flag("java-bridge", "fast-build-fix", true) ? "true" : "false"),
 			"-jar", $jar, "cli",
 			"--bind-address", "0.0.0.0:" . $port,
 			"--target-address", "127.0.0.1:" . $server->getPort(),

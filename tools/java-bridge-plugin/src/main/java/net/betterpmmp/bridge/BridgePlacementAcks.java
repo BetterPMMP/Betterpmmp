@@ -41,7 +41,19 @@ final class BridgePlacementAcks {
 
     private static final long TIMEOUT_MS = 600;
 
-    private record Pending(int sequence, BlockPosition clicked) {
+    private record Pending(int sequence, BlockPosition clicked, BlockPosition placed) {
+    }
+
+    private static BlockPosition side(final BlockPosition pos, final int face) {
+        return switch (face) {
+            case 0 -> new BlockPosition(pos.x(), pos.y() - 1, pos.z());
+            case 1 -> new BlockPosition(pos.x(), pos.y() + 1, pos.z());
+            case 2 -> new BlockPosition(pos.x(), pos.y(), pos.z() - 1);
+            case 3 -> new BlockPosition(pos.x(), pos.y(), pos.z() + 1);
+            case 4 -> new BlockPosition(pos.x() - 1, pos.y(), pos.z());
+            case 5 -> new BlockPosition(pos.x() + 1, pos.y(), pos.z());
+            default -> pos;
+        };
     }
 
     private static final Map<UserConnection, Deque<Pending>> PENDING = new WeakHashMap<>();
@@ -50,6 +62,10 @@ final class BridgePlacementAcks {
     }
 
     static void install(final BedrockProtocol protocol) {
+        if (!Boolean.parseBoolean(System.getProperty("betterpmmp.fastBuildFix", "true"))) {
+            ViaBedrock.getPlatform().getLogger().log(Level.INFO, "[BetterPMMP-Bridge] fast building fix disabled (java-bridge.fast-build-fix: false)");
+            return;
+        }
         try {
             final PacketMapping useItemOn = mapping(protocol, "serverboundMappings", ServerboundPackets26_3.USE_ITEM_ON.getId());
             final PacketMapping updateBlock = mapping(protocol, "clientboundMappings", ClientboundBedrockPackets.UPDATE_BLOCK.getId());
@@ -63,7 +79,7 @@ final class BridgePlacementAcks {
             useItemOn.setHandler(wrapper -> {
                 wrapper.passthrough(Types.VAR_INT); // hand
                 final BlockPosition clicked = wrapper.passthrough(Types.BLOCK_POSITION1_14);
-                wrapper.passthrough(Types.UNSIGNED_BYTE); // face
+                final short face = wrapper.passthrough(Types.UNSIGNED_BYTE); // face
                 wrapper.passthrough(Types.FLOAT);
                 wrapper.passthrough(Types.FLOAT);
                 wrapper.passthrough(Types.FLOAT);
@@ -72,23 +88,21 @@ final class BridgePlacementAcks {
                 final int sequence = wrapper.read(Types.VAR_INT);
                 wrapper.write(Types.VAR_INT, -1); // ViaBedrock's early acknowledgement now matches no prediction
                 wrapper.resetReader();
-                remember(wrapper.user(), sequence, clicked);
+                remember(wrapper.user(), sequence, clicked, side(clicked, face));
                 originalUse.handle(wrapper);
             });
 
             updateBlock.setHandler(wrapper -> {
                 final BlockPosition position = wrapper.passthrough(BedrockTypes.BLOCK_POSITION);
                 wrapper.resetReader();
-                originalUpdate.handle(wrapper);
                 final int sequence = due(wrapper.user(), position);
                 if (sequence >= 0) {
-                    // the Java block update must reach the client before the acknowledgement
-                    if (!wrapper.isCancelled()) {
-                        wrapper.send(BedrockProtocol.class);
-                        wrapper.cancel();
-                    }
+                    // acknowledge right before the server's first block update for the clicked or placed block:
+                    // the client drops its prediction and applies the server's block in the same moment, so there is
+                    // no gap and the client never resets the player's position
                     PacketFactory.sendJavaBlockChangedAck(wrapper.user(), sequence);
                 }
+                originalUpdate.handle(wrapper);
             });
             ViaBedrock.getPlatform().getLogger().log(Level.INFO, "[BetterPMMP-Bridge] fast building fix enabled");
         } catch (final Throwable t) {
@@ -103,9 +117,9 @@ final class BridgePlacementAcks {
         return mappings.mappedPacket(State.PLAY, packetId);
     }
 
-    private static void remember(final UserConnection user, final int sequence, final BlockPosition clicked) {
+    private static void remember(final UserConnection user, final int sequence, final BlockPosition clicked, final BlockPosition placed) {
         synchronized (PENDING) {
-            PENDING.computeIfAbsent(user, u -> new ArrayDeque<>()).addLast(new Pending(sequence, clicked));
+            PENDING.computeIfAbsent(user, u -> new ArrayDeque<>()).addLast(new Pending(sequence, clicked, placed));
         }
         user.getChannel().eventLoop().schedule(() -> {
             final int timedOut = expire(user, sequence);
@@ -118,32 +132,20 @@ final class BridgePlacementAcks {
         }, TIMEOUT_MS, TimeUnit.MILLISECONDS);
     }
 
-    /** Sequence to acknowledge now that the server sent this block, or -1. Acknowledges every older click too. */
+    /**
+     * Sequence to acknowledge now that the server sends this block, or -1. Only the oldest waiting click can match:
+     * the server answers clicks in order, and a neighbour update of an earlier click must not end a later
+     * click's prediction before the server has even seen that click.
+     */
     private static int due(final UserConnection user, final BlockPosition position) {
         synchronized (PENDING) {
             final Deque<Pending> queue = PENDING.get(user);
-            if (queue == null || queue.isEmpty()) {
+            final Pending head = queue == null ? null : queue.peekFirst();
+            if (head == null || !(head.clicked().equals(position) || head.placed().equals(position))) {
                 return -1;
             }
-            int last = -1;
-            boolean found = false;
-            for (final Pending pending : queue) {
-                last = pending.sequence();
-                if (pending.clicked().equals(position)) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                return -1;
-            }
-            while (!queue.isEmpty()) {
-                final Pending head = queue.pollFirst();
-                if (head.sequence() == last) {
-                    break;
-                }
-            }
-            return last;
+            queue.pollFirst();
+            return head.sequence();
         }
     }
 

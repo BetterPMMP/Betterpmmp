@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.54-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.55-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -49,6 +49,12 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel), Lama mit Truhe, Panda-Aussehen je Gen |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.55
+
+| System | Stand |
+|---|---|
+| Java: schnelles Bauen | ✅ Korrektur zu 5.54: die Bestätigung kam *nach* dem Server-Block – wich der Block bei Java minimal von der Vorhersage ab, setzte der Java-Client den Spieler zurück (Reinbuggen in Blöcke). Jetzt kommt sie direkt *vor* dem ersten Server-Block für die Stelle, im selben Moment: keine Lücke, kein Zurücksetzen. Nur der älteste offene Klick kann bestätigt werden. Neuer Schalter `java-bridge.fast-build-fix` (true/false) in der betterpmmp.yml. Bridge-Plugin 1.5.1 |
 
 ## Neu in 5.54
 
