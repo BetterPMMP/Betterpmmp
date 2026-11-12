@@ -108,15 +108,15 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
                 return;
             }
             if (SIZE_MESSAGE.equals(id)) {
-                final String[] parts = value.split(":");
-                if (parts.length == 2) {
+                final String[] parts = value.split(":", 3);
+                if (parts.length >= 2) {
                     try {
                         BridgeContainerSizes sizes = wrapper.user().get(BridgeContainerSizes.class);
                         if (sizes == null) {
                             sizes = new BridgeContainerSizes();
                             wrapper.user().put(sizes);
                         }
-                        sizes.put(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
+                        sizes.put(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]), parts.length == 3 ? parts[2] : "");
                     } catch (NumberFormatException ignored) {
                     }
                 }
@@ -142,12 +142,14 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
             }
 
             final BridgeContainerSizes sizes = wrapper.user().get(BridgeContainerSizes.class);
-            final int announced = sizes == null ? 27 : sizes.take(containerId & 0xFF, 27);
-            final int rows = Math.max(1, Math.min(6, (announced + 8) / 9));
+            final BridgeContainerSizes.Announced announced = sizes == null ? null : sizes.take(containerId & 0xFF);
+            final int rows = Math.max(1, Math.min(6, ((announced == null ? 27 : announced.size()) + 8) / 9));
 
             final BedrockBlockEntity blockEntity = chunkTracker.getBlockEntity(position);
             TextComponent title = new TranslationComponent(rows == 6 ? "container.chestDouble" : "container.chest");
-            if (blockEntity != null && blockEntity.tag().get("CustomName") instanceof StringTag customNameTag) {
+            if (announced != null && !announced.name().isEmpty()) {
+                title = TextUtil.stringToTextComponent(wrapper.user().get(ResourcePackStorage.class).getTexts().translate(announced.name()));
+            } else if (blockEntity != null && blockEntity.tag().get("CustomName") instanceof StringTag customNameTag) {
                 title = TextUtil.stringToTextComponent(wrapper.user().get(ResourcePackStorage.class).getTexts().translate(customNameTag.getValue()));
             }
 

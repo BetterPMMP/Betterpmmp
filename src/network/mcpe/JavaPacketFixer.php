@@ -9,13 +9,18 @@ declare(strict_types=1);
 
 namespace pocketmine\network\mcpe;
 
+use pocketmine\nbt\tag\StringTag;
 use pocketmine\network\mcpe\protocol\AddActorPacket;
+use pocketmine\network\mcpe\protocol\BlockActorDataPacket;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
 use pocketmine\network\mcpe\protocol\MoveActorAbsolutePacket;
 use pocketmine\network\mcpe\protocol\RemoveActorPacket;
 use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataProperties;
 use pocketmine\network\mcpe\protocol\types\entity\FloatMetadataProperty;
+use pocketmine\network\mcpe\protocol\types\BlockPosition;
 use pocketmine\network\mcpe\protocol\types\entity\StringMetadataProperty;
+use function array_key_first;
+use function count;
 
 /**
  * Adjusts packets for Java Edition players before they go to the bridge.
@@ -33,6 +38,8 @@ final class JavaPacketFixer{
 
 	/** @var array<int, true> runtime ids of marker actors */
 	private array $markers = [];
+	/** @var array<string, string> "x:y:z" => custom name sent for a (fake) container block */
+	private array $containerNames = [];
 
 	public function fix(ClientboundPacket $packet) : ClientboundPacket{
 		if($packet instanceof AddActorPacket){
@@ -49,10 +56,35 @@ final class JavaPacketFixer{
 			$fixed->position = $packet->position->subtract(0, self::MARKER_DROP, 0);
 			return $fixed;
 		}
+		if($packet instanceof BlockActorDataPacket){
+			$root = $packet->nbt->getRoot();
+			$key = self::key($packet->blockPosition);
+			if(($name = $root->getTag("CustomName")) instanceof StringTag){
+				$this->containerNames[$key] = $name->getValue();
+				if(count($this->containerNames) > 256){
+					unset($this->containerNames[array_key_first($this->containerNames)]);
+				}
+			}else{
+				unset($this->containerNames[$key]);
+			}
+			return $packet;
+		}
 		if($packet instanceof RemoveActorPacket){
 			unset($this->markers[$packet->actorUniqueId]);
 		}
 		return $packet;
+	}
+
+	/**
+	 * Name of the container block last sent at this position (menu plugins put a fake chest with a custom name
+	 * there). The bridge needs it when opening the window; ViaBedrock does not always find it itself.
+	 */
+	public function getContainerName(BlockPosition $position) : ?string{
+		return $this->containerNames[self::key($position)] ?? null;
+	}
+
+	private static function key(BlockPosition $position) : string{
+		return $position->getX() . ":" . $position->getY() . ":" . $position->getZ();
 	}
 
 	public function isMarkerActor(int $runtimeId) : bool{

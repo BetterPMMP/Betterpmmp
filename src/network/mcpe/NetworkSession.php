@@ -1405,6 +1405,11 @@ class NetworkSession{
 		$this->javaPendingSubtitle = $subtitle;
 	}
 
+	/** BetterPMMP: custom name of the (fake) container block at this position, as last sent to a Java player. */
+	public function getJavaContainerName(\pocketmine\network\mcpe\protocol\types\BlockPosition $position) : ?string{
+		return $this->javaPacketFixer?->getContainerName($position);
+	}
+
 	/**
 	 * BetterPMMP: Java Edition hides screen titles behind open windows (the background is blurred), so while a
 	 * Java player has a window open the title (and subtitle) is also shown as the window's heading.

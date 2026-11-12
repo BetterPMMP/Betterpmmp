@@ -12,7 +12,7 @@ vanilla game engine on top so that you can play survival from start to finish.
 
 GitHub: https://github.com/BetterPMMP/Betterpmmp
 
-Current version: **5.35-vanilla-beta.1** (API 5.51.0, plugins for PocketMine-MP 5 keep working).
+Current version: **5.36-vanilla-beta.1** (API 5.51.0, plugins for PocketMine-MP 5 keep working).
 
 > Status: beta. Many systems behave like vanilla, but not every detail matches
 > the official Bedrock Dedicated Server yet. See `VANILLA-PARITY.md` for an honest
@@ -128,7 +128,7 @@ Anfang bis Ende spielen kann.
 
 GitHub: https://github.com/BetterPMMP/Betterpmmp
 
-Aktuelle Version: **5.35-vanilla-beta.1** (API 5.51.0, Plugins für PocketMine-MP 5 laufen weiter).
+Aktuelle Version: **5.36-vanilla-beta.1** (API 5.51.0, Plugins für PocketMine-MP 5 laufen weiter).
 
 > Stand: Beta. Viele Systeme verhalten sich wie in Vanilla, aber noch nicht jedes
 > Detail stimmt mit dem offiziellen Bedrock Dedicated Server überein. Den ehrlichen

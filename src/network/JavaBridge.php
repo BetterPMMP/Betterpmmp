@@ -35,11 +35,14 @@ use function mkdir;
 use function php_uname;
 use function preg_match;
 use function preg_match_all;
+use function preg_quote;
+use function preg_replace;
 use function proc_close;
 use function proc_get_status;
 use function proc_open;
 use function proc_terminate;
 use function rename;
+use function rtrim;
 use function str_contains;
 use function str_ends_with;
 use function stream_get_contents;
@@ -135,6 +138,7 @@ final class JavaBridge{
 			return;
 		}
 		self::installPlugin($logger);
+		self::configureResourcePacks($logger);
 		$port = BetterPMMPConfig::int("java-bridge", "port", 25565);
 		$online = BetterPMMPConfig::flag("java-bridge", "online-mode", true);
 		self::$command = [
@@ -406,6 +410,48 @@ final class JavaBridge{
 			return;
 		}
 		$logger->info("[Java-Bridge] " . self::PLUGIN . " installiert (Kisten-Menüs und Inventar für Java-Spieler)");
+	}
+
+	/**
+	 * ViaBedrock converts the server's Bedrock resource pack for Java clients and offers it from a small HTTP
+	 * server. By default that server listens on 127.0.0.1 only, which a remote Java client cannot reach
+	 * ("Client resource pack download/load failed"). Make it public on a fixed port with the server's address.
+	 */
+	private static function configureResourcePacks(\Logger $logger) : void{
+		$port = BetterPMMPConfig::int("java-bridge", "resource-pack-port", 25566);
+		if($port <= 0){
+			return; // switched off
+		}
+		$address = BetterPMMPConfig::string("java-bridge", "public-address", "");
+		if($address === ""){
+			$ip = Internet::getIP();
+			$address = is_string($ip) ? $ip : "";
+		}
+		if($address === ""){
+			$logger->warning("[Java-Bridge] Öffentliche Adresse unbekannt, Texture-Packs für Java aus. Bitte java-bridge.public-address in betterpmmp.yml setzen.");
+			return;
+		}
+		$file = Path::join(self::$dir, "viabedrock.yml");
+		$yaml = file_exists($file) ? (string) @file_get_contents($file) : "";
+		$values = [
+			"translate-resource-packs" => "true",
+			"resource-pack-host" => "0.0.0.0",
+			"resource-pack-port" => (string) $port,
+			"resource-pack-url" => '"http://' . $address . ':' . $port . '/"',
+		];
+		foreach($values as $key => $value){
+			$line = $key . ": " . $value;
+			$count = 0;
+			$yaml = (string) preg_replace('/^' . preg_quote($key, '/') . ':.*$/m', $line, $yaml, 1, $count);
+			if($count === 0){
+				$yaml = rtrim($yaml) . ($yaml === "" ? "" : "\n") . $line . "\n";
+			}
+		}
+		if(@file_put_contents($file, $yaml) === false){
+			$logger->warning("[Java-Bridge] $file kann nicht geschrieben werden");
+			return;
+		}
+		$logger->info("[Java-Bridge] Texture-Packs für Java: http://$address:$port/ (Port $port TCP freigeben)");
 	}
 
 	/** @return array{string, string, string}|null [id, download url, label] of the ViaProxy dev build to use */

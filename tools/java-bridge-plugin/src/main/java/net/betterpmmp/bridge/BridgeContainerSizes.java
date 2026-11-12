@@ -9,18 +9,20 @@ import com.viaversion.viaversion.api.connection.StorableObject;
 import java.util.HashMap;
 import java.util.Map;
 
-/** Container sizes announced by BetterPMMP right before it opens a window (window id -> slot count). */
+/** Window details announced by BetterPMMP right before it opens a window: window id -> size and heading. */
 public final class BridgeContainerSizes implements StorableObject {
 
-    private final Map<Integer, Integer> sizes = new HashMap<>();
-
-    public void put(final int windowId, final int size) {
-        this.sizes.put(windowId, size);
+    public record Announced(int size, String name) {
     }
 
-    public int take(final int windowId, final int fallback) {
-        final Integer size = this.sizes.remove(windowId);
-        return size == null ? fallback : size;
+    private final Map<Integer, Announced> windows = new HashMap<>();
+
+    public void put(final int windowId, final int size, final String name) {
+        this.windows.put(windowId, new Announced(size, name));
+    }
+
+    public Announced take(final int windowId) {
+        return this.windows.remove(windowId);
     }
 
 }

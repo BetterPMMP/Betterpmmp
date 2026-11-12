@@ -364,7 +364,8 @@ class InventoryManager{
 							$windowType = $pk->windowType;
 							if(\pocketmine\network\JavaBridge::isJavaPlayer($this->player)){
 								//BetterPMMP: tell the bridge plugin the window size (Java needs it when opening, e.g. 54-slot menus)
-								$this->session->sendDataPacket(\pocketmine\network\mcpe\protocol\ScriptMessagePacket::create("betterpmmp:container_size", $windowId . ":" . $inventory->getSize()));
+								$name = $this->session->getJavaContainerName($pk->blockPosition) ?? "";
+								$this->session->sendDataPacket(\pocketmine\network\mcpe\protocol\ScriptMessagePacket::create("betterpmmp:container_size", $windowId . ":" . $inventory->getSize() . ":" . $name));
 							}
 						}
 						$this->session->sendDataPacket($pk);
