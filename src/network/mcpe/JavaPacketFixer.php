@@ -22,6 +22,7 @@ use pocketmine\network\mcpe\protocol\MoveActorAbsolutePacket;
 use pocketmine\network\mcpe\protocol\MovePlayerPacket;
 use pocketmine\network\mcpe\protocol\PlayerSkinPacket;
 use pocketmine\network\mcpe\protocol\RemoveActorPacket;
+use pocketmine\network\mcpe\protocol\ScriptMessagePacket;
 use pocketmine\network\mcpe\protocol\SetActorDataPacket;
 use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\protocol\types\entity\ByteMetadataProperty;
@@ -39,6 +40,7 @@ use function array_reverse;
 use function explode;
 use function count;
 use function in_array;
+use function str_contains;
 
 /**
  * Adjusts packets for Java Edition players before they go to the bridge.
@@ -63,11 +65,56 @@ final class JavaPacketFixer{
 	/** @var array<int, string> runtime id => uuid of NPCs sent as custom model entities */
 	private array $npcs = [];
 	/** @var array<int, array{Vector3, float}> runtime id => [feet position, height] */
-	private array $npcBases = [];
+	private array $bases = [];
 	/** @var array<int, list<string>> runtime id => name tag lines shown by carrier actors */
-	private array $npcNames = [];
+	private array $carrierLines = [];
 	/** @var ClientboundPacket[] packets to send after the current one */
 	private array $extra = [];
+	/** @var array<int, array{string, bool, bool}> runtime id => [name, always visible, shown by carriers] */
+	private array $names = [];
+
+	/**
+	 * ViaBedrock does not translate entity name tags, so Java shows no floating text at all (holograms, mob
+	 * names). Single-line names are set on the Java entity by the BetterPMMP-Bridge plugin ("entity_name"),
+	 * multi-line ones - and names of 3D NPCs, whose Java stand-in cannot show a name - by carrier armor stands.
+	 */
+	private function applyName(int $runtimeId, string $name, bool $visible, bool $forceCarriers) : void{
+		[$oldName, $oldVisible, $oldCarriers] = $this->names[$runtimeId] ?? ["", false, false];
+		$carriers = $name !== "" && ($forceCarriers || str_contains($name, "\n"));
+		if($name === $oldName && $visible === $oldVisible && $carriers === $oldCarriers){
+			return;
+		}
+		$this->names[$runtimeId] = [$name, $visible, $carriers];
+		if($carriers){
+			if(!$oldCarriers && $oldName !== ""){
+				$this->extra[] = self::nameMessage($runtimeId, false, "");
+			}
+			$this->showCarriers($runtimeId, $name);
+			return;
+		}
+		if($oldCarriers){
+			$this->showCarriers($runtimeId, "");
+		}
+		$this->extra[] = self::nameMessage($runtimeId, $visible, $name);
+	}
+
+	private static function nameMessage(int $runtimeId, bool $visible, string $name) : ScriptMessagePacket{
+		return ScriptMessagePacket::create("betterpmmp:entity_name", $runtimeId . ":" . ($visible ? "1" : "0") . ":" . $name);
+	}
+
+	/** @param MetadataProperty[] $metadata */
+	private static function nameVisible(array $metadata, bool $default) : bool{
+		$always = $metadata[EntityMetadataProperties::ALWAYS_SHOW_NAMETAG] ?? null;
+		if($always instanceof ByteMetadataProperty && $always->getValue() === 1){
+			return true;
+		}
+		$flags = $metadata[EntityMetadataProperties::FLAGS] ?? null;
+		if($flags instanceof LongMetadataProperty){
+			$mask = (1 << EntityMetadataFlags::CAN_SHOW_NAMETAG) | (1 << EntityMetadataFlags::ALWAYS_SHOW_NAMETAG);
+			return ($flags->getValue() & $mask) === $mask;
+		}
+		return $default;
+	}
 
 	/** @return ClientboundPacket[] */
 	public function takeExtraPackets() : array{
@@ -88,20 +135,20 @@ final class JavaPacketFixer{
 	 * Custom model entities show no name tag on Java, so the name is put on invisible armor stands above the
 	 * NPC (one per line, like Java holograms).
 	 */
-	private function showNpcName(int $npcId, string $name) : void{
+	private function showCarriers(int $npcId, string $name) : void{
 		$lines = $name === "" ? [] : array_reverse(explode("\n", $name));
-		$old = $this->npcNames[$npcId] ?? [];
+		$old = $this->carrierLines[$npcId] ?? [];
 		if($lines === $old){
 			return;
 		}
 		foreach($old as $i => $_){
 			$this->extra[] = RemoveActorPacket::create(self::carrierId($npcId, $i));
 		}
-		$this->npcNames[$npcId] = $lines;
-		if(!isset($this->npcBases[$npcId])){
+		$this->carrierLines[$npcId] = $lines;
+		if(!isset($this->bases[$npcId])){
 			return;
 		}
-		[$feet, $height] = $this->npcBases[$npcId];
+		[$feet, $height] = $this->bases[$npcId];
 		foreach($lines as $i => $line){
 			if($i >= 16){
 				break;
@@ -115,16 +162,16 @@ final class JavaPacketFixer{
 		}
 	}
 
-	private function moveNpcName(int $npcId, Vector3 $feet) : void{
-		if(!isset($this->npcBases[$npcId])){
+	private function moveCarriers(int $npcId, Vector3 $feet) : void{
+		if(!isset($this->bases[$npcId])){
 			return;
 		}
-		[$old, $height] = $this->npcBases[$npcId];
-		$this->npcBases[$npcId][0] = $feet;
+		[$old, $height] = $this->bases[$npcId];
+		$this->bases[$npcId][0] = $feet;
 		if($old->distanceSquared($feet) < 0.0001){
 			return; // only turned
 		}
-		foreach($this->npcNames[$npcId] ?? [] as $i => $_){
+		foreach($this->carrierLines[$npcId] ?? [] as $i => $_){
 			$this->extra[] = MoveActorAbsolutePacket::create(self::carrierId($npcId, $i), self::carrierPosition($feet, $height, $i), 0, 0, 0, 0);
 		}
 	}
@@ -153,8 +200,8 @@ final class JavaPacketFixer{
 		if($packet instanceof AddPlayerPacket && ($identifier = JavaNpcModels::identifierFor($packet->actorRuntimeId)) !== null){
 			// a 3D NPC: Java gets the custom entity from the BetterPMMP NPC model pack instead of a player
 			$this->npcs[$packet->actorRuntimeId] = $packet->uuid->toString();
-			$this->npcBases[$packet->actorRuntimeId] = [$packet->position, self::metaFloat($packet->metadata, EntityMetadataProperties::BOUNDING_BOX_HEIGHT, 1.8)];
-			$this->showNpcName($packet->actorRuntimeId, self::metaString($packet->metadata, EntityMetadataProperties::NAMETAG));
+			$this->bases[$packet->actorRuntimeId] = [$packet->position, self::metaFloat($packet->metadata, EntityMetadataProperties::BOUNDING_BOX_HEIGHT, 1.8)];
+			$this->applyName($packet->actorRuntimeId, self::metaString($packet->metadata, EntityMetadataProperties::NAMETAG), true, true);
 			return AddActorPacket::create(
 				$packet->actorRuntimeId, $packet->actorRuntimeId, $identifier, $packet->position, $packet->motion,
 				$packet->pitch, $packet->yaw, $packet->headYaw, $packet->yaw, [], $packet->metadata, $packet->syncedProperties, [], null
@@ -163,18 +210,27 @@ final class JavaPacketFixer{
 		if($packet instanceof MoveActorAbsolutePacket && isset($this->npcs[$packet->actorRuntimeId])){
 			$fixed = clone $packet;
 			$fixed->position = $packet->position->subtract(0, self::HUMAN_EYE_OFFSET, 0); // players are moved by eye height, custom entities by their feet
-			$this->moveNpcName($packet->actorRuntimeId, $fixed->position);
+			$this->moveCarriers($packet->actorRuntimeId, $fixed->position);
 			return $fixed;
 		}
-		if($packet instanceof SetActorDataPacket && isset($this->npcs[$packet->actorRuntimeId])){
-			$name = $packet->metadata[EntityMetadataProperties::NAMETAG] ?? null;
-			if($name instanceof StringMetadataProperty){
-				$this->showNpcName($packet->actorRuntimeId, $name->getValue());
-			}
+		if($packet instanceof SetActorDataPacket && !isset($this->markers[$packet->actorRuntimeId])){
+			$rid = $packet->actorRuntimeId;
 			$height = $packet->metadata[EntityMetadataProperties::BOUNDING_BOX_HEIGHT] ?? null;
-			if($height instanceof FloatMetadataProperty && isset($this->npcBases[$packet->actorRuntimeId])){
-				$this->npcBases[$packet->actorRuntimeId][1] = $height->getValue();
+			if($height instanceof FloatMetadataProperty && isset($this->bases[$rid])){
+				$this->bases[$rid][1] = $height->getValue();
 			}
+			$name = $packet->metadata[EntityMetadataProperties::NAMETAG] ?? null;
+			if($name instanceof StringMetadataProperty || isset($packet->metadata[EntityMetadataProperties::FLAGS]) || isset($packet->metadata[EntityMetadataProperties::ALWAYS_SHOW_NAMETAG])){
+				[$oldName, $oldVisible] = $this->names[$rid] ?? ["", false];
+				$isNpc = isset($this->npcs[$rid]);
+				if(isset($this->bases[$rid]) || $isNpc){
+					$this->applyName($rid, $name instanceof StringMetadataProperty ? $name->getValue() : $oldName, $isNpc || self::nameVisible($packet->metadata, $oldVisible), $isNpc);
+				}
+			}
+			return $packet;
+		}
+		if($packet instanceof MoveActorAbsolutePacket && isset($this->carrierLines[$packet->actorRuntimeId]) && !isset($this->markers[$packet->actorRuntimeId])){
+			$this->moveCarriers($packet->actorRuntimeId, $packet->position);
 			return $packet;
 		}
 		if($packet instanceof MovePlayerPacket && isset($this->npcs[$packet->actorRuntimeId])){
@@ -185,6 +241,17 @@ final class JavaPacketFixer{
 		}
 		if($packet instanceof AddActorPacket){
 			if(!self::isMarker($packet->metadata)){
+				if($packet->actorRuntimeId < 0x3F000000){ // not one of our own carriers
+					$scale = self::metaFloat($packet->metadata, EntityMetadataProperties::SCALE, 1.0);
+					$this->bases[$packet->actorRuntimeId] = [$packet->position, self::metaFloat($packet->metadata, EntityMetadataProperties::BOUNDING_BOX_HEIGHT, 0.0) * $scale];
+					$name = self::metaString($packet->metadata, EntityMetadataProperties::NAMETAG);
+					if($name !== ""){
+						$this->applyName($packet->actorRuntimeId, $name, self::nameVisible($packet->metadata, false), false);
+					}
+				}else{
+					// a carrier: its single line is set directly
+					$this->extra[] = self::nameMessage($packet->actorRuntimeId, true, self::metaString($packet->metadata, EntityMetadataProperties::NAMETAG));
+				}
 				return $packet;
 			}
 			$this->markers[$packet->actorRuntimeId] = true;
@@ -212,9 +279,12 @@ final class JavaPacketFixer{
 		}
 		if($packet instanceof RemoveActorPacket){
 			if(isset($this->npcs[$packet->actorUniqueId])){
-				$this->showNpcName($packet->actorUniqueId, "");
+				$this->showCarriers($packet->actorUniqueId, "");
 			}
-			unset($this->markers[$packet->actorUniqueId], $this->npcs[$packet->actorUniqueId], $this->npcBases[$packet->actorUniqueId], $this->npcNames[$packet->actorUniqueId]);
+			if(isset($this->carrierLines[$packet->actorUniqueId]) && !isset($this->npcs[$packet->actorUniqueId])){
+				$this->showCarriers($packet->actorUniqueId, "");
+			}
+			unset($this->markers[$packet->actorUniqueId], $this->npcs[$packet->actorUniqueId], $this->bases[$packet->actorUniqueId], $this->carrierLines[$packet->actorUniqueId], $this->names[$packet->actorUniqueId]);
 		}
 		return $packet;
 	}

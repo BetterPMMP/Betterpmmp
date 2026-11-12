@@ -25,7 +25,12 @@ import net.raphimc.viabedrock.protocol.ClientboundBedrockPackets;
 import net.raphimc.viabedrock.protocol.ServerboundBedrockPackets;
 import net.raphimc.viabedrock.protocol.data.enums.bedrock.generated.ContainerType;
 import net.raphimc.viabedrock.protocol.data.enums.java.generated.ContainerInput;
+import com.viaversion.viaversion.api.minecraft.entitydata.EntityData;
+import net.raphimc.viabedrock.api.model.entity.Entity;
+import net.raphimc.viabedrock.api.model.entity.PlayerEntity;
+import net.raphimc.viabedrock.protocol.data.generated.java.EntityDataFields;
 import net.raphimc.viabedrock.protocol.storage.ChunkTracker;
+import net.raphimc.viabedrock.protocol.storage.EntityTracker;
 import net.raphimc.viabedrock.protocol.storage.InventoryTracker;
 import net.raphimc.viabedrock.protocol.storage.ResourcePackStorage;
 import net.raphimc.viabedrock.protocol.types.BedrockTypes;
@@ -33,6 +38,8 @@ import net.raphimc.viaproxy.ViaProxy;
 import net.raphimc.viaproxy.plugins.ViaProxyPlugin;
 import net.raphimc.viaproxy.plugins.events.ViaProxyLoadedEvent;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 
@@ -42,6 +49,7 @@ import java.util.logging.Level;
  *     <li>chest windows of every size (BetterPMMP announces 54-slot menus before opening them),</li>
  *     <li>no block check for chest menus (menu plugins open them without a real chest block),</li>
  *     <li>screen titles shown as the heading of an open chest window (Java hides titles behind open screens),</li>
+ *     <li>entity name tags (holograms, NPC names), which ViaBedrock does not translate,</li>
  *     <li>inventory clicks: ViaBedrock cannot translate them yet, so they are forwarded to BetterPMMP
  *     ("betterpmmp:java_click"), which performs the click on the server like vanilla Java does.</li>
  * </ul>
@@ -52,6 +60,7 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
     public static final String SIZE_MESSAGE = "betterpmmp:container_size";
     public static final String TITLE_MESSAGE = "betterpmmp:window_title";
     public static final String CRAFT_RESULT_MESSAGE = "betterpmmp:craft_result";
+    public static final String ENTITY_NAME_MESSAGE = "betterpmmp:entity_name";
 
     @Override
     public void onEnable() {
@@ -85,6 +94,36 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
             wrapper.cancel();
             final String id = wrapper.read(BedrockTypes.STRING);
             final String value = wrapper.read(BedrockTypes.STRING);
+            if (ENTITY_NAME_MESSAGE.equals(id)) {
+                // ViaBedrock does not translate name tags: set the Java custom name ourselves
+                final String[] parts = value.split(":", 3);
+                if (parts.length != 3) {
+                    return;
+                }
+                final long runtimeId;
+                try {
+                    runtimeId = Long.parseLong(parts[0]);
+                } catch (NumberFormatException e) {
+                    return;
+                }
+                final Entity entity = wrapper.user().get(EntityTracker.class).getEntityByRid(runtimeId);
+                if (entity == null || entity instanceof PlayerEntity) {
+                    return;
+                }
+                final List<EntityData> data = new ArrayList<>();
+                try {
+                    final String text = wrapper.user().get(ResourcePackStorage.class).getTexts().translate(parts[2]);
+                    data.add(new EntityData(entity.getJavaEntityDataIndex(EntityDataFields.CUSTOM_NAME), VersionedTypes.V26_3.entityDataTypes.optionalComponentType, text.isEmpty() ? null : TextUtil.stringToNbt(text)));
+                    data.add(new EntityData(entity.getJavaEntityDataIndex(EntityDataFields.CUSTOM_NAME_VISIBLE), VersionedTypes.V26_3.entityDataTypes.booleanType, !text.isEmpty() && parts[1].equals("1")));
+                } catch (RuntimeException e) {
+                    return; // this Java entity type has no name fields
+                }
+                final PacketWrapper setEntityData = PacketWrapper.create(ClientboundPackets26_3.SET_ENTITY_DATA, wrapper.user());
+                setEntityData.write(Types.VAR_INT, entity.javaId()); // entity id
+                setEntityData.write(VersionedTypes.V26_3.entityDataList, data); // entity data
+                setEntityData.send(BedrockProtocol.class);
+                return;
+            }
             if (CRAFT_RESULT_MESSAGE.equals(id)) {
                 final int windowId;
                 try {
