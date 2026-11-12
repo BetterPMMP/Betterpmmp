@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.25-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.26-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -37,6 +37,30 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 | End | ✅/🟡 | **4.6**: Vanilla-Inselform, Säulen, Außeninseln, Chorus, End-Städte und -Schiffe (ohne Shulker) |
 | Drachenkampf | ✅/🟡 | **neu in 4.9**: Kampf-Manager wie Vanilla (Zustand im Weltordner), 10 Kristalle einmalig, genau ein Drache, Bossbar für alle im Kampfgebiet, Flugphasen (Kreisen, Sturzflug, Feuerball-Wolke, Landung auf dem Portal mit Atem-Angriff, Abheben), Heilung durch Kristalle, Flügel-Rückstoß, 10 s Todesanimation mit 12000/500 EP, Ausgangsportal, Drachenei beim ersten Sieg, End-Gateways zu den Außeninseln (mit Rück-Gateway) |
 | Portale (Nether/End) | ✅/🟡 | Nether/End werden beim Serverstart angelegt; Ankunft im End auf der Obsidian-Plattform; **4.9/5.0**: Enderauge fliegt direkt zum Portalraum der nächsten Festung (jede Festung hat ein vollständiges Portal, geprüft) |
+
+## Was noch fehlt (Bestandsaufnahme 5.26)
+
+Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch kein eigenes Vanilla-Verhalten haben.
+
+| Bereich | Offen |
+|---|---|
+| Kern | Wasserbindung (Blöcke im Wasser), Bündel, Kisten-/Trichter-/Befehlsblock-Lore, Leitstein-Kompass, Nautilus-Rüstung, Befehlsblöcke, Strukturblöcke |
+| Blöcke ohne Funktion | Bienenstock/-nest (Honig), Gerüst, Seetang und Seegras (Wachstum), Honigblock (Rutschen/Kleben am Spieler), Pulverschnee (Einsinken/Erfrieren), Spitzer Tropfstein (Schaden, Wachstum), Schildkrötenei, Blasensäule, Aquisator, Verzierter Krug (Inventar), Kupfertruhen (Inventar), Sculk-Katalysator und -Ader (Ausbreitung), Leitstein, neue Setzlinge (Kirsche, Blasseiche, Mangrove, Pappel wachsen nicht), Pappel-Holzset (Türen, Falltüren, Knöpfe, Schilder ohne Funktion), Beton-/Woll-Stufen und -Treppen (Form), Regale, Strohbett |
+| Mobs mit Standard-KI | Phantome (Schlafmangel-Spawn, Sturzflug), Wächter (Laser), Shulker (Geschosse, Schweben), Ertrunkene (Dreizack), Piglin-Barbar, Hoglin/Zoglin, Biene, Fuchs, Schildkröte, Delfin, Axolotl, Panda, Eisbär, Lama (Truhe, Spucken), Mooshroom (Scheren), Kaninchen, Fledermaus, Allay, Plagegeist, Endermilbe, Silberfischchen (aus Blöcken), neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel) |
+| Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
+| Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.26
+
+| System | Stand |
+|---|---|
+| Ghast | ✅ schwebt, schießt alle 3 s einen explodierenden Feuerball auf sichtbare Spieler (64 Blöcke), Feuerball lässt sich zurückschlagen |
+| Lohe | ✅ hält Abstand, Salven aus 3 kleinen Feuerbällen (5 Schaden, Feuer), 5 s Pause, Schaden durch Schneebälle, Wasser und Regen |
+| Schneegolem | ✅ wirft Schneebälle auf Monster, Schneespur außerhalb heißer Biome |
+| Schleim, Magmawürfel | ✅ drei Größen, Leben/Schaden nach Größe, teilen sich beim Tod in 2–4 kleinere, Drops nach Vanilla-Regel |
+| Piglin | ✅ Tauschhandel (Goldbarren → Gegenstand nach 6 s, Bedrock-Tabelle), lässt Spieler in Goldrüstung in Ruhe bis er angegriffen wird |
+| Zombie-Dorfbewohner | ✅ heilen: Schwäche + Goldapfel, zittert 3–5 min, wird zum Dorfbewohner; brennt in der Sonne |
+| Komposter | ✅ Pflanzen mit Vanilla-Chancen (30/50/65/85/100 %), 7 Schichten werden zu Kompost, gibt Knochenmehl |
 
 ## Neu in 5.25
 

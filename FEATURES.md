@@ -10,7 +10,7 @@ villager trading and many blocks and items without any function. BetterPMMP
 keeps PocketMine's network layer, world storage and plugin API, and adds a
 vanilla game engine on top so that you can play survival from start to finish.
 
-Current version: **5.25-vanilla-beta.1** (API 5.51.0, plugins for PocketMine-MP 5 keep working).
+Current version: **5.26-vanilla-beta.1** (API 5.51.0, plugins for PocketMine-MP 5 keep working).
 
 > Status: beta. Many systems behave like vanilla, but not every detail matches
 > the official Bedrock Dedicated Server yet. See `VANILLA-PARITY.md` for an honest
@@ -107,7 +107,7 @@ BetterPMMP behält das Netzwerk, die Weltspeicherung und die Plugin-API von
 PocketMine und setzt eine Vanilla-Spiel-Engine obendrauf, damit man Survival von
 Anfang bis Ende spielen kann.
 
-Aktuelle Version: **5.25-vanilla-beta.1** (API 5.51.0, Plugins für PocketMine-MP 5 laufen weiter).
+Aktuelle Version: **5.26-vanilla-beta.1** (API 5.51.0, Plugins für PocketMine-MP 5 laufen weiter).
 
 > Stand: Beta. Viele Systeme verhalten sich wie in Vanilla, aber noch nicht jedes
 > Detail stimmt mit dem offiziellen Bedrock Dedicated Server überein. Den ehrlichen

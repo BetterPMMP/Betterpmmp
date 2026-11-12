@@ -182,6 +182,21 @@ abstract class GenericSwimmingAnimalMob extends GenericFreeMotionMob{
 }
 
 abstract class GenericHostileFlyingMob extends GenericFreeMotionMob{
+	/** BetterPMMP: nearest survival player within a range. */
+	protected function nearestSurvivalPlayer(float $range) : ?Player{ $best = null; $closest = $range * $range; foreach($this->getWorld()->getPlayers() as $player){ if(!$player->isAlive() || $player->isCreative() || $player->isSpectator()){ continue; } $d = $this->getPosition()->distanceSquared($player->getPosition()); if($d < $closest){ $best = $player; $closest = $d; } } return $best; }
+	/** BetterPMMP: no solid block between the mob's and the player's eyes. */
+	protected function seesPlayer(Player $player) : bool{ $world = $this->getWorld(); $start = $this->getPosition()->add(0, $this->getSize()->getHeight() * 0.8, 0); $end = $player->getEyePos(); foreach(\pocketmine\math\VoxelRayTrace::betweenPoints($start, $end) as $p){ $x = $p->getFloorX(); $z = $p->getFloorZ(); if(!$world->isChunkLoaded($x >> 4, $z >> 4) || $world->getBlockAt($x, $p->getFloorY(), $z)->isSolid()){ return false; } } return true; }
+	/** BetterPMMP: shoots a fireball at a player. */
+	protected function shootFireball(Player $target, bool $large, float $speed, float $spread = 0.0) : void{
+		$eye = $this->getPosition()->add(0, $this->getSize()->getHeight() * 0.6, 0);
+		$aim = $target->getPosition()->add(0, $target->getSize()->getHeight() * 0.5, 0)->subtractVector($eye)->normalize();
+		if($spread > 0){ $aim = $aim->add(mt_rand(-100, 100) / 100 * $spread, mt_rand(-100, 100) / 100 * $spread, mt_rand(-100, 100) / 100 * $spread)->normalize(); }
+		$class = $large ? \pocketmine\entity\projectile\Fireball::class : \pocketmine\entity\projectile\SmallFireball::class;
+		$ball = new $class(Location::fromObject($eye->addVector($aim->multiply($large ? 2.5 : 0.8)), $this->getWorld()), $this);
+		$ball->setMotion($aim->multiply($speed));
+		$ball->spawnToAll();
+		$this->getWorld()->broadcastPacketToViewers($eye, \pocketmine\network\mcpe\protocol\LevelSoundEventPacket::create(\pocketmine\network\mcpe\protocol\types\LevelSoundEvent::SHOOT, $eye, -1, static::ENTITY_ID, false, false, $this->getId(), null));
+	}
 	protected function tickWandering(int $tickDiff) : void{ $target = $this->findTarget(); if($target === null){ parent::tickWandering($tickDiff); return; } $this->moveTowardTarget($target); }
 	protected function findTarget() : ?\pocketmine\player\Player{ $target = null; $closest = 14 * 14; foreach($this->getWorld()->getPlayers() as $player){ if(!$player->isAlive() || $player->isCreative() || $player->isSpectator()){ continue; } $distance = $this->getPosition()->distanceSquared($player->getPosition()); if($distance < $closest){ $target = $player; $closest = $distance; } } return $target; }
 	protected function moveTowardTarget(\pocketmine\player\Player $target) : void{ $dx = $target->getPosition()->x - $this->getPosition()->x; $dy = $target->getPosition()->y - $this->getPosition()->y; $dz = $target->getPosition()->z - $this->getPosition()->z; $length = sqrt(($dx * $dx) + ($dy * $dy) + ($dz * $dz)); if($length <= 1.5 && $this->attackTime <= 0){ $this->attackTime = 20; $target->attack(new \pocketmine\event\entity\EntityDamageByEntityEvent($this, $target, \pocketmine\event\entity\EntityDamageEvent::CAUSE_ENTITY_ATTACK, 3)); return; } if($length > 0.001){ $this->setMotion(new \pocketmine\math\Vector3($dx / $length * 0.15, $dy / $length * 0.12, $dz / $length * 0.15)); } }
@@ -365,6 +380,40 @@ class BeeMob extends GenericFlyingAnimalMob{
 }
 
 class BlazeMob extends GenericHostileFlyingMob{
+	/** BetterPMMP: vanilla blaze - keeps its distance and shoots bursts of three small fireballs (5 s pause), takes damage from snowballs and water */
+	private int $burstCooldown = 60;
+	private int $burstLeft = 0;
+	private int $shotDelay = 0;
+	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{
+		if($source instanceof \pocketmine\event\entity\EntityDamageByChildEntityEvent && $source->getChild() instanceof \pocketmine\entity\projectile\Snowball){ $source->setBaseDamage(3); }
+		parent::attack($source);
+	}
+	protected function entityBaseTick(int $tickDiff = 1) : bool{
+		$update = parent::entityBaseTick($tickDiff);
+		if($this->isAlive() && $this->ticksLived % 20 === 0 && ($this->isUnderwater() || $this->getWorld()->getWeather()->isRainingAt($this->getPosition()->getFloorX(), (int) ($this->getPosition()->y + 1), $this->getPosition()->getFloorZ()))){
+			$this->attack(new \pocketmine\event\entity\EntityDamageEvent($this, \pocketmine\event\entity\EntityDamageEvent::CAUSE_DROWNING, 1));
+		}
+		return $update;
+	}
+	protected function tickWandering(int $tickDiff) : void{
+		$target = $this->nearestSurvivalPlayer(32);
+		if($target === null || !$this->seesPlayer($target)){ GenericFreeMotionMob::tickWandering($tickDiff); return; }
+		$d = $target->getPosition()->subtractVector($this->getPosition());
+		$this->setRotation(rad2deg(atan2(-$d->x, $d->z)), 0.0);
+		$distance = $d->length();
+		if($distance > 10){ $this->setMotion($d->multiply(0.15 / max(0.1, $distance))); }
+		elseif($distance < 5){ $this->setMotion($d->multiply(-0.1 / max(0.1, $distance))); }
+		else{ $this->setMotion(new \pocketmine\math\Vector3(0, $d->y > 1 ? 0.05 : ($d->y < -2 ? -0.05 : 0), 0)); }
+		$this->burstCooldown = max(0, $this->burstCooldown - $tickDiff);
+		$this->shotDelay = max(0, $this->shotDelay - $tickDiff);
+		if($this->burstLeft === 0 && $this->burstCooldown === 0){ $this->burstLeft = 3; $this->shotDelay = 20; $this->setOnFire(10); }
+		if($this->burstLeft > 0 && $this->shotDelay === 0){
+			$this->shootFireball($target, false, 0.9, 0.05);
+			$this->shotDelay = 6;
+			if(--$this->burstLeft === 0){ $this->burstCooldown = 100; }
+		}
+	}
+	public function isFireProof() : bool{ return true; }
 	protected const ENTITY_ID = EntityIds::BLAZE;
 	protected const DISPLAY_NAME = "Blaze";
 	protected const SPAWN_EGG_GETTER = "BLAZE_SPAWN_EGG";
@@ -1089,6 +1138,18 @@ class FrostbiteMob extends GenericHostileMob{
 }
 
 class GhastMob extends GenericHostileFlyingMob{
+	/** BetterPMMP: vanilla ghast - floats around and shoots an exploding fireball every 3 s at players it sees within 64 blocks; the fireball can be hit back */
+	private int $fireCooldown = 60;
+	protected function tickWandering(int $tickDiff) : void{
+		$this->fireCooldown = max(0, $this->fireCooldown - $tickDiff);
+		$target = $this->nearestSurvivalPlayer(64);
+		if($target !== null && $this->seesPlayer($target)){
+			$d = $target->getPosition()->subtractVector($this->getPosition());
+			$this->setRotation(rad2deg(atan2(-$d->x, $d->z)), 0.0);
+			if($this->fireCooldown === 0){ $this->fireCooldown = 60; $this->shootFireball($target, true, 0.6); }
+		}
+		GenericFreeMotionMob::tickWandering($tickDiff);
+	}
 	protected const ENTITY_ID = EntityIds::GHAST;
 	protected const DISPLAY_NAME = "Ghast";
 	protected const SPAWN_EGG_GETTER = "GHAST_SPAWN_EGG";
@@ -1409,6 +1470,40 @@ class LlamaMob extends GenericAnimalMob{
 }
 
 class MagmaCubeMob extends GenericHostileMob{
+	protected const CUBE_BASE_DAMAGE = 2;
+	protected const CUBE_SMALL_DROPS = false;
+	public function isFireProof() : bool{ return true; }
+	protected function calculateFallDamage(float $fallDistance) : float{ return 0.0; }
+	/** BetterPMMP: vanilla sizes - big (4), medium (2), small (1): health and damage by size, a dying cube splits into 2-4 of the next smaller size */
+	private int $cubeSize = 0;
+	protected function getInitialSizeInfo() : EntitySizeInfo{ return new EntitySizeInfo(0.52, 0.52); }
+	protected function initEntity(CompoundTag $nbt) : void{
+		parent::initEntity($nbt);
+		$this->setCubeSize($nbt->getByte("Size", [1, 2, 2, 4, 4][mt_rand(0, 4)]), $nbt->getTag("Size") === null);
+	}
+	public function saveNBT() : CompoundTag{ return parent::saveNBT()->setByte("Size", $this->cubeSize); }
+	public function getCubeSize() : int{ return $this->cubeSize; }
+	public function setCubeSize(int $size, bool $heal = true) : void{
+		$this->cubeSize = in_array($size, [1, 2, 4], true) ? $size : 1;
+		$this->setScale((float) $this->cubeSize);
+		$this->setMaxHealth($this->cubeSize * $this->cubeSize);
+		if($heal || $this->getHealth() > $this->getMaxHealth()){ $this->setHealth($this->getMaxHealth()); }
+		$this->networkPropertiesDirty = true;
+	}
+	protected function syncNetworkData(EntityMetadataCollection $properties) : void{ parent::syncNetworkData($properties); $properties->setInt(EntityMetadataProperties::VARIANT, $this->cubeSize); }
+	protected function meleeDamage() : float{ return static::CUBE_BASE_DAMAGE + $this->cubeSize - (static::CUBE_BASE_DAMAGE === 0 && $this->cubeSize === 1 ? 1 : 0); }
+	public function getXpDropAmount() : int{ return $this->cubeSize; }
+	public function getDrops() : array{ return ($this->cubeSize === 1) === static::CUBE_SMALL_DROPS ? parent::getDrops() : []; }
+	protected function onDeath() : void{
+		parent::onDeath();
+		if($this->cubeSize > 1){
+			for($i = mt_rand(2, 4); $i > 0; --$i){
+				$child = new static(Location::fromObject($this->getPosition()->add(mt_rand(-5, 5) / 10 * $this->cubeSize / 2, 0.2, mt_rand(-5, 5) / 10 * $this->cubeSize / 2), $this->getWorld(), mt_rand(0, 359), 0));
+				$child->setCubeSize(intdiv($this->cubeSize, 2));
+				$child->spawnToAll();
+			}
+		}
+	}
 	protected const ENTITY_ID = EntityIds::MAGMA_CUBE;
 	protected const DISPLAY_NAME = "Magma Cube";
 	protected const SPAWN_EGG_GETTER = "MAGMA_CUBE_SPAWN_EGG";
@@ -1562,6 +1657,73 @@ class PhantomMob extends GenericHostileFlyingMob{
 }
 
 class PiglinMob extends GenericHostileMob{
+	/** BetterPMMP: vanilla piglin - leaves players in gold armor alone until hit, and barters: give it a gold ingot and it throws an item back after 6 s */
+	private int $barterTicks = 0;
+	private int $angerTicks = 0;
+	private ?Player $barterWith = null;
+	private static function wearsGold(Player $player) : bool{
+		foreach($player->getArmorInventory()->getContents() as $item){ if(str_contains(strtolower($item->getVanillaName()), "gold")){ return true; } }
+		return false;
+	}
+	protected function isValidCombatTarget(Living $target, bool $keep) : bool{
+		if($target instanceof Player && $this->angerTicks <= 0 && self::wearsGold($target)){ return false; }
+		return parent::isValidCombatTarget($target, $keep);
+	}
+	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{
+		parent::attack($source);
+		if($source instanceof \pocketmine\event\entity\EntityDamageByEntityEvent && $source->getDamager() instanceof Player){ $this->angerTicks = 600; $this->barterTicks = 0; }
+	}
+	public function getInteractButtonText(Player $player) : string{
+		return $this->barterTicks === 0 && $player->getInventory()->getItemInHand()->getTypeId() === VanillaItems::GOLD_INGOT()->getTypeId() ? "action.interact.barter" : "";
+	}
+	public function onInteract(Player $player, \pocketmine\math\Vector3 $clickPos) : bool{
+		$held = $player->getInventory()->getItemInHand();
+		if($this->barterTicks > 0 || $this->angerTicks > 0 || $held->getTypeId() !== VanillaItems::GOLD_INGOT()->getTypeId()){ return parent::onInteract($player, $clickPos); }
+		if($player->hasFiniteResources()){ $held->pop(); $player->getInventory()->setItemInHand($held); }
+		$this->barterTicks = 120;
+		$this->barterWith = $player;
+		$this->getNavigator()->stop();
+		return true;
+	}
+	protected function tickWandering(int $tickDiff) : void{
+		$this->angerTicks = max(0, $this->angerTicks - $tickDiff);
+		if($this->barterTicks > 0){
+			$this->getNavigator()->stop();
+			$m = $this->getMotion(); $this->setMotion(new \pocketmine\math\Vector3(0, $m->y, 0));
+			if(($this->barterTicks -= $tickDiff) <= 0){
+				$this->barterTicks = 0;
+				$loot = self::barterLoot();
+				$to = $this->barterWith !== null && $this->barterWith->isConnected() && $this->barterWith->getWorld() === $this->getWorld() ? $this->barterWith->getPosition()->subtractVector($this->getPosition()) : $this->getDirectionVector();
+				$len = max(0.1, $to->length());
+				if($loot !== null){ $this->getWorld()->dropItem($this->getPosition()->add(0, 1.2, 0), $loot, new \pocketmine\math\Vector3($to->x / $len * 0.3, 0.25, $to->z / $len * 0.3)); }
+				$this->barterWith = null;
+			}
+			return;
+		}
+		parent::tickWandering($tickDiff);
+	}
+	/** vanilla Bedrock piglin bartering table */
+	private static function barterLoot() : ?Item{
+		$table = [["enchanted_book", 1, 1, 5], ["iron_boots", 1, 1, 8], ["potion", 1, 1, 8], ["splash_potion", 1, 1, 8], ["water_bottle", 1, 1, 10], ["iron_nugget", 10, 36, 10], ["ender_pearl", 2, 4, 10],
+			["string", 3, 9, 20], ["nether_quartz", 5, 12, 20], ["obsidian", 1, 1, 40], ["crying_obsidian", 1, 3, 40], ["fire_charge", 1, 1, 40], ["leather", 2, 4, 40], ["soul_sand", 2, 8, 40],
+			["nether_brick", 2, 8, 40], ["arrow", 6, 12, 40], ["gravel", 8, 16, 40], ["blackstone", 8, 16, 40]];
+		$total = 0; foreach($table as $row){ $total += $row[3]; }
+		$roll = mt_rand(1, $total);
+		foreach($table as [$name, $min, $max, $weight]){
+			if(($roll -= $weight) > 0){ continue; }
+			$soulSpeed = \pocketmine\item\enchantment\ExtraEnchantments::get("soul_speed");
+			$item = match($name){
+				"enchanted_book" => VanillaItems::ENCHANTED_BOOK()->addEnchantment(new \pocketmine\item\enchantment\EnchantmentInstance($soulSpeed, mt_rand(1, 3))),
+				"iron_boots" => VanillaItems::IRON_BOOTS()->addEnchantment(new \pocketmine\item\enchantment\EnchantmentInstance($soulSpeed, mt_rand(1, 3))),
+				"potion" => VanillaItems::POTION()->setType(\pocketmine\item\PotionType::FIRE_RESISTANCE()),
+				"splash_potion" => VanillaItems::SPLASH_POTION()->setType(\pocketmine\item\PotionType::FIRE_RESISTANCE()),
+				"water_bottle" => VanillaItems::POTION()->setType(\pocketmine\item\PotionType::WATER()),
+				default => \pocketmine\item\StringToItemParser::getInstance()->parse($name),
+			};
+			return $item?->setCount(mt_rand($min, $max));
+		}
+		return null;
+	}
 	protected const ENTITY_ID = EntityIds::PIGLIN;
 	protected const DISPLAY_NAME = "Piglin";
 	protected const SPAWN_EGG_GETTER = "PIGLIN_SPAWN_EGG";
@@ -1671,6 +1833,38 @@ class SkeletonHorseMob extends GenericAnimalMob implements \pocketmine\entity\ri
 }
 
 class SlimeMob extends GenericHostileMob{
+	protected const CUBE_BASE_DAMAGE = 0;
+	protected const CUBE_SMALL_DROPS = true;
+	/** BetterPMMP: vanilla sizes - big (4), medium (2), small (1): health and damage by size, a dying cube splits into 2-4 of the next smaller size */
+	private int $cubeSize = 0;
+	protected function getInitialSizeInfo() : EntitySizeInfo{ return new EntitySizeInfo(0.52, 0.52); }
+	protected function initEntity(CompoundTag $nbt) : void{
+		parent::initEntity($nbt);
+		$this->setCubeSize($nbt->getByte("Size", [1, 2, 2, 4, 4][mt_rand(0, 4)]), $nbt->getTag("Size") === null);
+	}
+	public function saveNBT() : CompoundTag{ return parent::saveNBT()->setByte("Size", $this->cubeSize); }
+	public function getCubeSize() : int{ return $this->cubeSize; }
+	public function setCubeSize(int $size, bool $heal = true) : void{
+		$this->cubeSize = in_array($size, [1, 2, 4], true) ? $size : 1;
+		$this->setScale((float) $this->cubeSize);
+		$this->setMaxHealth($this->cubeSize * $this->cubeSize);
+		if($heal || $this->getHealth() > $this->getMaxHealth()){ $this->setHealth($this->getMaxHealth()); }
+		$this->networkPropertiesDirty = true;
+	}
+	protected function syncNetworkData(EntityMetadataCollection $properties) : void{ parent::syncNetworkData($properties); $properties->setInt(EntityMetadataProperties::VARIANT, $this->cubeSize); }
+	protected function meleeDamage() : float{ return static::CUBE_BASE_DAMAGE + $this->cubeSize - (static::CUBE_BASE_DAMAGE === 0 && $this->cubeSize === 1 ? 1 : 0); }
+	public function getXpDropAmount() : int{ return $this->cubeSize; }
+	public function getDrops() : array{ return ($this->cubeSize === 1) === static::CUBE_SMALL_DROPS ? parent::getDrops() : []; }
+	protected function onDeath() : void{
+		parent::onDeath();
+		if($this->cubeSize > 1){
+			for($i = mt_rand(2, 4); $i > 0; --$i){
+				$child = new static(Location::fromObject($this->getPosition()->add(mt_rand(-5, 5) / 10 * $this->cubeSize / 2, 0.2, mt_rand(-5, 5) / 10 * $this->cubeSize / 2), $this->getWorld(), mt_rand(0, 359), 0));
+				$child->setCubeSize(intdiv($this->cubeSize, 2));
+				$child->spawnToAll();
+			}
+		}
+	}
 	protected const ENTITY_ID = EntityIds::SLIME;
 	protected const DISPLAY_NAME = "Slime";
 	protected const SPAWN_EGG_GETTER = "SLIME_SPAWN_EGG";
@@ -1711,6 +1905,37 @@ class SnifferMob extends GenericAnimalMob{
 }
 
 class SnowGolemMob extends GenericAnimalMob{
+	/** BetterPMMP: vanilla snow golem - throws snowballs at monsters within 10 blocks and leaves a snow trail outside hot biomes */
+	private int $throwCooldown = 20;
+	public function canBeLeashed() : bool{ return true; }
+	public function getDrops() : array{ return [VanillaItems::SNOWBALL()->setCount(mt_rand(0, 15))]; }
+	protected function tickWandering(int $tickDiff) : void{
+		$this->throwCooldown = max(0, $this->throwCooldown - $tickDiff);
+		$pos = $this->getPosition();
+		$world = $this->getWorld();
+		if($this->ticksLived % 10 === 0){
+			[$temperature] = \pocketmine\world\weather\Weather::biomeClimate($world->getBiomeId($pos->getFloorX(), $pos->getFloorY(), $pos->getFloorZ()));
+			if($temperature < 0.8 && $world->getBlockAt($pos->getFloorX(), $pos->getFloorY(), $pos->getFloorZ())->getTypeId() === \pocketmine\block\BlockTypeIds::AIR && $world->getBlockAt($pos->getFloorX(), $pos->getFloorY() - 1, $pos->getFloorZ())->isFullCube()){
+				$world->setBlockAt($pos->getFloorX(), $pos->getFloorY(), $pos->getFloorZ(), VanillaBlocks::SNOW_LAYER());
+			}
+		}
+		if($this->throwCooldown === 0){
+			foreach($world->getNearbyEntities($this->getBoundingBox()->expandedCopy(10, 4, 10), $this) as $e){
+				if(($e instanceof GenericHostileMob || $e instanceof GenericHostileFlyingMob || $e instanceof Zombie) && $e->isAlive()){
+					$eye = $pos->add(0, 1.6, 0);
+					$aim = $e->getPosition()->add(0, $e->getSize()->getHeight() * 0.6, 0)->subtractVector($eye);
+					$flat = sqrt($aim->x * $aim->x + $aim->z * $aim->z);
+					$ball = new \pocketmine\entity\projectile\Snowball(Location::fromObject($eye, $world), $this);
+					$ball->setMotion((new \pocketmine\math\Vector3($aim->x, $aim->y + $flat * 0.1, $aim->z))->normalize()->multiply(1.3));
+					$ball->spawnToAll();
+					$this->setRotation(rad2deg(atan2(-$aim->x, $aim->z)), 0.0);
+					$this->throwCooldown = 20;
+					break;
+				}
+			}
+		}
+		parent::tickWandering($tickDiff);
+	}
 	protected const ENTITY_ID = EntityIds::SNOW_GOLEM;
 	protected const DISPLAY_NAME = "Snow Golem";
 	protected const SPAWN_EGG_GETTER = "SNOW_GOLEM_SPAWN_EGG";
@@ -2366,6 +2591,38 @@ class ZombiePigmanMob extends GenericHostileMob{
 }
 
 class ZombieVillagerMob extends GenericHostileMob{
+	/** BetterPMMP: vanilla cure - a zombie villager with Weakness that is fed a golden apple shakes for 3-5 minutes and turns into a villager */
+	private int $cureTicks = 0;
+	protected function burnsInDaylight() : bool{ return true; }
+	protected function initEntity(CompoundTag $nbt) : void{ parent::initEntity($nbt); $this->cureTicks = $nbt->getInt("BetterPMMPCureTicks", 0); if($this->cureTicks > 0){ $this->setPersistent(); } }
+	public function saveNBT() : CompoundTag{ return parent::saveNBT()->setInt("BetterPMMPCureTicks", $this->cureTicks); }
+	public function isCuring() : bool{ return $this->cureTicks > 0; }
+	public function getInteractButtonText(Player $player) : string{
+		return $this->cureTicks === 0 && $this->getEffects()->has(\pocketmine\entity\effect\VanillaEffects::WEAKNESS()) && $player->getInventory()->getItemInHand()->getTypeId() === VanillaItems::GOLDEN_APPLE()->getTypeId() ? "action.interact.cure" : "";
+	}
+	public function onInteract(Player $player, \pocketmine\math\Vector3 $clickPos) : bool{
+		$held = $player->getInventory()->getItemInHand();
+		if($this->cureTicks > 0 || $held->getTypeId() !== VanillaItems::GOLDEN_APPLE()->getTypeId() || !$this->getEffects()->has(\pocketmine\entity\effect\VanillaEffects::WEAKNESS())){ return parent::onInteract($player, $clickPos); }
+		if($player->hasFiniteResources()){ $held->pop(); $player->getInventory()->setItemInHand($held); }
+		$this->cureTicks = mt_rand(3600, 6000);
+		$this->setPersistent();
+		$this->getEffects()->add(new \pocketmine\entity\effect\EffectInstance(\pocketmine\entity\effect\VanillaEffects::STRENGTH(), $this->cureTicks, 0));
+		$this->networkPropertiesDirty = true;
+		$this->getWorld()->addSound($this->getPosition(), new \pocketmine\world\sound\VanillaSound(\pocketmine\network\mcpe\protocol\types\LevelSoundEvent::REMEDY));
+		return true;
+	}
+	protected function entityBaseTick(int $tickDiff = 1) : bool{
+		$update = parent::entityBaseTick($tickDiff);
+		if($this->cureTicks > 0 && $this->isAlive() && ($this->cureTicks -= $tickDiff) <= 0){
+			$villager = new Villager(Location::fromObject($this->getPosition(), $this->getWorld(), $this->getLocation()->getYaw(), 0));
+			$villager->spawnToAll();
+			$villager->getEffects()->add(new \pocketmine\entity\effect\EffectInstance(\pocketmine\entity\effect\VanillaEffects::NAUSEA(), 200, 0));
+			$this->getWorld()->addSound($this->getPosition(), new \pocketmine\world\sound\VanillaSound(\pocketmine\network\mcpe\protocol\types\LevelSoundEvent::UNFECT));
+			$this->flagForDespawn();
+		}
+		return $update;
+	}
+	protected function syncNetworkData(EntityMetadataCollection $properties) : void{ parent::syncNetworkData($properties); $properties->setGenericFlag(EntityMetadataFlags::CONVERTING, $this->cureTicks > 0); }
 	protected const ENTITY_ID = EntityIds::ZOMBIE_VILLAGER;
 	protected const DISPLAY_NAME = "Zombie Villager";
 	protected const SPAWN_EGG_GETTER = "ZOMBIE_VILLAGER_SPAWN_EGG";
