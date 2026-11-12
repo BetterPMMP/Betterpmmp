@@ -55,6 +55,22 @@ class LiquidBucket extends Item{
 	}
 
 	public function onInteractBlock(Player $player, Block $blockReplace, Block $blockClicked, int $face, Vector3 $clickVector, array &$returnedItems) : ItemUseResult{
+		//BetterPMMP: a water bucket on stairs, slabs, fences ... waterlogs them
+		$world = $player->getWorld();
+		$clickedPos = $blockClicked->getPosition();
+		if($this->liquid instanceof \pocketmine\block\Water && \pocketmine\world\Waterlogging::canHold($blockClicked)
+			&& $world->getLiquidAt($clickedPos->getFloorX(), $clickedPos->getFloorY(), $clickedPos->getFloorZ()) === null){
+			$ev = new PlayerBucketEmptyEvent($player, $blockClicked, $face, $this, VanillaItems::BUCKET());
+			$ev->call();
+			if($ev->isCancelled()){
+				return ItemUseResult::FAIL;
+			}
+			$world->setLiquidAt($clickedPos->getFloorX(), $clickedPos->getFloorY(), $clickedPos->getFloorZ(), clone $this->liquid);
+			$world->addSound($clickedPos->add(0.5, 0.5, 0.5), $this->liquid->getBucketEmptySound());
+			$this->pop();
+			$returnedItems[] = $ev->getItem();
+			return ItemUseResult::SUCCESS;
+		}
 		if(!$blockReplace->canBeReplaced()){
 			return ItemUseResult::NONE;
 		}

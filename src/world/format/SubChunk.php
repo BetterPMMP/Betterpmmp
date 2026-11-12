@@ -24,6 +24,7 @@ declare(strict_types=1);
 namespace pocketmine\world\format;
 
 use function array_map;
+use function array_pop;
 use function count;
 
 class SubChunk{
@@ -84,6 +85,26 @@ class SubChunk{
 	}
 
 	/**
+	 * BetterPMMP: the liquid layer (layer 1), used by Bedrock for waterlogged blocks.
+	 */
+	public function getLiquidStateId(int $x, int $y, int $z) : int{
+		return isset($this->blockLayers[1]) ? $this->blockLayers[1]->get($x, $y, $z) : $this->emptyBlockId;
+	}
+
+	public function setLiquidStateId(int $x, int $y, int $z, int $block) : void{
+		if(!isset($this->blockLayers[1])){
+			if($block === $this->emptyBlockId){
+				return;
+			}
+			if(!isset($this->blockLayers[0])){
+				$this->blockLayers[] = new PalettedBlockArray($this->emptyBlockId);
+			}
+			$this->blockLayers[] = new PalettedBlockArray($this->emptyBlockId);
+		}
+		$this->blockLayers[1]->set($x, $y, $z, $block);
+	}
+
+	/**
 	 * @return PalettedBlockArray[]
 	 * @phpstan-return list<PalettedBlockArray>
 	 */
@@ -130,13 +151,18 @@ class SubChunk{
 	}
 
 	public function collectGarbage() : void{
-		$cleanedLayers = [];
-		foreach($this->blockLayers as $layer){
+		//BetterPMMP: only empty layers at the end may go - an empty main layer has to stay in place when the
+		//liquid layer behind it is used, otherwise the water would become the main block
+		$cleanedLayers = $this->blockLayers;
+		foreach($cleanedLayers as $layer){
 			$layer->collectGarbage();
-
-			if($layer->getBitsPerBlock() !== 0 || $layer->get(0, 0, 0) !== $this->emptyBlockId){
-				$cleanedLayers[] = $layer;
+		}
+		while(count($cleanedLayers) > 0){
+			$last = $cleanedLayers[count($cleanedLayers) - 1];
+			if($last->getBitsPerBlock() !== 0 || $last->get(0, 0, 0) !== $this->emptyBlockId){
+				break;
 			}
+			array_pop($cleanedLayers);
 		}
 		$this->blockLayers = $cleanedLayers;
 		$this->biomes->collectGarbage();

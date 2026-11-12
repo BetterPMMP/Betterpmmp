@@ -2145,6 +2145,51 @@ class World implements ChunkManager{
 	 *
 	 * @throws \InvalidArgumentException if the position is out of the world bounds
 	 */
+	/**
+	 * BetterPMMP: the liquid in the second block layer (water in a waterlogged block), or null.
+	 */
+	public function getLiquidAt(int $x, int $y, int $z) : ?Block{
+		if(!$this->isInWorld($x, $y, $z)){
+			return null;
+		}
+		$chunk = $this->getChunk($x >> Chunk::COORD_BIT_SIZE, $z >> Chunk::COORD_BIT_SIZE);
+		if($chunk === null){
+			return null;
+		}
+		$state = $chunk->getLiquidStateId($x & Chunk::COORD_MASK, $y, $z & Chunk::COORD_MASK);
+		return $state === Block::EMPTY_STATE_ID ? null : $this->blockStateRegistry->fromStateId($state);
+	}
+
+	/**
+	 * BetterPMMP: sets (or clears with null) the liquid of a waterlogged block and tells the clients.
+	 */
+	public function setLiquidAt(int $x, int $y, int $z, ?Block $liquid) : void{
+		if(!$this->isInWorld($x, $y, $z)){
+			return;
+		}
+		$chunk = $this->loadChunk($x >> Chunk::COORD_BIT_SIZE, $z >> Chunk::COORD_BIT_SIZE);
+		if($chunk === null){
+			return;
+		}
+		$state = $liquid?->getStateId() ?? Block::EMPTY_STATE_ID;
+		if($chunk->getLiquidStateId($x & Chunk::COORD_MASK, $y, $z & Chunk::COORD_MASK) === $state){
+			return;
+		}
+		$chunk->setLiquidStateId($x & Chunk::COORD_MASK, $y, $z & Chunk::COORD_MASK, $state);
+		$this->markTickingChunkForRecheck($x >> Chunk::COORD_BIT_SIZE, $z >> Chunk::COORD_BIT_SIZE);
+		$pos = new Vector3($x, $y, $z);
+		foreach($this->getChunkPlayers($x >> Chunk::COORD_BIT_SIZE, $z >> Chunk::COORD_BIT_SIZE) as $player){
+			$session = $player->getNetworkSession();
+			$session->sendDataPacket(\pocketmine\network\mcpe\protocol\UpdateBlockPacket::create(
+				new \pocketmine\network\mcpe\protocol\types\BlockPosition($x, $y, $z),
+				$session->getTypeConverter()->getBlockTranslator()->internalIdToNetworkId($state),
+				\pocketmine\network\mcpe\protocol\UpdateBlockPacket::FLAG_NETWORK,
+				\pocketmine\network\mcpe\protocol\UpdateBlockPacket::DATA_LAYER_LIQUID
+			));
+		}
+		$this->notifyNeighbourBlockUpdate($pos);
+	}
+
 	public function setBlockAt(int $x, int $y, int $z, Block $block, bool $update = true) : void{
 		if(!$this->isInWorld($x, $y, $z)){
 			throw new \InvalidArgumentException("Pos x=$x,y=$y,z=$z is outside of the world bounds");
@@ -2169,6 +2214,15 @@ class World implements ChunkManager{
 		$this->unlockChunk($chunkX, $chunkZ, null);
 
 		$previousBlock = $this->getBlockAt($x, $y, $z);
+		//BetterPMMP: a waterlogged block that is replaced by something that cannot hold water leaves the water
+		//behind (as a normal water block when the new block is air)
+		$liquidChunk = $this->getChunk($chunkX, $chunkZ);
+		if($liquidChunk !== null && $liquidChunk->getLiquidStateId($x & Chunk::COORD_MASK, $y, $z & Chunk::COORD_MASK) !== Block::EMPTY_STATE_ID && !Waterlogging::canHold($block)){
+			$this->setLiquidAt($x, $y, $z, null);
+			if($block->getTypeId() === BlockTypeIds::AIR){
+				$block = VanillaBlocks::WATER();
+			}
+		}
 		$redstoneChanged = $update && ($block instanceof \pocketmine\block\utils\RedstoneSignalEmitter ||
 			$previousBlock instanceof \pocketmine\block\utils\RedstoneSignalEmitter);
 		if(!$previousBlock->hasSameTypeId($block)){
@@ -2523,8 +2577,18 @@ class World implements ChunkManager{
 			}
 		}
 
+		//BetterPMMP: a waterloggable block placed into still water keeps the water
+		$waterlogged = [];
+		foreach($tx->getBlocks() as [$x, $y, $z, $block]){
+			if(Waterlogging::canHold($block) && Waterlogging::isWaterSource($this->getBlockAt($x, $y, $z))){
+				$waterlogged[] = [$x, $y, $z];
+			}
+		}
 		if(!$tx->apply()){
 			return false;
+		}
+		foreach($waterlogged as [$x, $y, $z]){
+			$this->setLiquidAt($x, $y, $z, VanillaBlocks::WATER());
 		}
 		$first = true;
 		foreach($tx->getBlocks() as [$x, $y, $z, $_]){

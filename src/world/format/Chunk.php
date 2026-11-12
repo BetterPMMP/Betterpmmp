@@ -111,6 +111,16 @@ class Chunk{
 		$this->terrainDirtyFlags |= self::DIRTY_FLAG_BLOCKS;
 	}
 
+	/** BetterPMMP: state in the liquid layer (waterlogged blocks). */
+	public function getLiquidStateId(int $x, int $y, int $z) : int{
+		return $this->getSubChunk($y >> SubChunk::COORD_BIT_SIZE)->getLiquidStateId($x, $y & SubChunk::COORD_MASK, $z);
+	}
+
+	public function setLiquidStateId(int $x, int $y, int $z, int $block) : void{
+		$this->getSubChunk($y >> SubChunk::COORD_BIT_SIZE)->setLiquidStateId($x, $y & SubChunk::COORD_MASK, $z, $block);
+		$this->terrainDirtyFlags |= self::DIRTY_FLAG_BLOCKS;
+	}
+
 	/**
 	 * Returns the Y coordinate of the highest non-air block at the specified X/Z chunk block coordinates
 	 *

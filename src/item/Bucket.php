@@ -38,6 +38,22 @@ class Bucket extends Item{
 	}
 
 	public function onInteractBlock(Player $player, Block $blockReplace, Block $blockClicked, int $face, Vector3 $clickVector, array &$returnedItems) : ItemUseResult{
+		//BetterPMMP: an empty bucket takes the water out of a waterlogged block
+		$world = $player->getWorld();
+		$clickedPos = $blockClicked->getPosition();
+		$liquid = $world->getLiquidAt($clickedPos->getFloorX(), $clickedPos->getFloorY(), $clickedPos->getFloorZ());
+		if($liquid instanceof Liquid && $liquid->getTypeId() === BlockTypeIds::WATER){
+			$ev = new PlayerBucketFillEvent($player, $blockClicked, $face, $this, VanillaItems::WATER_BUCKET());
+			$ev->call();
+			if($ev->isCancelled()){
+				return ItemUseResult::FAIL;
+			}
+			$world->setLiquidAt($clickedPos->getFloorX(), $clickedPos->getFloorY(), $clickedPos->getFloorZ(), null);
+			$world->addSound($clickedPos->add(0.5, 0.5, 0.5), $liquid->getBucketFillSound());
+			$this->pop();
+			$returnedItems[] = $ev->getItem();
+			return ItemUseResult::SUCCESS;
+		}
 		//TODO: move this to generic placement logic
 		if($blockClicked instanceof Liquid && $blockClicked->isSource()){
 			$stack = clone $this;

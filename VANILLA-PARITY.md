@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.45-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.46-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -44,11 +44,17 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 
 | Bereich | Offen |
 |---|---|
-| Kern | Wasserbindung (Blöcke im Wasser), Bündel, Kisten-/Trichter-/Befehlsblock-Lore, Leitstein-Kompass, Nautilus-Rüstung, Befehlsblöcke, Strukturblöcke |
+| Kern | Wasser fließt nicht aus gefluteten Blöcken, Bündel, Kisten-/Trichter-/Befehlsblock-Lore, Leitstein-Kompass, Nautilus-Rüstung, Befehlsblöcke, Strukturblöcke |
 | Blöcke ohne Funktion | Seegras (Wachstum), Tropfstein-Wachstum und fallende Stalaktiten, Blasensäule, Aquisator, Verzierter Krug (Inventar), Kupfertruhen (Inventar), Sculk-Katalysator und -Ader (Ausbreitung), Leitstein, Mangroven-Keimling (wächst nicht), Pappel-Schilder (Text), Regale, Strohbett |
 | Mobs mit Standard-KI | Piglin-Barbar, Hoglin/Zoglin, Fuchs, Schildkröte (Eier legen), Delfin, Axolotl, Panda, Eisbär, Lama (Truhe, Spucken), Mooshroom (Scheren), Kaninchen, Fledermaus, Allay, Plagegeist, Endermilbe, Silberfischchen (aus Blöcken), neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel) |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.46
+
+| System | Stand |
+|---|---|
+| Wasserbindung (Waterlogging) | ✅ Wasser in der zweiten Block-Ebene wie bei Bedrock (gespeichert und an Clients gesendet): Wassereimer auf Treppen, Stufen, Zäune, Mauern, Falltüren, Zauntore, Leitern, Schilder, Truhen, Laternen, Gitter/Scheiben, Trichter u. a. flutet sie, leerer Eimer holt das Wasser zurück, so ein Block in stilles Wasser gesetzt bleibt geflutet, beim Abbauen bleibt das Wasser. Wasser fließt noch nicht aus gefluteten Blöcken heraus. Fix im Core: eine leere Haupt-Ebene wurde beim Aufräumen entfernt und die Wasser-Ebene rückte nach |
 
 ## Neu in 5.45
 
