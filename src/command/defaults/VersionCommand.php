@@ -70,7 +70,7 @@ class VersionCommand extends VanillaCommand{
 			$sender->sendMessage($muted . "PHP  " . $bright . PHP_VERSION . $muted . "  •  OS  " . $bright . Utils::getOS() . $muted . "  •  JIT  " . $bright . $jitLabel . TextFormat::RESET);
 			$sender->sendMessage($muted . "Build ID  " . $bright . substr(VersionInfo::GIT_HASH(), 0, 8) . TextFormat::RESET);
 			$sender->sendMessage($muted . "Based on Axolotl-PM  •  Open source under LGPL-3.0");
-			$sender->sendMessage($muted . "Website  " . $accent . VersionInfo::WEBSITE_URL . TextFormat::RESET);
+			$sender->sendMessage($muted . "GitHub  " . $accent . VersionInfo::WEBSITE_URL . TextFormat::RESET);
 		}else{
 			$pluginName = implode(" ", $args);
 			$exactPlugin = $sender->getServer()->getPluginManager()->getPlugin($pluginName);

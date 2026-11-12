@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.27-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.28-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -38,17 +38,29 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 | Drachenkampf | ✅/🟡 | **neu in 4.9**: Kampf-Manager wie Vanilla (Zustand im Weltordner), 10 Kristalle einmalig, genau ein Drache, Bossbar für alle im Kampfgebiet, Flugphasen (Kreisen, Sturzflug, Feuerball-Wolke, Landung auf dem Portal mit Atem-Angriff, Abheben), Heilung durch Kristalle, Flügel-Rückstoß, 10 s Todesanimation mit 12000/500 EP, Ausgangsportal, Drachenei beim ersten Sieg, End-Gateways zu den Außeninseln (mit Rück-Gateway) |
 | Portale (Nether/End) | ✅/🟡 | Nether/End werden beim Serverstart angelegt; Ankunft im End auf der Obsidian-Plattform; **4.9/5.0**: Enderauge fliegt direkt zum Portalraum der nächsten Festung (jede Festung hat ein vollständiges Portal, geprüft) |
 
-## Was noch fehlt (Bestandsaufnahme 5.27)
+## Was noch fehlt (Bestandsaufnahme 5.28)
 
 Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch kein eigenes Vanilla-Verhalten haben.
 
 | Bereich | Offen |
 |---|---|
 | Kern | Wasserbindung (Blöcke im Wasser), Bündel, Kisten-/Trichter-/Befehlsblock-Lore, Leitstein-Kompass, Nautilus-Rüstung, Befehlsblöcke, Strukturblöcke |
-| Blöcke ohne Funktion | Bienenstock/-nest (Honig), Gerüst, Seetang und Seegras (Wachstum), Honigblock (Rutschen/Kleben am Spieler), Pulverschnee (Einsinken/Erfrieren), Spitzer Tropfstein (Schaden, Wachstum), Schildkrötenei, Blasensäule, Aquisator, Verzierter Krug (Inventar), Kupfertruhen (Inventar), Sculk-Katalysator und -Ader (Ausbreitung), Leitstein, neue Setzlinge (Kirsche, Blasseiche, Mangrove, Pappel wachsen nicht), Pappel-Holzset (Türen, Falltüren, Knöpfe, Schilder ohne Funktion), Beton-/Woll-Stufen und -Treppen (Form), Regale, Strohbett |
-| Mobs mit Standard-KI | Piglin-Barbar, Hoglin/Zoglin, Biene, Fuchs, Schildkröte, Delfin, Axolotl, Panda, Eisbär, Lama (Truhe, Spucken), Mooshroom (Scheren), Kaninchen, Fledermaus, Allay, Plagegeist, Endermilbe, Silberfischchen (aus Blöcken), neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel) |
+| Blöcke ohne Funktion | Seetang und Seegras (Wachstum), Tropfstein-Wachstum und fallende Stalaktiten, Blasensäule, Aquisator, Verzierter Krug (Inventar), Kupfertruhen (Inventar), Sculk-Katalysator und -Ader (Ausbreitung), Leitstein, neue Setzlinge (Kirsche, Blasseiche, Mangrove, Pappel wachsen nicht), Pappel-Holzset (Türen, Falltüren, Knöpfe, Schilder ohne Funktion), Beton-/Woll-Stufen und -Treppen (Form), Regale, Strohbett |
+| Mobs mit Standard-KI | Piglin-Barbar, Hoglin/Zoglin, Fuchs, Schildkröte (Eier legen), Delfin, Axolotl, Panda, Eisbär, Lama (Truhe, Spucken), Mooshroom (Scheren), Kaninchen, Fledermaus, Allay, Plagegeist, Endermilbe, Silberfischchen (aus Blöcken), neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel) |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.28
+
+| System | Stand |
+|---|---|
+| Bienen | ✅ fliegen zu Blumen in 8 Blöcken, sammeln 10 s Nektar, bestäuben unterwegs Feldfrüchte, merken sich ihren Stock (gespeichert) und füllen ihn mit Honig; tagsüber unterwegs, nachts und bei Regen am Stock; wütend nach Angriff oder Ernte ohne Lagerfeuer, stechen (Gift 10 s / 18 s auf Schwer) und sterben danach. Bienen gehen nicht in den Stock hinein (keine gespeicherten Bewohner) |
+| Bienenstock, Bienennest | ✅ Honigstufe 0–5, Schere → 3 Honigwaben, Glasflasche → Honigflasche, Lagerfeuer bis 5 Blöcke darunter beruhigt, Vorderseite zum Spieler, Nest nur mit Behutsamkeit |
+| Pulverschnee | ✅ keine Kollision (Einsinken), kein Fallschaden, Erfrieren nach 7 s (Frost-Overlay, 1 Schaden alle 2 s), Lederstiefel, Eiswanderer, Schneegolem und Eisbär immun, löscht Feuer und schmilzt dabei, mit Eimer aufnehmen |
+| Honigblock | ✅ kleinere Hitbox, verlangsamt, Rutschen an der Seite, 20 % Fallschaden |
+| Spitzer Tropfstein | ✅ Spitze nach oben: doppelter Fallschaden; hängende Spitze unter Tropfsteinblock mit Wasser/Lava darüber füllt Kessel bis 10 Blöcke darunter; bricht ohne Halt |
+| Schildkröteneier | ✅ 1–4 pro Block, schlüpfen auf Sand (meist nachts) in drei Stufen, Babyschildkröten; Zertrampeln durch Laufen/Landen (Schleichen schützt, Zombies gezielt) |
+| Gerüst | ✅ Stabilität 0–7, Teile mehr als 6 Blöcke von der Stütze fallen ab, Gerüst auf Gerüst baut die Säule nach oben, kein Fallschaden darin |
 
 ## Neu in 5.27
 

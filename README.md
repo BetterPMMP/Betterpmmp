@@ -1,5 +1,7 @@
 # BetterPMMP
 
+GitHub: https://github.com/BetterPMMP/Betterpmmp
+
 PocketMine-MP 5 (API 5.51.0) based server for Minecraft: Bedrock Edition, built on the
 Axolotl-MP dependency set. Goal: vanilla gameplay parity, implemented system by system.
 

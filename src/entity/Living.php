@@ -740,6 +740,7 @@ abstract class Living extends Entity{
 		Timings::$livingEntityBaseTick->startTiming();
 
 		$hasUpdate = parent::entityBaseTick($tickDiff);
+		\pocketmine\block\VanillaPowderSnow::thaw($this); //BetterPMMP: frost wears off outside powder snow
 
 		if($this->isAlive()){
 			if($this->effectManager->tick($tickDiff)){

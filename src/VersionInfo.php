@@ -31,11 +31,12 @@ use function str_repeat;
 
 final class VersionInfo{
 	public const NAME = "BetterPMMP";
-	public const BETTERPMMP_BUILD = "5.27-vanilla-beta.1";
+	public const BETTERPMMP_BUILD = "5.28-vanilla-beta.1";
 	public const BASE_VERSION = "5.51.0";
 	public const IS_DEVELOPMENT_BUILD = true;
 	public const BUILD_CHANNEL = "beta";
-	public const WEBSITE_URL = "https://green-bear-43454.zap.cloud/";
+	public const WEBSITE_URL = "https://github.com/BetterPMMP/Betterpmmp";
+	public const ISSUES_URL = "https://github.com/BetterPMMP/Betterpmmp/issues";
 
 	/**
 	 * PocketMine-MP-specific version ID for world data. Used to determine what fixes need to be applied to old world

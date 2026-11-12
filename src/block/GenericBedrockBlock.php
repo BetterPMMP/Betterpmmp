@@ -76,6 +76,7 @@ class GenericBedrockBlock extends Block{
 	 * Returns a copy using the state that matches the given Bedrock properties
 	 * (other properties keep their current value), e.g. ["hanging" => true].
 	 * @param array<string, bool|int|string> $properties
+	 * @return static
 	 */
 	public function withProperties(array $properties) : self{
 		$current = $this->getStateData()->getStates();

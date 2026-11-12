@@ -23,7 +23,7 @@ declare(strict_types=1);
 
 /**
  * PocketMine-MP is the Minecraft: PE multiplayer server software
- * Homepage: http://www.pocketmine.net/
+ * Homepage: https://github.com/BetterPMMP/Betterpmmp
  */
 namespace pocketmine;
 
@@ -1115,7 +1115,8 @@ class Server{
 			] as $link){
 				$splash .= "- " . $this->language->translate($link) . "\n";
 			}
-			$splash .= "- BetterPMMP website: {$highlight}" . VersionInfo::WEBSITE_URL . "{$reset}\n";
+			$splash .= "- BetterPMMP GitHub: {$highlight}" . VersionInfo::WEBSITE_URL . "{$reset}\n";
+			$splash .= "- BetterPMMP issues: {$highlight}" . VersionInfo::ISSUES_URL . "{$reset}\n";
 			$splash .= "- BetterPMMP core build: " . VersionInfo::BETTERPMMP_BUILD . " (experimental redstone; incomplete vanilla parity)\n";
 			$this->logger->info($splash);
 

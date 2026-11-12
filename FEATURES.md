@@ -10,7 +10,9 @@ villager trading and many blocks and items without any function. BetterPMMP
 keeps PocketMine's network layer, world storage and plugin API, and adds a
 vanilla game engine on top so that you can play survival from start to finish.
 
-Current version: **5.27-vanilla-beta.1** (API 5.51.0, plugins for PocketMine-MP 5 keep working).
+GitHub: https://github.com/BetterPMMP/Betterpmmp
+
+Current version: **5.28-vanilla-beta.1** (API 5.51.0, plugins for PocketMine-MP 5 keep working).
 
 > Status: beta. Many systems behave like vanilla, but not every detail matches
 > the official Bedrock Dedicated Server yet. See `VANILLA-PARITY.md` for an honest
@@ -82,6 +84,15 @@ Current version: **5.27-vanilla-beta.1** (API 5.51.0, plugins for PocketMine-MP 
 - Maps: filled maps that draw while you walk, cartography table (zoom, copy, lock,
   rename), buried treasure maps and explorer maps from cartographers.
 
+### Bees and cave blocks
+- Bees fly to flowers, collect nectar, pollinate crops and fill beehives and bee nests
+  with honey; shears give honeycomb, glass bottles give honey bottles; bees get angry
+  when the hive is harvested without a campfire below, sting (poison) and die later.
+- Powder snow (sink in, freezing damage, leather boots protect, bucket pick-up), honey
+  block (slow, sticky, less fall damage), pointed dripstone (double fall damage, drips
+  water and lava into cauldrons), turtle eggs (hatch on sand, can be trampled),
+  scaffolding (stability, columns, unsupported pieces fall).
+
 ### Weather and world
 - Vanilla weather cycle: rain, snow, thunderstorms, lightning (charged creepers,
   witches, zombified piglins), snow layers and ice, rain puts out fire, sleeping skips storms.
@@ -107,7 +118,9 @@ BetterPMMP behält das Netzwerk, die Weltspeicherung und die Plugin-API von
 PocketMine und setzt eine Vanilla-Spiel-Engine obendrauf, damit man Survival von
 Anfang bis Ende spielen kann.
 
-Aktuelle Version: **5.27-vanilla-beta.1** (API 5.51.0, Plugins für PocketMine-MP 5 laufen weiter).
+GitHub: https://github.com/BetterPMMP/Betterpmmp
+
+Aktuelle Version: **5.28-vanilla-beta.1** (API 5.51.0, Plugins für PocketMine-MP 5 laufen weiter).
 
 > Stand: Beta. Viele Systeme verhalten sich wie in Vanilla, aber noch nicht jedes
 > Detail stimmt mit dem offiziellen Bedrock Dedicated Server überein. Den ehrlichen
@@ -185,6 +198,15 @@ Aktuelle Version: **5.27-vanilla-beta.1** (API 5.51.0, Plugins für PocketMine-M
   Wolfsrüstung, Pulverschnee-Eimer, Windkugeln, bunte Eier.
 - Karten: Karten, die sich beim Laufen zeichnen, Kartentisch (Vergrößern, Kopieren,
   Sperren, Umbenennen), Schatzkarten und Entdeckerkarten vom Kartografen.
+
+### Bienen und Höhlenblöcke
+- Bienen fliegen zu Blumen, sammeln Nektar, bestäuben Pflanzen und füllen Bienenstöcke
+  und -nester mit Honig; Schere gibt Honigwaben, Glasflasche gibt Honigflaschen; ohne
+  Lagerfeuer darunter werden Bienen wütend, stechen (Gift) und sterben danach.
+- Pulverschnee (Einsinken, Erfrieren, Lederstiefel schützen, mit Eimer aufnehmen),
+  Honigblock (langsam, klebrig, weniger Fallschaden), spitzer Tropfstein (doppelter
+  Fallschaden, tropft Wasser und Lava in Kessel), Schildkröteneier (schlüpfen auf Sand,
+  können zertrampelt werden), Gerüst (Stabilität, Säulen, ungestützte Teile fallen).
 
 ### Wetter und Welt
 - Vanilla-Wetterzyklus: Regen, Schnee, Gewitter, Blitze (geladene Creeper, Hexen,

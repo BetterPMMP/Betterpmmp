@@ -377,6 +377,192 @@ class BeeMob extends GenericFlyingAnimalMob{
 	protected const SPAWN_EGG_GETTER = "BEE_SPAWN_EGG";
 	protected const HEIGHT = 0.55;
 	protected const WIDTH = 0.6;
+
+	/** BetterPMMP: vanilla bee - collects nectar from flowers, pollinates crops on the way home, fills its hive with honey, stings when angry (and dies later). */
+	private ?\pocketmine\math\Vector3 $hive = null;
+	private ?\pocketmine\math\Vector3 $flower = null;
+	private bool $nectar = false;
+	private int $pollinateTicks = 0;
+	private int $searchCooldown = 0;
+	private int $angerTicks = 0;
+	private ?int $angerTarget = null;
+	private bool $stung = false;
+	private int $stingDeathTicks = -1;
+	private int $attackCooldown = 0;
+
+	protected function initEntity(CompoundTag $nbt) : void{
+		parent::initEntity($nbt);
+		$this->nectar = $nbt->getByte("HasNectar", 0) === 1;
+		$this->stung = $nbt->getByte("HasStung", 0) === 1;
+		if($this->stung){ $this->stingDeathTicks = mt_rand(600, 1200); }
+		$hive = $nbt->getListTag("HivePos");
+		if($hive !== null && $hive->count() === 3){ $v = $hive->getAllValues(); $this->hive = new \pocketmine\math\Vector3((int) $v[0], (int) $v[1], (int) $v[2]); }
+	}
+
+	public function saveNBT() : CompoundTag{
+		$nbt = parent::saveNBT();
+		$nbt->setByte("HasNectar", $this->nectar ? 1 : 0);
+		$nbt->setByte("HasStung", $this->stung ? 1 : 0);
+		if($this->hive !== null){ $nbt->setTag("HivePos", new \pocketmine\nbt\tag\ListTag([new \pocketmine\nbt\tag\IntTag((int) $this->hive->x), new \pocketmine\nbt\tag\IntTag((int) $this->hive->y), new \pocketmine\nbt\tag\IntTag((int) $this->hive->z)])); }
+		return $nbt;
+	}
+
+	protected function syncNetworkData(EntityMetadataCollection $properties) : void{
+		parent::syncNetworkData($properties);
+		$properties->setGenericFlag(EntityMetadataFlags::ANGRY, $this->angerTicks > 0);
+		$properties->setGenericFlag(EntityMetadataFlags::POWERED, $this->nectar); // has_nectar look
+	}
+
+	public function hasNectar() : bool{ return $this->nectar; }
+	public function getHivePosition() : ?\pocketmine\math\Vector3{ return $this->hive; }
+	public function setHivePosition(?\pocketmine\math\Vector3 $pos) : void{ $this->hive = $pos?->floor(); }
+	public function isAngry() : bool{ return $this->angerTicks > 0; }
+
+	public function anger(Living $target, int $ticks = 500) : void{
+		if($this->stung || ($target instanceof Player && ($target->isCreative() || $target->isSpectator()))){ return; }
+		$this->angerTarget = $target->getId();
+		$this->angerTicks = $ticks;
+		$this->networkPropertiesDirty = true;
+	}
+
+	/** Angers every bee within 16 blocks (hive harvested or broken). */
+	public static function angerAround(\pocketmine\math\Vector3 $pos, Living $target) : void{
+		$world = $target->getWorld();
+		foreach($world->getNearbyEntities(new \pocketmine\math\AxisAlignedBB($pos->x - 16, $pos->y - 16, $pos->z - 16, $pos->x + 16, $pos->y + 16, $pos->z + 16)) as $entity){
+			if($entity instanceof self){ $entity->anger($target); }
+		}
+	}
+
+	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{
+		parent::attack($source);
+		if(!$source->isCancelled() && $source instanceof \pocketmine\event\entity\EntityDamageByEntityEvent && ($damager = $source->getDamager()) instanceof Living && $this->isAlive()){
+			$this->anger($damager);
+			self::angerAround($this->location, $damager);
+		}
+	}
+
+	protected function entityBaseTick(int $tickDiff = 1) : bool{
+		$update = parent::entityBaseTick($tickDiff);
+		if($this->stingDeathTicks > 0 && ($this->stingDeathTicks -= $tickDiff) <= 0 && $this->isAlive()){
+			$this->attack(new \pocketmine\event\entity\EntityDamageEvent($this, \pocketmine\event\entity\EntityDamageEvent::CAUSE_MAGIC, 1000));
+		}
+		if($this->angerTicks > 0 && ($this->angerTicks -= $tickDiff) <= 0){ $this->angerTicks = 0; $this->angerTarget = null; $this->networkPropertiesDirty = true; }
+		return $update;
+	}
+
+	private function flyTo(\pocketmine\math\Vector3 $target, float $speed) : float{
+		$d = $target->subtractVector($this->location);
+		$length = $d->length();
+		if($length > 0.05){
+			$this->setMotion($d->multiply(min($speed, $length) / $length));
+			$this->setRotation(rad2deg(atan2(-$d->x, $d->z)), -rad2deg(atan2($d->y, sqrt($d->x * $d->x + $d->z * $d->z))));
+		}
+		return $length;
+	}
+
+	protected function tickWandering(int $tickDiff) : void{
+		$world = $this->getWorld();
+		$this->attackCooldown = max(0, $this->attackCooldown - $tickDiff);
+		// angry: chase and sting
+		if($this->angerTicks > 0 && $this->angerTarget !== null){
+			$target = $world->getEntity($this->angerTarget);
+			if($target instanceof Living && $target->isAlive() && $target->getPosition()->distanceSquared($this->location) < 48 * 48 && !($target instanceof Player && ($target->isCreative() || $target->isSpectator()))){
+				$distance = $this->flyTo($target->getPosition()->add(0, $target->getSize()->getHeight() * 0.5, 0), 0.3);
+				if($distance < 1.4 && $this->attackCooldown === 0 && !$this->stung){
+					$this->attackCooldown = 20;
+					$ev = new \pocketmine\event\entity\EntityDamageByEntityEvent($this, $target, \pocketmine\event\entity\EntityDamageEvent::CAUSE_ENTITY_ATTACK, 2);
+					$target->attack($ev);
+					if(!$ev->isCancelled()){
+						$seconds = $world->getDifficulty() >= \pocketmine\world\World::DIFFICULTY_HARD ? 18 : ($world->getDifficulty() === \pocketmine\world\World::DIFFICULTY_NORMAL ? 10 : 0);
+						if($seconds > 0){ $target->getEffects()->add(new \pocketmine\entity\effect\EffectInstance(\pocketmine\entity\effect\VanillaEffects::POISON(), $seconds * 20)); }
+						$this->stung = true;
+						$this->stingDeathTicks = mt_rand(600, 1200);
+						$this->angerTicks = 0; $this->angerTarget = null; $this->networkPropertiesDirty = true;
+					}
+				}
+				return;
+			}
+			$this->angerTicks = 0; $this->angerTarget = null; $this->networkPropertiesDirty = true;
+		}
+		$this->searchCooldown = max(0, $this->searchCooldown - $tickDiff);
+		$hiveBlock = $this->hive !== null && $world->isChunkLoaded($this->hive->getFloorX() >> 4, $this->hive->getFloorZ() >> 4) ? $world->getBlock($this->hive) : null;
+		if($this->hive !== null && $hiveBlock !== null && !$hiveBlock instanceof \pocketmine\block\VanillaBeehive){ $this->hive = null; $hiveBlock = null; }
+		if($this->hive === null && $this->searchCooldown === 0){
+			$this->hive = $this->findBlock(fn(\pocketmine\block\Block $b) : bool => $b instanceof \pocketmine\block\VanillaBeehive, 10, 5);
+			$this->searchCooldown = 100;
+		}
+		$time = $world->getTimeOfDay();
+		$goHome = $this->nectar || $time >= \pocketmine\world\World::TIME_NIGHT || $world->getWeather()->isRaining();
+		if($goHome && $this->hive !== null){
+			if($this->nectar && $this->ticksLived % 30 === 0){ $this->pollinateBelow(); }
+			$front = $this->hive->add(0.5, 0.5, 0.5);
+			if($this->flyTo($front, 0.18) < 1.6){
+				$this->setMotion(new \pocketmine\math\Vector3(0, 0, 0));
+				if($this->nectar && $hiveBlock instanceof \pocketmine\block\VanillaBeehive){
+					$hiveBlock->addHoney();
+					$world->addSound($this->hive, new \pocketmine\world\sound\VanillaSound(\pocketmine\network\mcpe\protocol\types\LevelSoundEvent::BLOCK_BEEHIVE_WORK));
+					$this->nectar = false;
+					$this->networkPropertiesDirty = true;
+				}
+			}
+			return;
+		}
+		if(!$this->nectar && !$goHome){
+			if($this->flower === null && $this->searchCooldown === 0){
+				$this->flower = $this->findBlock(fn(\pocketmine\block\Block $b) : bool => self::isFlower($b), 8, 3);
+				$this->searchCooldown = $this->flower === null ? 120 : 20;
+			}
+			if($this->flower !== null){
+				if(!self::isFlower($world->getBlock($this->flower))){ $this->flower = null; parent::tickWandering($tickDiff); return; }
+				if($this->flyTo($this->flower->add(0.5, 0.6, 0.5), 0.15) < 0.8){
+					$this->setMotion(new \pocketmine\math\Vector3(0, 0, 0));
+					$this->pollinateTicks += $tickDiff;
+					if($this->pollinateTicks >= 200){ $this->nectar = true; $this->flower = null; $this->pollinateTicks = 0; $this->networkPropertiesDirty = true; }
+				}
+				return;
+			}
+		}
+		parent::tickWandering($tickDiff);
+	}
+
+	private static function isFlower(\pocketmine\block\Block $block) : bool{
+		if($block instanceof \pocketmine\block\Flower){ return true; }
+		if($block instanceof \pocketmine\block\DoublePlant){ $id = $block->getTypeId(); return in_array($id, [\pocketmine\block\BlockTypeIds::SUNFLOWER, \pocketmine\block\BlockTypeIds::LILAC, \pocketmine\block\BlockTypeIds::ROSE_BUSH, \pocketmine\block\BlockTypeIds::PEONY], true); }
+		if($block instanceof \pocketmine\block\GenericBedrockBlock){ $n = $block->getBedrockName(); return str_contains($n, "petals") || str_contains($n, "wildflowers") || str_contains($n, "eyeblossom") || str_contains($n, "torchflower") || str_contains($n, "pitcher_plant") || str_contains($n, "flowering_azalea"); }
+		return in_array($block->getTypeId(), [\pocketmine\block\BlockTypeIds::FLOWERING_AZALEA_LEAVES, \pocketmine\block\BlockTypeIds::TORCHFLOWER, \pocketmine\block\BlockTypeIds::PITCHER_PLANT, \pocketmine\block\BlockTypeIds::PINK_PETALS], true);
+	}
+
+	/** Grows one crop below the bee (up to 3 blocks), like vanilla pollination. */
+	private function pollinateBelow() : void{
+		$world = $this->getWorld();
+		for($dy = 1; $dy <= 3; ++$dy){
+			$pos = $this->location->subtract(0, $dy, 0)->floor();
+			$block = $world->getBlock($pos);
+			if($block instanceof \pocketmine\block\Crops && $block->getAge() < \pocketmine\block\Crops::MAX_AGE){
+				$world->setBlock($pos, $block->setAge($block->getAge() + 1));
+				return;
+			}
+			if($block->isSolid()){ return; }
+		}
+	}
+
+	/** @param \Closure(\pocketmine\block\Block) : bool $match */
+	private function findBlock(\Closure $match, int $radius, int $height) : ?\pocketmine\math\Vector3{
+		$world = $this->getWorld();
+		$base = $this->location->floor();
+		$best = null; $bestDistance = PHP_INT_MAX;
+		for($x = -$radius; $x <= $radius; ++$x){ for($z = -$radius; $z <= $radius; ++$z){
+			$bx = $base->getFloorX() + $x; $bz = $base->getFloorZ() + $z;
+			if(!$world->isChunkLoaded($bx >> 4, $bz >> 4)){ continue; }
+			for($y = -$height; $y <= $height; ++$y){
+				$by = $base->getFloorY() + $y;
+				if(!$world->isInWorld($bx, $by, $bz)){ continue; }
+				$d = $x * $x + $y * $y + $z * $z;
+				if($d < $bestDistance && $match($world->getBlockAt($bx, $by, $bz))){ $best = new \pocketmine\math\Vector3($bx, $by, $bz); $bestDistance = $d; }
+			}
+		} }
+		return $best;
+	}
 }
 
 class BlazeMob extends GenericHostileFlyingMob{

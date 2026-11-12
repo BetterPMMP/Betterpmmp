@@ -79,6 +79,13 @@ final class ExtraVanillaBlocks{
 		"minecraft:calibrated_sculk_sensor" => [VanillaSculkSensor::class, null],
 		"minecraft:open_eyeblossom" => [VanillaEyeblossom::class, null],
 		"minecraft:closed_eyeblossom" => [VanillaEyeblossom::class, null],
+		"minecraft:beehive" => [VanillaBeehive::class, null],
+		"minecraft:bee_nest" => [VanillaBeehive::class, null],
+		"minecraft:powder_snow" => [VanillaPowderSnow::class, null],
+		"minecraft:honey_block" => [VanillaHoneyBlock::class, null],
+		"minecraft:pointed_dripstone" => [VanillaPointedDripstone::class, null],
+		"minecraft:turtle_egg" => [VanillaTurtleEgg::class, null],
+		"minecraft:scaffolding" => [VanillaScaffolding::class, null],
 	];
 
 	public static function getAll() : array{
