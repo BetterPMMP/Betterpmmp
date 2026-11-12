@@ -35,6 +35,8 @@ use pocketmine\nbt\tag\IntTag;
 use pocketmine\nbt\tag\ListTag;
 use pocketmine\nbt\tag\StringTag;
 use pocketmine\world\World;
+use function ceil;
+use function in_array;
 use function max;
 use function min;
 use function mt_rand;
@@ -118,6 +120,10 @@ class MonsterSpawner extends Spawnable{
 		$this->entityTypeId = $entityTypeId;
 		$this->spawnDelay = 20;
 		$this->clearSpawnCompoundCache();
+		//BetterPMMP: show the new mob in the cage right away and keep the spawner running
+		$world = $this->position->getWorld();
+		$world->setBlock($this->position, $world->getBlock($this->position));
+		$world->scheduleDelayedBlockUpdate($this->position, 20);
 	}
 
 	/** Runs one spawner cycle. Called by MonsterSpawner::onScheduledUpdate(). */
@@ -158,14 +164,19 @@ class MonsterSpawner extends Spawnable{
 				if(!$world->isChunkLoaded($x >> 4, $z >> 4) || !$this->isSpawnSpaceClear($world, $x, $y, $z)){
 					continue;
 				}
+				$inWater = $world->getBlockAt($x, $y, $z) instanceof \pocketmine\block\Water;
+				if(self::isWaterMob($entityTypeId) !== $inWater){
+					continue;
+				}
 				$nbt = CompoundTag::create()
 					->setString(EntityFactory::TAG_IDENTIFIER, $entityTypeId)
 					->setTag(Entity::TAG_POS, new ListTag([new DoubleTag($x + 0.5), new DoubleTag($y), new DoubleTag($z + 0.5)]))
 					->setTag(Entity::TAG_MOTION, new ListTag([new DoubleTag(0.0), new DoubleTag(0.0), new DoubleTag(0.0)]))
 					->setTag(Entity::TAG_ROTATION, new ListTag([new FloatTag(mt_rand(0, 359)), new FloatTag(0.0)]));
 				$entity = EntityFactory::getInstance()->createFromData($world, $nbt);
-				if($entity instanceof Mob){
+				if($entity instanceof \pocketmine\entity\Living){ //BetterPMMP: also squid and other non-Mob creatures
 					$entity->spawnToAll();
+					$world->addParticle($entity->getPosition()->add(0, 0.5, 0), new \pocketmine\world\particle\MobSpawnParticle((int) ceil($entity->getSize()->getWidth()), (int) ceil($entity->getSize()->getHeight())));
 					break;
 				}
 				$entity?->flagForDespawn();
@@ -174,11 +185,16 @@ class MonsterSpawner extends Spawnable{
 		$this->spawnDelay = mt_rand(min($this->minSpawnDelay, $this->maxSpawnDelay), max($this->minSpawnDelay, $this->maxSpawnDelay));
 	}
 
+	private static function isWaterMob(string $id) : bool{
+		return in_array($id, ["minecraft:cod", "minecraft:salmon", "minecraft:pufferfish", "minecraft:tropicalfish", "minecraft:squid", "minecraft:glow_squid",
+			"minecraft:dolphin", "minecraft:guardian", "minecraft:elder_guardian", "minecraft:tadpole", "minecraft:axolotl", "minecraft:nautilus"], true);
+	}
+
 	private function countNearbyMobs(World $world, string $entityTypeId) : int{
 		$count = 0;
 		$rangeSquared = max(1, $this->spawnRange * 2) ** 2;
 		foreach($world->getEntities() as $entity){
-			if($entity instanceof Mob && $entity->getNetworkTypeId() === $entityTypeId && $entity->getPosition()->distanceSquared($this->position) <= $rangeSquared){
+			if($entity instanceof \pocketmine\entity\Living && $entity::getNetworkTypeId() === $entityTypeId && $entity->getPosition()->distanceSquared($this->position) <= $rangeSquared){
 				++$count;
 			}
 		}

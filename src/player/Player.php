@@ -2184,9 +2184,50 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		return true;
 	}
 
+	/**
+	 * BetterPMMP: swaps the items in the main hand and the off hand. Works with
+	 * every item (the vanilla client only lets a few items into the off hand
+	 * through its inventory screen, so the server does the swap).
+	 * Calls {@link \pocketmine\event\player\PlayerSwapHandItemsEvent}.
+	 *
+	 * @return bool whether the items were swapped
+	 */
+	public function swapHandItems() : bool{
+		$main = $this->inventory->getItemInHand();
+		$off = $this->offHandInventory->getItem(0);
+		if($main->isNull() && $off->isNull()){
+			return false;
+		}
+		$ev = new \pocketmine\event\player\PlayerSwapHandItemsEvent($this, $main, $off);
+		if($this->isSpectator() || !$this->isAlive()){
+			$ev->cancel();
+		}
+		$ev->call();
+		if($ev->isCancelled()){
+			return false;
+		}
+		$this->setUsingItem(false);
+		$this->inventory->setItemInHand($off);
+		$this->offHandInventory->setItem(0, $main);
+		$this->getWorld()->addSound($this->getPosition(), new \pocketmine\world\sound\VanillaSound(\pocketmine\network\mcpe\protocol\types\LevelSoundEvent::ARMOR_EQUIP_GENERIC), [$this]);
+		return true;
+	}
+
+	private int $lastSneakPressTick = -100;
+
 	public function toggleSneak(bool $sneak, bool $sneakPressed = true) : bool{
 		if($sneak === $this->sneaking && $sneakPressed === $this->sneakPressed){
 			return true;
+		}
+		//BetterPMMP: double-sneak (two presses within 0.35 s) swaps the hands, see betterpmmp.yml hand-swap
+		if($sneak && !$this->sneaking && \pocketmine\BetterPMMPConfig::flag("hand-swap", "double-sneak", true)){
+			$tick = $this->server->getTick();
+			if($tick - $this->lastSneakPressTick <= 7){
+				$this->lastSneakPressTick = -100;
+				$this->swapHandItems();
+			}else{
+				$this->lastSneakPressTick = $tick;
+			}
 		}
 		$this->setSneakPressed($sneakPressed);
 

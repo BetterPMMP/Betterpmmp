@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.24-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.25-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -37,6 +37,15 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 | End | ✅/🟡 | **4.6**: Vanilla-Inselform, Säulen, Außeninseln, Chorus, End-Städte und -Schiffe (ohne Shulker) |
 | Drachenkampf | ✅/🟡 | **neu in 4.9**: Kampf-Manager wie Vanilla (Zustand im Weltordner), 10 Kristalle einmalig, genau ein Drache, Bossbar für alle im Kampfgebiet, Flugphasen (Kreisen, Sturzflug, Feuerball-Wolke, Landung auf dem Portal mit Atem-Angriff, Abheben), Heilung durch Kristalle, Flügel-Rückstoß, 10 s Todesanimation mit 12000/500 EP, Ausgangsportal, Drachenei beim ersten Sieg, End-Gateways zu den Außeninseln (mit Rück-Gateway) |
 | Portale (Nether/End) | ✅/🟡 | Nether/End werden beim Serverstart angelegt; Ankunft im End auf der Obsidian-Plattform; **4.9/5.0**: Enderauge fliegt direkt zum Portalraum der nächsten Festung (jede Festung hat ein vollständiges Portal, geprüft) |
+
+## Neu in 5.25
+
+| System | Stand |
+|---|---|
+| Hände tauschen | ✅ jedes Item zwischen Haupthand und Zweithand: `Player::swapHandItems()`, `PlayerSwapHandItemsEvent` (abbrechbar), Befehl `/swaphands` (`/swap`, `/offhand`), Geste „zweimal schnell schleichen“ (abschaltbar in betterpmmp.yml) |
+| Spawner | ✅ alle 83 Mob-Arten per Spawn-Ei (Ei wird verbraucht, Käfig zeigt den Mob sofort), auch Tintenfische und andere Wasser-Mobs (nur im Wasser), Spawn-Partikel; Spawn-Ei auf Prüfungs-Spawner legt dessen Mob fest (gespeichert) |
+| Rüstungsständer | ✅ aufstellen, Rüstung anlegen/tauschen, Item in die Hand geben, mit leerer Hand abnehmen (nach Klickhöhe), Schleichen + Benutzen wechselt die Pose (13), Schlag zerlegt ihn, wird gespeichert |
+| Sitzkissen | 🟡 alle 16 Farben aufstellen, benutzen zum Hinsetzen, Schlag hebt es wieder auf (Farbdarstellung im Client ungeprüft) |
 
 ## Neu in 5.24
 

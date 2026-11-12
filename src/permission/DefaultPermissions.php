@@ -74,6 +74,7 @@ abstract class DefaultPermissions{
 		$everyoneRoot = self::registerNoArgsDesc(self::ROOT_USER, [$operatorRoot]);
 		//BetterPMMP: permissions without a core translation key get a plain description
 		self::registerPermission(new Permission(Names::COMMAND_WEATHER, "Allows the user to change the weather"), [$operatorRoot]);
+		self::registerPermission(new Permission(Names::COMMAND_SWAPHANDS, "Allows the user to swap the items in both hands"), [$everyoneRoot]);
 
 		self::registerNoArgsDesc(Names::COMMAND_DUMPMEMORY, [$consoleRoot]);
 

@@ -112,6 +112,12 @@ final class EntityFactory{
 		$this->register(\pocketmine\entity\object\MinecartEntity::class, function(World $world, CompoundTag $nbt) : \pocketmine\entity\object\MinecartEntity{
 			return new \pocketmine\entity\object\MinecartEntity(Helper::parseLocation($nbt, $world), $nbt);
 		}, ['MinecartRideable', 'minecraft:minecart']);
+		$this->register(\pocketmine\entity\object\ArmorStand::class, function(World $world, CompoundTag $nbt) : \pocketmine\entity\object\ArmorStand{
+			return new \pocketmine\entity\object\ArmorStand(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['ArmorStand', 'minecraft:armor_stand']);
+		$this->register(\pocketmine\entity\object\Cushion::class, function(World $world, CompoundTag $nbt) : \pocketmine\entity\object\Cushion{
+			return new \pocketmine\entity\object\Cushion(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['Cushion', 'minecraft:cushion']);
 		$this->register(\pocketmine\entity\object\TntMinecartEntity::class, function(World $world, CompoundTag $nbt) : \pocketmine\entity\object\TntMinecartEntity{
 			return new \pocketmine\entity\object\TntMinecartEntity(Helper::parseLocation($nbt, $world), $nbt);
 		}, ['MinecartTNT', 'minecraft:tnt_minecart']);

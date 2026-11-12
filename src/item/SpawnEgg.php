@@ -39,6 +39,14 @@ abstract class SpawnEgg extends Item{
 	abstract protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity;
 
 	public function onInteractBlock(Player $player, Block $blockReplace, Block $blockClicked, int $face, Vector3 $clickVector, array &$returnedItems) : ItemUseResult{
+		//BetterPMMP: a spawn egg on a trial spawner sets its mob
+		if($blockClicked instanceof \pocketmine\block\VanillaTrialSpawner && ($trialId = $this->spawnerEntityId()) !== null){
+			$player->getWorld()->getTrialManager()->setSpawnerMob($blockClicked->getPosition(), $trialId);
+			if($player->hasFiniteResources()){
+				$this->pop();
+			}
+			return ItemUseResult::SUCCESS;
+		}
 		if($blockClicked instanceof MonsterSpawner && ($tile = $player->getWorld()->getTile($blockClicked->getPosition())) instanceof TileMonsterSpawner){
 			$baseEggs = [
 				VanillaItems::PIG_SPAWN_EGG()->getTypeId() => "minecraft:pig",
@@ -46,7 +54,8 @@ abstract class SpawnEgg extends Item{
 				VanillaItems::CHICKEN_SPAWN_EGG()->getTypeId() => "minecraft:chicken",
 				VanillaItems::SHEEP_SPAWN_EGG()->getTypeId() => "minecraft:sheep",
 				VanillaItems::ZOMBIE_SPAWN_EGG()->getTypeId() => "minecraft:zombie",
-				VanillaItems::VILLAGER_SPAWN_EGG()->getTypeId() => "minecraft:villager"
+				VanillaItems::VILLAGER_SPAWN_EGG()->getTypeId() => "minecraft:villager",
+				VanillaItems::SQUID_SPAWN_EGG()->getTypeId() => "minecraft:squid"
 			];
 			$entityTypeId = $baseEggs[$this->getTypeId()] ?? null;
 			if($entityTypeId === null){
@@ -60,6 +69,9 @@ abstract class SpawnEgg extends Item{
 			}
 			if($entityTypeId !== null){
 				$tile->setEntityTypeId($entityTypeId);
+				if($player->hasFiniteResources()){
+					$this->pop(); //BetterPMMP: the egg is used up like in vanilla
+				}
 				return ItemUseResult::SUCCESS;
 			}
 		}
@@ -72,5 +84,28 @@ abstract class SpawnEgg extends Item{
 		$entity->spawnToAll();
 		//TODO: what if the entity was marked for deletion?
 		return ItemUseResult::SUCCESS;
+	}
+
+	/** Entity id this egg puts into a spawner, or null. */
+	private function spawnerEntityId() : ?string{
+		$baseEggs = [
+			VanillaItems::PIG_SPAWN_EGG()->getTypeId() => "minecraft:pig",
+			VanillaItems::COW_SPAWN_EGG()->getTypeId() => "minecraft:cow",
+			VanillaItems::CHICKEN_SPAWN_EGG()->getTypeId() => "minecraft:chicken",
+			VanillaItems::SHEEP_SPAWN_EGG()->getTypeId() => "minecraft:sheep",
+			VanillaItems::ZOMBIE_SPAWN_EGG()->getTypeId() => "minecraft:zombie",
+			VanillaItems::VILLAGER_SPAWN_EGG()->getTypeId() => "minecraft:villager",
+				VanillaItems::SQUID_SPAWN_EGG()->getTypeId() => "minecraft:squid"
+		];
+		if(isset($baseEggs[$this->getTypeId()])){
+			return $baseEggs[$this->getTypeId()];
+		}
+		foreach(VanillaMobTypes::additional() as $definition){
+			$getter = $definition["getter"];
+			if(VanillaItems::$getter()->getTypeId() === $this->getTypeId()){
+				return $definition["id"];
+			}
+		}
+		return null;
 	}
 }

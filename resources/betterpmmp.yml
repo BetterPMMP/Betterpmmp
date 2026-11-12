@@ -44,3 +44,10 @@ mob-ai:
 maps:
   send-creation-packet: true  # Paket "Karte erstellt" vor dem ersten Bild
   send-images: true           # Kartenbild (Pixel und Markierungen)
+
+# ---------------------------------------------------------------
+# Hände tauschen (jedes Item zwischen Haupthand und Zweithand)
+# ---------------------------------------------------------------
+# Immer möglich: Befehl /swaphands (auch /swap oder /offhand).
+hand-swap:
+  double-sneak: true   # zweimal schnell schleichen tauscht die Hände

@@ -65,12 +65,24 @@ final class TrialManager{
 	private array $vaults = [];
 	private int $scanTicks = 0;
 	private bool $dirty = false;
+	/** @var array<string, string> spawner pos => entity id set with a spawn egg */
+	private array $mobOverrides = [];
+
+	/** A spawn egg used on a trial spawner changes what it spawns (vanilla). */
+	public function setSpawnerMob(Vector3 $pos, string $entityTypeId) : void{
+		$this->mobOverrides[self::key($pos)] = $entityTypeId;
+		$this->dirty = true;
+		$this->save();
+	}
 
 	public function __construct(private World $world){
 		$file = $this->file();
 		if(file_exists($file)){
 			$data = json_decode((string) file_get_contents($file), true);
 			if(is_array($data)){
+				foreach(($data["mobs"] ?? []) as $key => $id){
+					$this->mobOverrides[(string) $key] = (string) $id;
+				}
 				foreach(($data["cooldowns"] ?? []) as $key => $until){
 					$this->cooldowns[(string) $key] = (int) $until;
 				}
@@ -95,7 +107,7 @@ final class TrialManager{
 		foreach($this->vaults as $key => $players){
 			$vaults[$key] = array_keys($players);
 		}
-		@file_put_contents($this->file(), json_encode(["cooldowns" => $this->cooldowns, "vaults" => $vaults]));
+		@file_put_contents($this->file(), json_encode(["cooldowns" => $this->cooldowns, "vaults" => $vaults, "mobs" => $this->mobOverrides]));
 		$this->dirty = false;
 	}
 
@@ -321,7 +333,20 @@ final class TrialManager{
 			for($dy = -1; $dy <= 1; ++$dy){
 				$y = $pos->getFloorY() + $dy;
 				if($this->world->getBlockAt($x, $y - 1, $z)->isSolid() && !$this->world->getBlockAt($x, $y, $z)->isSolid() && !$this->world->getBlockAt($x, $y + 1, $z)->isSolid()){
-					$mob = new $class(Location::fromObject(new Vector3($x + 0.5, $y, $z + 0.5), $this->world, mt_rand(0, 359), 0));
+					$location = Location::fromObject(new Vector3($x + 0.5, $y, $z + 0.5), $this->world, mt_rand(0, 359), 0);
+					$mob = null;
+					if(isset($this->mobOverrides[$key])){
+						$nbt = \pocketmine\nbt\tag\CompoundTag::create()
+							->setString(\pocketmine\entity\EntityFactory::TAG_IDENTIFIER, $this->mobOverrides[$key])
+							->setTag(\pocketmine\entity\Entity::TAG_POS, new \pocketmine\nbt\tag\ListTag([new \pocketmine\nbt\tag\DoubleTag($location->x), new \pocketmine\nbt\tag\DoubleTag($location->y), new \pocketmine\nbt\tag\DoubleTag($location->z)]))
+							->setTag(\pocketmine\entity\Entity::TAG_MOTION, new \pocketmine\nbt\tag\ListTag([new \pocketmine\nbt\tag\DoubleTag(0.0), new \pocketmine\nbt\tag\DoubleTag(0.0), new \pocketmine\nbt\tag\DoubleTag(0.0)]))
+							->setTag(\pocketmine\entity\Entity::TAG_ROTATION, new \pocketmine\nbt\tag\ListTag([new \pocketmine\nbt\tag\FloatTag($location->yaw), new \pocketmine\nbt\tag\FloatTag(0.0)]));
+						$mob = \pocketmine\entity\EntityFactory::getInstance()->createFromData($this->world, $nbt);
+					}
+					if(!$mob instanceof Living){
+						$mob?->flagForDespawn();
+						$mob = new $class($location);
+					}
 					if($mob instanceof \pocketmine\entity\Zombie){
 						$mob->setBaby(false);
 					}

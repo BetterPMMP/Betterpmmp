@@ -153,6 +153,8 @@ final class ExtraVanillaItems{
 			$name === "minecraft:tnt_minecart" => new VariantMinecart($id, "Minecart with TNT", $name, 1),
 			$name === "minecraft:powder_snow_bucket" => new PlacingBucket($id, "Powder Snow Bucket", $name, 1),
 			$name === "minecraft:blue_egg" || $name === "minecraft:brown_egg" => new ColoredEgg($id, $display),
+			$name === "minecraft:armor_stand" => new PlaceableEntityItem($id, "Armor Stand", $name, 16),
+			str_ends_with($name, "_cushion") => new PlaceableEntityItem($id, $display, $name, 64),
 			$name === "minecraft:lead" => new LeadItem($id, "Lead", $name, 64),
 			$name === "minecraft:empty_map" => new EmptyMapItem($id, "Empty Map", $name, 64),
 			default => new GenericBedrockItem($id, $display, $name, self::stackSize($name)),

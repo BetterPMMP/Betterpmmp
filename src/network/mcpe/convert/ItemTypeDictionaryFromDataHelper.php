@@ -54,8 +54,17 @@ final class ItemTypeDictionaryFromDataHelper{
 			if(!is_array($entry) || !is_string($name) || !isset($entry["component_based"], $entry["runtime_id"], $entry["version"]) || !is_bool($entry["component_based"]) || !is_int($entry["runtime_id"]) || !is_int($entry["version"]) || !(is_string($componentNbt = $entry["component_nbt"] ?? null) || $componentNbt === null)){
 				throw new AssumptionFailedError("Invalid item list format");
 			}
-			$params[] = new ItemTypeEntry($name, $entry["runtime_id"], $entry["component_based"], $entry["version"], $componentNbt === null ? $emptyNBT : new CacheableNbt($nbtSerializer->read(ErrorToExceptionHandler::trapAndRemoveFalse(fn() => base64_decode($componentNbt, true)))->mustGetCompoundTag()));
+			$params[] = new ItemTypeEntry($name, $entry["runtime_id"], $entry["component_based"], $entry["version"], $componentNbt === null ? $emptyNBT : new CacheableNbt(self::allowOffHand($nbtSerializer->read(ErrorToExceptionHandler::trapAndRemoveFalse(fn() => base64_decode($componentNbt, true)))->mustGetCompoundTag())));
 		}
 		return new ItemTypeDictionary($params);
+	}
+
+	/** BetterPMMP: data-driven items may go into the off hand through the inventory screen too. */
+	private static function allowOffHand(CompoundTag $root) : CompoundTag{
+		$properties = $root->getCompoundTag("components")?->getCompoundTag("item_properties");
+		if($properties !== null && $properties->getTag("allow_off_hand") !== null){
+			$properties->setByte("allow_off_hand", 1);
+		}
+		return $root;
 	}
 }
