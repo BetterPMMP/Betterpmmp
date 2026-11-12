@@ -105,6 +105,7 @@ use function fmod;
 use function get_debug_type;
 use function implode;
 use function in_array;
+use function str_contains;
 use function is_infinite;
 use function is_nan;
 use function json_decode;
@@ -480,7 +481,9 @@ class InGamePacketHandler extends PacketHandler{
 				//get rid of continued spam if the player clicks and holds right-click
 				$this->lastRightClickData = $data;
 				$this->lastRightClickTime = microtime(true);
-				if($spamBug){
+				//BetterPMMP: Java Edition players click fast on purpose (speed bridging, double-clicking); the bridge
+				//never repeats a click by itself, so the Bedrock spam filter is skipped for them
+				if($spamBug && !\pocketmine\network\JavaBridge::isJavaPlayer($this->player)){
 					throw new FilterNoisyPacketException();
 				}
 				//TODO: end hack for client spam bug
@@ -631,6 +634,14 @@ class InGamePacketHandler extends PacketHandler{
 			$tile->toggleSlot($packet->getSlot(), $packet->isDisabled());
 		}
 		return true;
+	}
+
+	public function handleLevelSoundEvent(\pocketmine\network\mcpe\protocol\LevelSoundEventPacket $packet) : bool{
+		//BetterPMMP: the client announces a spear jab with its attack sound; the jab itself is done by the server
+		if(str_contains($packet->sound, "spear.attack")){
+			$this->player->spearJab();
+		}
+		return false;
 	}
 
 	public function handleCommandBlockUpdate(\pocketmine\network\mcpe\protocol\CommandBlockUpdatePacket $packet) : bool{

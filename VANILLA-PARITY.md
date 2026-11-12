@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.52-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.53-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -49,6 +49,13 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel), Lama mit Truhe, Panda-Aussehen je Gen |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.53
+
+| System | Stand |
+|---|---|
+| Speer-Stoß | ✅ Der Bedrock-Client schickt beim Speer keinen normalen Treffer (er meldet nur das Angriffsgeräusch bzw. einen Schwung ins Leere) – der Server sucht jetzt selbst das Ziel in Blickrichtung (4,5 Blöcke) und trifft es. Schaden wie Bedrock: Holz/Gold 2, Stein/Kupfer 3, Eisen 4, Diamant 5, Netherit 6 |
+| Java: schnelles Bauen | ✅ Schnelle Klicks (Speed-Bridging, Doppelklick) wurden vom Bedrock-Spam-Filter verworfen, und Blöcke wurden abgelehnt, weil die Kameradrehung beim Server später ankommt als der Klick. Für Java-Spieler gilt jetzt nur noch die Reichweite (+1,5 Blöcke für die verzögerte Position) |
 
 ## Neu in 5.52
 

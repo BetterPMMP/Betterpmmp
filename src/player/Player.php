@@ -2043,7 +2043,12 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 	public function interactBlock(Vector3 $pos, int $face, Vector3 $clickOffset) : bool{
 		$this->setUsingItem(false);
 
-		if($this->canInteract($pos->add(0.5, 0.5, 0.5), $this->isCreative() ? self::MAX_REACH_DISTANCE_CREATIVE : self::MAX_REACH_DISTANCE_SURVIVAL)){
+		//BetterPMMP: a Java player's camera turn reaches the server separately from (and often after) the click, so
+		//when building fast the server still has the old view direction; only the reach is checked for them (the
+		//Java client itself only clicks blocks it is looking at). One block of extra reach for the lagging position.
+		$java = \pocketmine\network\JavaBridge::isJavaPlayer($this);
+		$reach = ($this->isCreative() ? self::MAX_REACH_DISTANCE_CREATIVE : self::MAX_REACH_DISTANCE_SURVIVAL) + ($java ? 1.5 : 0);
+		if($this->canInteract($pos->add(0.5, 0.5, 0.5), $reach, $java ? 1000.0 : M_SQRT3 / 2)){
 			$this->broadcastAnimation(new ArmSwingAnimation($this), $this->getViewers());
 			$item = $this->inventory->getItemInHand(); //this is a copy of the real item
 			$oldItem = clone $item;
@@ -2077,6 +2082,9 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 
 		$heldItem = $this->inventory->getItemInHand();
 		$oldItem = clone $heldItem;
+		if($heldItem instanceof Spear){
+			$this->lastSpearJab = $this->server->getTick();
+		}
 
 		$ev = new EntityDamageByEntityEvent($this, $entity, EntityDamageEvent::CAUSE_ENTITY_ATTACK, $heldItem->getAttackPoints());
 		if($heldItem instanceof Spear){
@@ -2126,7 +2134,7 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		$this->broadcastAnimation(new ArmSwingAnimation($this), $this->getViewers());
 		if($heldItem instanceof Spear || $heldItem instanceof \pocketmine\item\Mace){
 			//BetterPMMP: diagnosis for weapon damage reports (debug level 2 in pocketmine.yml)
-			$this->logger->debug("[Waffe] " . $heldItem->getName() . " -> " . $entity->getName() . ": Grundschaden " . $ev->getBaseDamage() . ", Endschaden " . $ev->getFinalDamage() . ($ev->isCancelled() ? ", ABGEBROCHEN (Schutz-Plugin, PvP aus oder zu weit weg)" : ", ok"));
+			$this->logger->debug("[Waffe] " . $heldItem->getName() . " -> " . ($entity instanceof Living ? $entity->getName() : $entity::getNetworkTypeId()) . ": Grundschaden " . $ev->getBaseDamage() . ", Endschaden " . $ev->getFinalDamage() . ($ev->isCancelled() ? ", ABGEBROCHEN (Schutz-Plugin, PvP aus oder zu weit weg)" : ", ok"));
 		}
 
 		$soundPos = $entity->getPosition()->add(0, $entity->size->getHeight() / 2, 0);
@@ -2171,6 +2179,11 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 	 * Under normal circumstances, this will just play the no-damage attack sound and the arm-swing animation.
 	 */
 	public function missSwing() : void{
+		//BetterPMMP: the Bedrock client handles spear jabs as a piercing swing and does not send an attack for them,
+		//so the server finds what the spear hits along the view (reach 4.5)
+		if($this->inventory->getItemInHand() instanceof Spear && $this->spearJab()){
+			return;
+		}
 		$ev = new PlayerMissSwingEvent($this);
 		$ev->call();
 		if(!$ev->isCancelled()){
@@ -3014,6 +3027,52 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 
 	/** BetterPMMP: server tick a Java player started eating/drinking (-1 = not eating) and the hotbar slot used */
 	private int $javaEatStart = -1;
+
+	private int $lastSpearJab = -100;
+
+	/** A spear jab: hits the first living entity along the view (once per 5 ticks, the client may report it twice). */
+	public function spearJab() : bool{
+		if(!$this->inventory->getItemInHand() instanceof Spear){
+			return false;
+		}
+		$tick = $this->server->getTick();
+		if($tick - $this->lastSpearJab < 5){
+			return true;
+		}
+		$target = $this->findSpearTarget();
+		if($target === null){
+			return false;
+		}
+		$this->lastSpearJab = $tick;
+		$this->logger->debug("[Speer] Stoß trifft " . $target->getName());
+		$this->attackEntity($target);
+		return true;
+	}
+
+	/** The closest living entity a spear jab along the view direction hits. */
+	private function findSpearTarget() : ?Living{
+		$eye = $this->getEyePos();
+		$dir = $this->getDirectionVector();
+		$best = null;
+		$bestAlong = PHP_INT_MAX;
+		foreach($this->getWorld()->getNearbyEntities($this->boundingBox->expandedCopy(self::SPEAR_REACH, self::SPEAR_REACH, self::SPEAR_REACH), $this) as $entity){
+			if(!$entity instanceof Living || !$entity->isAlive()){
+				continue;
+			}
+			// distance along the view to the entity's box, and how far the view line passes from it
+			$box = $entity->getBoundingBox()->expandedCopy(0.3, 0.3, 0.3);
+			$hit = $box->calculateIntercept($eye, $eye->addVector($dir->multiply(self::SPEAR_REACH)));
+			if($hit === null && !$box->isVectorInside($eye)){
+				continue;
+			}
+			$along = $hit === null ? 0.0 : $hit->getHitVector()->distance($eye);
+			if($along < $bestAlong){
+				$best = $entity;
+				$bestAlong = $along;
+			}
+		}
+		return $best;
+	}
 
 	/** BetterPMMP: spear charge attack state */
 	private ?Vector3 $spearLastPos = null;

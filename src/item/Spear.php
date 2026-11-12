@@ -23,12 +23,13 @@ final class Spear extends TieredTool implements Releasable{
 	private const KINETIC_KNOCKBACK_MIN_SPEED = 5.1;
 
 	public function getAttackPoints() : int{
+		// Bedrock jab damage (one more than the Java values, like Bedrock swords)
 		return match($this->tier){
-			ToolTier::WOOD, ToolTier::GOLD => 1,
-			ToolTier::STONE, ToolTier::COPPER => 2,
-			ToolTier::IRON => 3,
-			ToolTier::DIAMOND => 4,
-			ToolTier::NETHERITE => 5
+			ToolTier::WOOD, ToolTier::GOLD => 2,
+			ToolTier::STONE, ToolTier::COPPER => 3,
+			ToolTier::IRON => 4,
+			ToolTier::DIAMOND => 5,
+			ToolTier::NETHERITE => 6
 		};
 	}
 
