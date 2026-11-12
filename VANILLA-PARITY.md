@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.53-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.54-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -49,6 +49,12 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel), Lama mit Truhe, Panda-Aussehen je Gen |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.54
+
+| System | Stand |
+|---|---|
+| Java: schnelles Bauen | ✅ Ursache gefunden: ViaBedrock bestätigte jeden gesetzten Block sofort an den Java-Client, bevor der Server ihn gesetzt hatte – der Java-Client setzte seinen vorhergesagten Block deshalb kurz auf Luft zurück, und ein schneller Klick darauf ging ins Leere. BetterPMMP-Bridge 1.5.0 hält die Bestätigung jetzt zurück, bis der Server den Block geschickt hat (Sicherheits-Timeout 0,6 s). Das Plugin wird beim Serverstart automatisch aktualisiert |
 
 ## Neu in 5.53
 

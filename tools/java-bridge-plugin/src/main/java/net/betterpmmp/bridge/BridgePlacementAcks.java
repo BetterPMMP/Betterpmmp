@@ -1,0 +1,176 @@
+package net.betterpmmp.bridge;
+
+import com.viaversion.viaversion.api.connection.UserConnection;
+import com.viaversion.viaversion.api.minecraft.BlockPosition;
+import com.viaversion.viaversion.api.protocol.AbstractProtocol;
+import com.viaversion.viaversion.api.protocol.packet.PacketWrapper;
+import com.viaversion.viaversion.api.protocol.packet.State;
+import com.viaversion.viaversion.api.protocol.packet.mapping.PacketMapping;
+import com.viaversion.viaversion.api.protocol.packet.mapping.PacketMappings;
+import com.viaversion.viaversion.api.protocol.remapper.PacketHandler;
+import com.viaversion.viaversion.api.type.Types;
+import com.viaversion.viaversion.protocols.v26_2to26_3.packet.ServerboundPackets26_3;
+import net.raphimc.viabedrock.ViaBedrock;
+import net.raphimc.viabedrock.api.util.PacketFactory;
+import net.raphimc.viabedrock.protocol.BedrockProtocol;
+import net.raphimc.viabedrock.protocol.ClientboundBedrockPackets;
+import net.raphimc.viabedrock.protocol.types.BedrockTypes;
+
+import java.lang.reflect.Field;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Map;
+import java.util.WeakHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+
+/**
+ * Fast building for Java players.
+ *
+ * ViaBedrock acknowledges a Java block placement (USE_ITEM_ON) to the Java client right away, before the
+ * Bedrock server has placed anything. A Java client that gets the acknowledgement puts the blocks it predicted
+ * back to the last state it knows from the server - air - so the block it just placed vanishes until the
+ * server's block update arrives a moment later. Clicking that block during the gap (speed bridging,
+ * double-clicking) clicks air and nothing happens.
+ *
+ * This holds the acknowledgement back until the server has sent the block update for the clicked block
+ * (BetterPMMP always re-sends the clicked block and its neighbours after an interaction), with a short timeout
+ * as a safety net.
+ */
+final class BridgePlacementAcks {
+
+    private static final long TIMEOUT_MS = 600;
+
+    private record Pending(int sequence, BlockPosition clicked) {
+    }
+
+    private static final Map<UserConnection, Deque<Pending>> PENDING = new WeakHashMap<>();
+
+    private BridgePlacementAcks() {
+    }
+
+    static void install(final BedrockProtocol protocol) {
+        try {
+            final PacketMapping useItemOn = mapping(protocol, "serverboundMappings", ServerboundPackets26_3.USE_ITEM_ON.getId());
+            final PacketMapping updateBlock = mapping(protocol, "clientboundMappings", ClientboundBedrockPackets.UPDATE_BLOCK.getId());
+            if (useItemOn == null || updateBlock == null || useItemOn.handler() == null || updateBlock.handler() == null) {
+                ViaBedrock.getPlatform().getLogger().log(Level.WARNING, "[BetterPMMP-Bridge] block placement handlers not found, fast building fix disabled");
+                return;
+            }
+            final PacketHandler originalUse = useItemOn.handler();
+            final PacketHandler originalUpdate = updateBlock.handler();
+
+            useItemOn.setHandler(wrapper -> {
+                wrapper.passthrough(Types.VAR_INT); // hand
+                final BlockPosition clicked = wrapper.passthrough(Types.BLOCK_POSITION1_14);
+                wrapper.passthrough(Types.UNSIGNED_BYTE); // face
+                wrapper.passthrough(Types.FLOAT);
+                wrapper.passthrough(Types.FLOAT);
+                wrapper.passthrough(Types.FLOAT);
+                wrapper.passthrough(Types.BOOLEAN); // inside block
+                wrapper.passthrough(Types.BOOLEAN); // world border hit
+                final int sequence = wrapper.read(Types.VAR_INT);
+                wrapper.write(Types.VAR_INT, -1); // ViaBedrock's early acknowledgement now matches no prediction
+                wrapper.resetReader();
+                remember(wrapper.user(), sequence, clicked);
+                originalUse.handle(wrapper);
+            });
+
+            updateBlock.setHandler(wrapper -> {
+                final BlockPosition position = wrapper.passthrough(BedrockTypes.BLOCK_POSITION);
+                wrapper.resetReader();
+                originalUpdate.handle(wrapper);
+                final int sequence = due(wrapper.user(), position);
+                if (sequence >= 0) {
+                    // the Java block update must reach the client before the acknowledgement
+                    if (!wrapper.isCancelled()) {
+                        wrapper.send(BedrockProtocol.class);
+                        wrapper.cancel();
+                    }
+                    PacketFactory.sendJavaBlockChangedAck(wrapper.user(), sequence);
+                }
+            });
+            ViaBedrock.getPlatform().getLogger().log(Level.INFO, "[BetterPMMP-Bridge] fast building fix enabled");
+        } catch (final Throwable t) {
+            ViaBedrock.getPlatform().getLogger().log(Level.WARNING, "[BetterPMMP-Bridge] could not install the fast building fix", t);
+        }
+    }
+
+    private static PacketMapping mapping(final BedrockProtocol protocol, final String fieldName, final int packetId) throws ReflectiveOperationException {
+        final Field field = AbstractProtocol.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        final PacketMappings mappings = (PacketMappings) field.get(protocol);
+        return mappings.mappedPacket(State.PLAY, packetId);
+    }
+
+    private static void remember(final UserConnection user, final int sequence, final BlockPosition clicked) {
+        synchronized (PENDING) {
+            PENDING.computeIfAbsent(user, u -> new ArrayDeque<>()).addLast(new Pending(sequence, clicked));
+        }
+        user.getChannel().eventLoop().schedule(() -> {
+            final int timedOut = expire(user, sequence);
+            if (timedOut >= 0) {
+                try {
+                    PacketFactory.sendJavaBlockChangedAck(user, timedOut);
+                } catch (final Throwable ignored) {
+                }
+            }
+        }, TIMEOUT_MS, TimeUnit.MILLISECONDS);
+    }
+
+    /** Sequence to acknowledge now that the server sent this block, or -1. Acknowledges every older click too. */
+    private static int due(final UserConnection user, final BlockPosition position) {
+        synchronized (PENDING) {
+            final Deque<Pending> queue = PENDING.get(user);
+            if (queue == null || queue.isEmpty()) {
+                return -1;
+            }
+            int last = -1;
+            boolean found = false;
+            for (final Pending pending : queue) {
+                last = pending.sequence();
+                if (pending.clicked().equals(position)) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                return -1;
+            }
+            while (!queue.isEmpty()) {
+                final Pending head = queue.pollFirst();
+                if (head.sequence() == last) {
+                    break;
+                }
+            }
+            return last;
+        }
+    }
+
+    /** Removes a click that got no answer in time; returns its sequence if it was still waiting. */
+    private static int expire(final UserConnection user, final int sequence) {
+        synchronized (PENDING) {
+            final Deque<Pending> queue = PENDING.get(user);
+            if (queue == null) {
+                return -1;
+            }
+            boolean waiting = false;
+            for (final Pending pending : queue) {
+                if (pending.sequence() == sequence) {
+                    waiting = true;
+                    break;
+                }
+            }
+            if (!waiting) {
+                return -1;
+            }
+            while (!queue.isEmpty()) {
+                final Pending head = queue.pollFirst();
+                if (head.sequence() == sequence) {
+                    break;
+                }
+            }
+            return sequence;
+        }
+    }
+}
