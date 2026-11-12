@@ -2059,7 +2059,7 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 				return true;
 			}
 		}else{
-			$this->logger->debug("Cancelled interaction of block at $pos due to not currently being interactable");
+			$this->logger->debug("Cancelled interaction of block at $pos due to not currently being interactable" . ($java ? " ([Java-Bau] zu weit weg: Server-Position " . $this->location->asVector3() . ")" : ""));
 		}
 
 		return false;

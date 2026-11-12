@@ -2488,7 +2488,11 @@ class World implements ChunkManager{
 			return false;
 		}
 
+		$javaDebug = $player !== null && \pocketmine\network\JavaBridge::isJavaPlayer($player);
 		if($blockClicked->getTypeId() === BlockTypeIds::AIR){
+			if($javaDebug){
+				$this->logger->debug("[Java-Bau] " . $player->getName() . " klickt auf Luft bei " . $blockClicked->getPosition()->asVector3() . " (der Block fehlt auf dem Server)");
+			}
 			return false;
 		}
 
@@ -2537,6 +2541,9 @@ class World implements ChunkManager{
 			$item->getPlacementTransaction($blockReplace, $blockClicked, $face, $clickVector, $player);
 		if($tx === null){
 			//no placement options available
+			if($javaDebug){
+				$this->logger->debug("[Java-Bau] " . $item->getName() . " lässt sich an " . $blockReplace->getPosition()->asVector3() . " nicht setzen");
+			}
 			return false;
 		}
 
@@ -2550,6 +2557,9 @@ class World implements ChunkManager{
 			foreach($block->getCollisionBoxes() as $collisionBox){
 				foreach($this->getCollidingEntities($collisionBox) as $colliding){
 					if($colliding !== $ignore){
+						if($javaDebug){
+							$this->logger->debug("[Java-Bau] Block bei " . $x . " " . $y . " " . $z . " abgelehnt: " . ($colliding instanceof \pocketmine\player\Player ? $colliding->getName() : $colliding::class) . " steht im Weg");
+						}
 						return false;  //Entity in block
 					}
 				}
@@ -2580,8 +2590,14 @@ class World implements ChunkManager{
 
 			$ev->call();
 			if($ev->isCancelled()){
+				if($javaDebug){
+					$this->logger->debug("[Java-Bau] BlockPlaceEvent abgebrochen (Schutz-Plugin?)");
+				}
 				return false;
 			}
+		}
+		if($javaDebug){
+			$this->logger->debug("[Java-Bau] gesetzt: " . $item->getName() . " bei " . $blockReplace->getPosition()->asVector3());
 		}
 
 		//BetterPMMP: a waterloggable block placed into still water keeps the water

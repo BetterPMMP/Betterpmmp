@@ -124,6 +124,7 @@ final class BridgePlacementAcks {
         user.getChannel().eventLoop().schedule(() -> {
             final int timedOut = expire(user, sequence);
             if (timedOut >= 0) {
+                ViaBedrock.getPlatform().getLogger().log(Level.INFO, "[BetterPMMP-Bridge] Bauen: keine Server-Antwort auf Klick bei " + clicked + " innerhalb von " + TIMEOUT_MS + " ms");
                 try {
                     PacketFactory.sendJavaBlockChangedAck(user, timedOut);
                 } catch (final Throwable ignored) {

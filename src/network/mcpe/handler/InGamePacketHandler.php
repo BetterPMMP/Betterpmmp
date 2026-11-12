@@ -492,6 +492,9 @@ class InGamePacketHandler extends PacketHandler{
 
 				$blockPos = $data->getBlockPosition();
 				$vBlockPos = new Vector3($blockPos->getX(), $blockPos->getY(), $blockPos->getZ());
+				if(\pocketmine\network\JavaBridge::isJavaPlayer($this->player)){
+					$this->session->getLogger()->debug("[Java-Bau] Klick auf " . $vBlockPos . " Seite " . $data->getFace() . ($spamBug ? " (schnell wiederholt)" : ""));
+				}
 				$this->player->interactBlock($vBlockPos, $data->getFace(), $clickPos);
 				if($data->getClientInteractPrediction() === PredictedResult::SUCCESS){
 					//If the item has an associated blockstate ID, this means it will only place one block.
