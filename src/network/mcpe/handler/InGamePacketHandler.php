@@ -633,6 +633,14 @@ class InGamePacketHandler extends PacketHandler{
 		return true;
 	}
 
+	public function handleScriptMessage(\pocketmine\network\mcpe\protocol\ScriptMessagePacket $packet) : bool{
+		//BetterPMMP: inventory clicks of Java Edition players, forwarded by the BetterPMMP-Bridge ViaProxy plugin
+		if($packet->getMessageId() === "betterpmmp:java_click" && \pocketmine\network\JavaBridge::isJavaPlayer($this->player)){
+			\pocketmine\network\mcpe\JavaInventoryClick::handle($this->player, $this->inventoryManager, $packet->getValue());
+		}
+		return true;
+	}
+
 	public function handleItemStackRequest(ItemStackRequestPacket $packet) : bool{
 		$responses = [];
 		if(count($packet->getRequests()) > 80){

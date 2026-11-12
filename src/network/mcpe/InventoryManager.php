@@ -202,6 +202,11 @@ class InventoryManager{
 		}
 	}
 
+	/** BetterPMMP: the inventory open under a window ID, if any. */
+	public function getInventoryByWindowId(int $windowId) : ?Inventory{
+		return $this->networkIdToInventoryMap[$windowId] ?? null;
+	}
+
 	public function getWindowId(Inventory $inventory) : ?int{
 		return ($id = array_search($inventory, $this->networkIdToInventoryMap, true)) !== false ? $id : null;
 	}
@@ -357,6 +362,10 @@ class InventoryManager{
 						if($pk instanceof ContainerOpenPacket){
 							//workaround useless bullshit in 1.21 - ContainerClose requires a type now for some reason
 							$windowType = $pk->windowType;
+							if(\pocketmine\network\JavaBridge::isJavaPlayer($this->player)){
+								//BetterPMMP: tell the bridge plugin the window size (Java needs it when opening, e.g. 54-slot menus)
+								$this->session->sendDataPacket(\pocketmine\network\mcpe\protocol\ScriptMessagePacket::create("betterpmmp:container_size", $windowId . ":" . $inventory->getSize()));
+							}
 						}
 						$this->session->sendDataPacket($pk);
 					}

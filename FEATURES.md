@@ -12,7 +12,7 @@ vanilla game engine on top so that you can play survival from start to finish.
 
 GitHub: https://github.com/BetterPMMP/Betterpmmp
 
-Current version: **5.32-vanilla-beta.1** (API 5.51.0, plugins for PocketMine-MP 5 keep working).
+Current version: **5.33-vanilla-beta.1** (API 5.51.0, plugins for PocketMine-MP 5 keep working).
 
 > Status: beta. Many systems behave like vanilla, but not every detail matches
 > the official Bedrock Dedicated Server yet. See `VANILLA-PARITY.md` for an honest
@@ -90,6 +90,7 @@ Current version: **5.32-vanilla-beta.1** (API 5.51.0, plugins for PocketMine-MP 
   it crashes and stops it with the server. Java accounts are checked by Mojang, names
   get the prefix `J_`. Settings: `java-bridge` in `betterpmmp.yml`.
 - Optional (`chat-forms: true`): forms from plugins as chat menus for Java players.
+- Own ViaProxy plugin (BetterPMMP-Bridge): chest menus of every size and inventory clicks for Java players.
 
 ### Bees and cave blocks
 - Bees fly to flowers, collect nectar, pollinate crops and fill beehives and bee nests
@@ -127,7 +128,7 @@ Anfang bis Ende spielen kann.
 
 GitHub: https://github.com/BetterPMMP/Betterpmmp
 
-Aktuelle Version: **5.32-vanilla-beta.1** (API 5.51.0, Plugins für PocketMine-MP 5 laufen weiter).
+Aktuelle Version: **5.33-vanilla-beta.1** (API 5.51.0, Plugins für PocketMine-MP 5 laufen weiter).
 
 > Stand: Beta. Viele Systeme verhalten sich wie in Vanilla, aber noch nicht jedes
 > Detail stimmt mit dem offiziellen Bedrock Dedicated Server überein. Den ehrlichen
@@ -212,6 +213,7 @@ Aktuelle Version: **5.32-vanilla-beta.1** (API 5.51.0, Plugins für PocketMine-M
   Abstürzen neu und beendet es mit dem Server. Java-Konten prüft Mojang, Namen bekommen
   das Präfix `J_`. Einstellungen: `java-bridge` in `betterpmmp.yml`.
 - Optional (`chat-forms: true`): Formulare von Plugins als Chat-Menü für Java-Spieler.
+- Eigenes ViaProxy-Plugin (BetterPMMP-Bridge): Kisten-Menüs in jeder Größe und Inventar-Klicks für Java-Spieler.
 
 ### Bienen und Höhlenblöcke
 - Bienen fliegen zu Blumen, sammeln Nektar, bestäuben Pflanzen und füllen Bienenstöcke

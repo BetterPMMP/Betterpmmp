@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.32-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.33-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -49,6 +49,14 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Mobs mit Standard-KI | Piglin-Barbar, Hoglin/Zoglin, Fuchs, Schildkröte (Eier legen), Delfin, Axolotl, Panda, Eisbär, Lama (Truhe, Spucken), Mooshroom (Scheren), Kaninchen, Fledermaus, Allay, Plagegeist, Endermilbe, Silberfischchen (aus Blöcken), neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel) |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.33
+
+| System | Stand |
+|---|---|
+| Java-Bridge: Kisten-Menüs und Inventar | ✅ eigenes ViaProxy-Plugin „BetterPMMP-Bridge“ (Quellcode in `tools/java-bridge-plugin`, wird automatisch nach `java-bridge/plugins/` installiert): Kisten-Fenster in jeder Größe (auch 54 Plätze), keine Block-Prüfung bei Menüs ohne echte Kiste, und Inventar-Klicks, die ViaBedrock noch gar nicht übersetzt, werden an BetterPMMP weitergeleitet. BetterPMMP führt sie wie ein Java-Server aus (Links-/Rechtsklick, Shift, Zahlentasten, F, Q, Doppelklick, Ziehen) – als normale Inventar-Transaktion, Menü-Plugins sehen die Klicks also wie bei Bedrock |
+| ViaProxy-Version | ⚙️ fest auf den getesteten Dev-Build 964 (`viaproxy-build`), „latest“ = immer der neueste |
+| Noch offen für Java | Ressourcenpakete, eigene Skins/Modelle, NPCs mit eigenen Modellen (hängt an ViaBedrock) |
 
 ## Neu in 5.31
 

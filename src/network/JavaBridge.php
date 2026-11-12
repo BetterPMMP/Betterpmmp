@@ -66,7 +66,10 @@ use const PHP_OS_FAMILY;
 final class JavaBridge{
 
 	private const RELEASES_URL = "https://api.github.com/repos/ViaVersion/ViaProxy/releases/latest";
-	private const CI_URL = "https://ci.viaversion.com/job/ViaProxy/lastSuccessfulBuild/";
+	private const CI_JOB = "https://ci.viaversion.com/job/ViaProxy/";
+	/** ViaProxy dev build the BetterPMMP-Bridge plugin was tested with ("viaproxy-build: latest" uses the newest one) */
+	public const TESTED_BUILD = 964;
+	private const PLUGIN = "BetterPMMP-Bridge.jar";
 	private const JRE_URL = "https://api.adoptium.net/v3/binary/latest/21/ga/linux/%s/jre/hotspot/normal/eclipse";
 	private const JAR = "ViaProxy.jar";
 	private const MAX_RESTARTS = 5;
@@ -131,6 +134,7 @@ final class JavaBridge{
 		if(!self::ensureViaProxy($jar, $logger)){
 			return;
 		}
+		self::installPlugin($logger);
 		$port = BetterPMMPConfig::int("java-bridge", "port", 25565);
 		$online = BetterPMMPConfig::flag("java-bridge", "online-mode", true);
 		self::$command = [
@@ -381,9 +385,45 @@ final class JavaBridge{
 		return true;
 	}
 
-	/** @return array{string, string, string}|null [id, download url, label] of the newest ViaProxy dev build */
+	/**
+	 * Puts the BetterPMMP-Bridge plugin (shipped with BetterPMMP) into java-bridge/plugins/. It adds what
+	 * ViaBedrock is missing: chest menus of every size and inventory clicks (performed by BetterPMMP).
+	 */
+	private static function installPlugin(\Logger $logger) : void{
+		$source = Path::join(\pocketmine\RESOURCE_PATH, "java-bridge", self::PLUGIN);
+		$data = @file_get_contents($source);
+		if($data === false){
+			$logger->warning("[Java-Bridge] " . self::PLUGIN . " fehlt in BetterPMMP, Kisten-Menüs und Inventar-Klicks gehen für Java-Spieler nicht");
+			return;
+		}
+		$dir = Path::join(self::$dir, "plugins");
+		$target = Path::join($dir, self::PLUGIN);
+		if(file_exists($target) && @file_get_contents($target) === $data){
+			return;
+		}
+		if((!is_dir($dir) && !@mkdir($dir, 0777, true)) || @file_put_contents($target, $data) === false){
+			$logger->warning("[Java-Bridge] " . self::PLUGIN . " konnte nicht nach $dir kopiert werden");
+			return;
+		}
+		$logger->info("[Java-Bridge] " . self::PLUGIN . " installiert (Kisten-Menüs und Inventar für Java-Spieler)");
+	}
+
+	/** @return array{string, string, string}|null [id, download url, label] of the ViaProxy dev build to use */
 	private static function latestDevBuild() : ?array{
-		$result = Internet::getURL(self::CI_URL . "api/json?tree=number,artifacts%5BfileName,relativePath%5D", 15, ["User-Agent: BetterPMMP"]);
+		$wanted = strtolower(BetterPMMPConfig::string("java-bridge", "viaproxy-build", (string) self::TESTED_BUILD));
+		$builds = $wanted === "latest" ? ["lastSuccessfulBuild"] : [(string) (int) $wanted, "lastSuccessfulBuild"];
+		foreach($builds as $build){
+			$found = self::devBuild(self::CI_JOB . $build . "/");
+			if($found !== null){
+				return $found;
+			}
+		}
+		return null;
+	}
+
+	/** @return array{string, string, string}|null */
+	private static function devBuild(string $buildUrl) : ?array{
+		$result = Internet::getURL($buildUrl . "api/json?tree=number,artifacts%5BfileName,relativePath%5D", 15, ["User-Agent: BetterPMMP"]);
 		$data = $result === null || $result->getCode() !== 200 ? null : json_decode($result->getBody(), true);
 		if(!is_array($data) || !is_array($data["artifacts"] ?? null)){
 			return null;
@@ -394,7 +434,7 @@ final class JavaBridge{
 			$path = is_array($artifact) && is_string($artifact["relativePath"] ?? null) ? $artifact["relativePath"] : "";
 			$lower = strtolower($name);
 			if(str_ends_with($lower, ".jar") && !str_contains($lower, "java8") && !str_contains($lower, "sources") && !str_contains($lower, "javadoc")){
-				return ["dev-$number", self::CI_URL . "artifact/" . $path, "ViaProxy Dev-Build #$number ($name)"];
+				return ["dev-$number", $buildUrl . "artifact/" . $path, "ViaProxy Dev-Build #$number ($name)"];
 			}
 		}
 		return null;
