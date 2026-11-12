@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.31-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.32-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -54,7 +54,7 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 
 | System | Stand |
 |---|---|
-| Java-Modus: Formulare als Chat-Menü | ✅ Java-Spieler (über die Java-Bridge) bekommen Formulare von Plugins als Chat-Menü: Knöpfe nummeriert (Zahl schreiben), Ja/Nein-Fenster mit 1/2, ausführliche Formulare Frage für Frage (Text, ja/nein, Auswahl, Zahl), 0 oder x schließt. Die Antwort geht wie bei Bedrock an das Plugin, Plugins müssen nichts ändern |
+| Java-Modus: Formulare als Chat-Menü | ⚙️ seit 5.32 nur noch mit `java-bridge: chat-forms: true` (ViaProxy zeigt die Fenster selbst). Java-Spieler (über die Java-Bridge) bekommen Formulare von Plugins als Chat-Menü: Knöpfe nummeriert (Zahl schreiben), Ja/Nein-Fenster mit 1/2, ausführliche Formulare Frage für Frage (Text, ja/nein, Auswahl, Zahl), 0 oder x schließt. Die Antwort geht wie bei Bedrock an das Plugin, Plugins müssen nichts ändern |
 | Java-Bridge: Kisten-Menüs, Inventar, Blöcke setzen | 🟡 hängt an ViaBedrock (Übersetzung für 1.26.60 noch unfertig) |
 
 ## Neu in 5.30

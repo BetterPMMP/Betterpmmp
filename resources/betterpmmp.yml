@@ -74,3 +74,4 @@ java-bridge:
   name-prefix: "J_"                 # Namen von Java-Spielern, z. B. J_Steve
   target-version: "Bedrock 1.26.60" # Bedrock-Version für ViaProxy
   memory: "512M"                    # maximaler Arbeitsspeicher für ViaProxy
+  chat-forms: false                 # true = Formulare (UIs) für Java-Spieler als Chat-Menü statt Fenster

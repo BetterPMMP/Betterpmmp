@@ -2456,8 +2456,8 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 	 */
 	public function sendForm(Form $form) : void{
 		$id = $this->formIdCounter++;
-		if(\pocketmine\network\JavaBridge::isJavaPlayer($this)){
-			//BetterPMMP: Java Edition players get forms as chat menus (ViaProxy cannot show form windows reliably)
+		if(\pocketmine\BetterPMMPConfig::flag("java-bridge", "chat-forms", false) && \pocketmine\network\JavaBridge::isJavaPlayer($this)){
+			//BetterPMMP: optional - Java Edition players get forms as chat menus instead of the windows ViaProxy shows
 			$data = $form->jsonSerialize();
 			if(is_array($data)){
 				$this->forms[$id] = $form;
