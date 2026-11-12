@@ -161,6 +161,8 @@ class NetworkSession{
 	private \PrefixedLogger $logger;
 	private ?Player $player = null;
 	private ?PlayerInfo $info = null;
+	/** BetterPMMP: packet fixes for Java Edition players (Java bridge) */
+	private ?JavaPacketFixer $javaPacketFixer = null;
 	private ?int $ping = null;
 
 	private ?PacketHandler $handler = null;
@@ -594,6 +596,11 @@ class NetworkSession{
 		//Basic safety restriction. TODO: improve this
 		if(!$this->loggedIn && !$packet->canBeSentBeforeLogin()){
 			throw new \InvalidArgumentException("Attempted to send " . get_class($packet) . " to " . $this->getDisplayName() . " too early");
+		}
+
+		if(\pocketmine\network\JavaBridge::isBridgeAddress($this->ip) && !$this->info instanceof XboxLivePlayerInfo){
+			//BetterPMMP: fixes for Java Edition players coming through the Java bridge
+			$packet = ($this->javaPacketFixer ??= new JavaPacketFixer())->fix($packet);
 		}
 
 		$timings = Timings::getSendDataPacketTimings($packet);

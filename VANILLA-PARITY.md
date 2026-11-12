@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.33-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.34-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -49,6 +49,12 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Mobs mit Standard-KI | Piglin-Barbar, Hoglin/Zoglin, Fuchs, Schildkröte (Eier legen), Delfin, Axolotl, Panda, Eisbär, Lama (Truhe, Spucken), Mooshroom (Scheren), Kaninchen, Fledermaus, Allay, Plagegeist, Endermilbe, Silberfischchen (aus Blöcken), neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel) |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.34
+
+| System | Stand |
+|---|---|
+| Java-Bridge: Spieler rutscht ständig | ✅ Plugins setzen oft unsichtbare Platzhalter-Wesen mit Größe 0 neben Spieler (z. B. einen Wither für die Bossbar). Java kennt Größe 0 nicht, das Wesen ist dort normal groß und schiebt den Spieler dauernd weg. BetterPMMP verschiebt solche Platzhalter (Größe unter 0,01, kein Namensschild) für Java-Spieler 64 Blöcke nach unten – Bossbar und alles andere bleiben |
 
 ## Neu in 5.33
 
