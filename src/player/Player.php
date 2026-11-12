@@ -268,6 +268,9 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 	protected int $viewDistance = -1;
 	protected int $spawnThreshold;
 	protected int $spawnChunkLoadCount = 0;
+	/** BetterPMMP: chunks sent since the last dimension change, -1 when no change is pending */
+	protected int $dimensionChunkLoadCount = -1;
+	protected int $dimensionChangeTick = 0;
 	protected int $chunksPerTick;
 	protected ChunkSelector $chunkSelector;
 	protected ChunkLoader $chunkLoader;
@@ -918,6 +921,9 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 
 					$this->getNetworkSession()->startUsingChunk($X, $Z, function() use ($X, $Z, $index) : void{
 						$this->usedChunks[$index] = UsedChunkStatus::SENT;
+						if($this->dimensionChunkLoadCount !== -1 && ++$this->dimensionChunkLoadCount >= $this->spawnThreshold){
+							$this->finishDimensionChange();
+						}
 						if($this->spawnChunkLoadCount === -1){
 							$this->spawnEntitiesOnChunk($X, $Z);
 						}elseif($this->spawnChunkLoadCount++ === $this->spawnThreshold){
@@ -1525,6 +1531,9 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 
 	public function onUpdate(int $currentTick) : bool{
 		$tickDiff = $currentTick - $this->lastUpdate;
+		if($this->dimensionChunkLoadCount !== -1 && $currentTick - $this->dimensionChangeTick > 100){
+			$this->finishDimensionChange(); //BetterPMMP: never leave the client on the loading screen
+		}
 
 		if($tickDiff <= 0){
 			return true;
@@ -2928,6 +2937,9 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		if(parent::teleport($pos, $yaw, $pitch)){
 			if($targetWorld->getDimensionId() !== $fromDimension){
 				$this->getNetworkSession()->sendDataPacket(ChangeDimensionPacket::create($targetWorld->getDimensionId(), $this->getPosition(), false, null));
+				//BetterPMMP: the client keeps its loading screen until the server confirms the terrain is there
+				$this->dimensionChunkLoadCount = 0;
+				$this->dimensionChangeTick = $this->server->getTick();
 			}
 
 			$this->removeCurrentWindow();
@@ -2953,6 +2965,21 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		}
 
 		return false;
+	}
+
+	/**
+	 * BetterPMMP: tells the client that the terrain of the new dimension is sent, which closes its loading screen
+	 * (current clients and the Java bridge wait for this, like the vanilla server sends it).
+	 */
+	protected function finishDimensionChange() : void{
+		$this->dimensionChunkLoadCount = -1;
+		$this->getNetworkSession()->sendDataPacket(\pocketmine\network\mcpe\protocol\PlayerActionPacket::create(
+			$this->getId(),
+			\pocketmine\network\mcpe\protocol\types\PlayerAction::DIMENSION_CHANGE_ACK,
+			new \pocketmine\network\mcpe\protocol\types\BlockPosition(0, 0, 0),
+			new \pocketmine\network\mcpe\protocol\types\BlockPosition(0, 0, 0),
+			0
+		));
 	}
 
 	protected function addDefaultWindows() : void{

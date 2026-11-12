@@ -11,6 +11,7 @@ import com.viaversion.viaversion.api.protocol.packet.PacketWrapper;
 import com.viaversion.viaversion.api.type.Types;
 import com.viaversion.viaversion.libs.mcstructs.text.TextComponent;
 import com.viaversion.viaversion.libs.mcstructs.text.components.TranslationComponent;
+import com.viaversion.viaversion.protocols.v26_2to26_3.packet.ClientboundPackets26_3;
 import com.viaversion.viaversion.protocols.v26_2to26_3.packet.ServerboundPackets26_3;
 import net.raphimc.viabedrock.ViaBedrock;
 import net.raphimc.viabedrock.api.chunk.BedrockBlockEntity;
@@ -39,6 +40,7 @@ import java.util.logging.Level;
  * <ul>
  *     <li>chest windows of every size (BetterPMMP announces 54-slot menus before opening them),</li>
  *     <li>no block check for chest menus (menu plugins open them without a real chest block),</li>
+ *     <li>screen titles shown as the heading of an open chest window (Java hides titles behind open screens),</li>
  *     <li>inventory clicks: ViaBedrock cannot translate them yet, so they are forwarded to BetterPMMP
  *     ("betterpmmp:java_click"), which performs the click on the server like vanilla Java does.</li>
  * </ul>
@@ -47,6 +49,7 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
 
     public static final String CLICK_MESSAGE = "betterpmmp:java_click";
     public static final String SIZE_MESSAGE = "betterpmmp:container_size";
+    public static final String TITLE_MESSAGE = "betterpmmp:window_title";
 
     @Override
     public void onEnable() {
@@ -80,6 +83,30 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
             wrapper.cancel();
             final String id = wrapper.read(BedrockTypes.STRING);
             final String value = wrapper.read(BedrockTypes.STRING);
+            if (TITLE_MESSAGE.equals(id)) {
+                final int colon = value.indexOf(':');
+                if (colon <= 0) {
+                    return;
+                }
+                final int windowId;
+                try {
+                    windowId = Integer.parseInt(value.substring(0, colon));
+                } catch (NumberFormatException e) {
+                    return;
+                }
+                final InventoryTracker inventoryTracker = wrapper.user().get(InventoryTracker.class);
+                if (inventoryTracker.getCurrentContainer() instanceof BridgeChestContainer container && (container.containerId() & 0xFF) == windowId) {
+                    final String text = wrapper.user().get(ResourcePackStorage.class).getTexts().translate(value.substring(colon + 1));
+                    // re-opening a Java screen with the same id only changes its heading
+                    final PacketWrapper openScreen = PacketWrapper.create(ClientboundPackets26_3.OPEN_SCREEN, wrapper.user());
+                    openScreen.write(Types.VAR_INT, (int) container.containerId()); // container id
+                    openScreen.write(Types.VAR_INT, container.size() / 9 - 1); // type: generic_9x1 ... generic_9x6
+                    openScreen.write(Types.TAG, TextUtil.stringToNbt(text)); // title
+                    openScreen.send(BedrockProtocol.class);
+                    PacketFactory.sendJavaContainerSetContent(wrapper.user(), container);
+                }
+                return;
+            }
             if (SIZE_MESSAGE.equals(id)) {
                 final String[] parts = value.split(":");
                 if (parts.length == 2) {

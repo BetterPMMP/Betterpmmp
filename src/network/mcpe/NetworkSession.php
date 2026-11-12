@@ -163,6 +163,7 @@ class NetworkSession{
 	private ?PlayerInfo $info = null;
 	/** BetterPMMP: packet fixes for Java Edition players (Java bridge) */
 	private ?JavaPacketFixer $javaPacketFixer = null;
+	private string $javaPendingSubtitle = "";
 	private ?int $ping = null;
 
 	private ?PacketHandler $handler = null;
@@ -1396,10 +1397,31 @@ class NetworkSession{
 
 	public function onTitle(string $title) : void{
 		$this->sendDataPacket(SetTitlePacket::title($title));
+		$this->javaWindowTitle($title);
 	}
 
 	public function onSubTitle(string $subtitle) : void{
 		$this->sendDataPacket(SetTitlePacket::subtitle($subtitle));
+		$this->javaPendingSubtitle = $subtitle;
+	}
+
+	/**
+	 * BetterPMMP: Java Edition hides screen titles behind open windows (the background is blurred), so while a
+	 * Java player has a window open the title (and subtitle) is also shown as the window's heading.
+	 */
+	private function javaWindowTitle(string $title) : void{
+		$subtitle = $this->javaPendingSubtitle;
+		$this->javaPendingSubtitle = "";
+		if(!\pocketmine\network\JavaBridge::isBridgeAddress($this->ip) || $this->info instanceof XboxLivePlayerInfo || $this->invManager === null){
+			return;
+		}
+		$window = $this->player?->getCurrentWindow();
+		$windowId = $window === null ? null : $this->invManager->getWindowId($window);
+		if($windowId === null){
+			return;
+		}
+		$text = $subtitle === "" ? $title : $title . TextFormat::RESET . TextFormat::DARK_GRAY . " | " . TextFormat::RESET . $subtitle;
+		$this->sendDataPacket(\pocketmine\network\mcpe\protocol\ScriptMessagePacket::create("betterpmmp:window_title", $windowId . ":" . $text));
 	}
 
 	public function onActionBar(string $actionBar) : void{
