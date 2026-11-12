@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.57-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.58-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -49,6 +49,12 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel), Lama mit Truhe, Panda-Aussehen je Gen |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.58
+
+| System | Stand |
+|---|---|
+| Java: Zurücksetzen beim Bauen | ✅ Der Server begrenzt Bewegungen auf 2 pro Tick und setzt bei mehr auf die letzte Position zurück; über die Bridge kommen beim schnellen Drehen und Bauen mehr – Java-Spieler wurden deshalb zurück- und in Blöcke gesetzt, danach passten die Klicks nicht mehr. Für Java-Spieler gilt die Grenze nicht mehr, und der Server folgt der Position des Java-Clients, wenn er an einem Block hängen bleibt, den der Client (noch) nicht hat. Bedrock-Spieler unverändert |
 
 ## Neu in 5.57
 

@@ -1397,9 +1397,15 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 	}
 
 	private function actuallyHandleMovement(Vector3 $newPos) : void{
-		$this->moveRateLimit--;
-		if($this->moveRateLimit < 0){
-			return;
+		//BetterPMMP: the Java bridge sends a movement for every Java position/rotation packet (more than one per tick
+		//when turning fast while building), so the Bedrock movement rate limit would throw Java players back to an
+		//old position ("lagging back into blocks"); the Java client moves with its own collision, the server follows it
+		$java = \pocketmine\network\JavaBridge::isJavaPlayer($this);
+		if(!$java){
+			$this->moveRateLimit--;
+			if($this->moveRateLimit < 0){
+				return;
+			}
 		}
 
 		$oldPos = $this->location;
@@ -1433,6 +1439,10 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 			$dz = $newPos->z - $oldPos->z;
 
 			$this->move($dx, $dy, $dz);
+			if($java && $this->location->distanceSquared($newPos) > 0.0001){
+				//the server collided with a block the Java client does not have yet (or just placed): follow the client
+				$this->setPosition($newPos);
+			}
 		}
 
 		if($revert){
