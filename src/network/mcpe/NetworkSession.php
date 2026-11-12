@@ -605,6 +605,7 @@ class NetworkSession{
 			if($packet === null){
 				return true; // not meant for Java players
 			}
+			$javaExtraPackets = $this->javaPacketFixer->takeExtraPackets();
 		}
 
 		$timings = Timings::getSendDataPacketTimings($packet);
@@ -631,6 +632,10 @@ class NetworkSession{
 			}
 			if($immediate){
 				$this->flushGamePacketQueue();
+			}
+
+			foreach($javaExtraPackets ?? [] as $extraPacket){
+				$this->sendDataPacketInternal($extraPacket, $immediate, null);
 			}
 
 			return true;

@@ -22,12 +22,21 @@ use pocketmine\network\mcpe\protocol\MoveActorAbsolutePacket;
 use pocketmine\network\mcpe\protocol\MovePlayerPacket;
 use pocketmine\network\mcpe\protocol\PlayerSkinPacket;
 use pocketmine\network\mcpe\protocol\RemoveActorPacket;
+use pocketmine\network\mcpe\protocol\SetActorDataPacket;
+use pocketmine\math\Vector3;
+use pocketmine\network\mcpe\protocol\types\entity\ByteMetadataProperty;
+use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataFlags;
+use pocketmine\network\mcpe\protocol\types\entity\LongMetadataProperty;
+use pocketmine\network\mcpe\protocol\types\entity\MetadataProperty;
+use pocketmine\network\mcpe\protocol\types\entity\PropertySyncData;
 use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataProperties;
 use pocketmine\network\mcpe\protocol\types\entity\FloatMetadataProperty;
 use pocketmine\network\mcpe\protocol\types\BlockPosition;
 use pocketmine\network\mcpe\protocol\types\CacheableNbt;
 use pocketmine\network\mcpe\protocol\types\entity\StringMetadataProperty;
 use function array_key_first;
+use function array_reverse;
+use function explode;
 use function count;
 use function in_array;
 
@@ -53,6 +62,88 @@ final class JavaPacketFixer{
 
 	/** @var array<int, string> runtime id => uuid of NPCs sent as custom model entities */
 	private array $npcs = [];
+	/** @var array<int, array{Vector3, float}> runtime id => [feet position, height] */
+	private array $npcBases = [];
+	/** @var array<int, list<string>> runtime id => name tag lines shown by carrier actors */
+	private array $npcNames = [];
+	/** @var ClientboundPacket[] packets to send after the current one */
+	private array $extra = [];
+
+	/** @return ClientboundPacket[] */
+	public function takeExtraPackets() : array{
+		$extra = $this->extra;
+		$this->extra = [];
+		return $extra;
+	}
+
+	private const NAME_LINE_HEIGHT = 0.27;
+	/** Java renders the name of an (invisible) armor stand this far above its feet */
+	private const ARMOR_STAND_NAME_HEIGHT = 2.2;
+
+	private static function carrierId(int $npcId, int $line) : int{
+		return 0x3F000000 + $npcId * 16 + $line;
+	}
+
+	/**
+	 * Custom model entities show no name tag on Java, so the name is put on invisible armor stands above the
+	 * NPC (one per line, like Java holograms).
+	 */
+	private function showNpcName(int $npcId, string $name) : void{
+		$lines = $name === "" ? [] : array_reverse(explode("\n", $name));
+		$old = $this->npcNames[$npcId] ?? [];
+		if($lines === $old){
+			return;
+		}
+		foreach($old as $i => $_){
+			$this->extra[] = RemoveActorPacket::create(self::carrierId($npcId, $i));
+		}
+		$this->npcNames[$npcId] = $lines;
+		if(!isset($this->npcBases[$npcId])){
+			return;
+		}
+		[$feet, $height] = $this->npcBases[$npcId];
+		foreach($lines as $i => $line){
+			if($i >= 16){
+				break;
+			}
+			$id = self::carrierId($npcId, $i);
+			$this->extra[] = AddActorPacket::create($id, $id, "minecraft:armor_stand", self::carrierPosition($feet, $height, $i), null, 0, 0, 0, 0, [], [
+				EntityMetadataProperties::FLAGS => new LongMetadataProperty((1 << EntityMetadataFlags::INVISIBLE) | (1 << EntityMetadataFlags::CAN_SHOW_NAMETAG) | (1 << EntityMetadataFlags::ALWAYS_SHOW_NAMETAG) | (1 << EntityMetadataFlags::NO_AI)),
+				EntityMetadataProperties::NAMETAG => new StringMetadataProperty($line),
+				EntityMetadataProperties::ALWAYS_SHOW_NAMETAG => new ByteMetadataProperty(1),
+			], new PropertySyncData([], []), [], null);
+		}
+	}
+
+	private function moveNpcName(int $npcId, Vector3 $feet) : void{
+		if(!isset($this->npcBases[$npcId])){
+			return;
+		}
+		[$old, $height] = $this->npcBases[$npcId];
+		$this->npcBases[$npcId][0] = $feet;
+		if($old->distanceSquared($feet) < 0.0001){
+			return; // only turned
+		}
+		foreach($this->npcNames[$npcId] ?? [] as $i => $_){
+			$this->extra[] = MoveActorAbsolutePacket::create(self::carrierId($npcId, $i), self::carrierPosition($feet, $height, $i), 0, 0, 0, 0);
+		}
+	}
+
+	private static function carrierPosition(Vector3 $feet, float $height, int $line) : Vector3{
+		return $feet->add(0, $height + 0.3 + $line * self::NAME_LINE_HEIGHT - self::ARMOR_STAND_NAME_HEIGHT, 0);
+	}
+
+	/** @param MetadataProperty[] $metadata */
+	private static function metaFloat(array $metadata, int $key, float $default) : float{
+		$value = $metadata[$key] ?? null;
+		return $value instanceof FloatMetadataProperty ? $value->getValue() : $default;
+	}
+
+	/** @param MetadataProperty[] $metadata */
+	private static function metaString(array $metadata, int $key) : string{
+		$value = $metadata[$key] ?? null;
+		return $value instanceof StringMetadataProperty ? $value->getValue() : "";
+	}
 
 	/** @return ClientboundPacket|null the packet to send, null to drop it */
 	public function fix(ClientboundPacket $packet) : ?ClientboundPacket{
@@ -62,6 +153,8 @@ final class JavaPacketFixer{
 		if($packet instanceof AddPlayerPacket && ($identifier = JavaNpcModels::identifierFor($packet->actorRuntimeId)) !== null){
 			// a 3D NPC: Java gets the custom entity from the BetterPMMP NPC model pack instead of a player
 			$this->npcs[$packet->actorRuntimeId] = $packet->uuid->toString();
+			$this->npcBases[$packet->actorRuntimeId] = [$packet->position, self::metaFloat($packet->metadata, EntityMetadataProperties::BOUNDING_BOX_HEIGHT, 1.8)];
+			$this->showNpcName($packet->actorRuntimeId, self::metaString($packet->metadata, EntityMetadataProperties::NAMETAG));
 			return AddActorPacket::create(
 				$packet->actorRuntimeId, $packet->actorRuntimeId, $identifier, $packet->position, $packet->motion,
 				$packet->pitch, $packet->yaw, $packet->headYaw, $packet->yaw, [], $packet->metadata, $packet->syncedProperties, [], null
@@ -70,7 +163,19 @@ final class JavaPacketFixer{
 		if($packet instanceof MoveActorAbsolutePacket && isset($this->npcs[$packet->actorRuntimeId])){
 			$fixed = clone $packet;
 			$fixed->position = $packet->position->subtract(0, self::HUMAN_EYE_OFFSET, 0); // players are moved by eye height, custom entities by their feet
+			$this->moveNpcName($packet->actorRuntimeId, $fixed->position);
 			return $fixed;
+		}
+		if($packet instanceof SetActorDataPacket && isset($this->npcs[$packet->actorRuntimeId])){
+			$name = $packet->metadata[EntityMetadataProperties::NAMETAG] ?? null;
+			if($name instanceof StringMetadataProperty){
+				$this->showNpcName($packet->actorRuntimeId, $name->getValue());
+			}
+			$height = $packet->metadata[EntityMetadataProperties::BOUNDING_BOX_HEIGHT] ?? null;
+			if($height instanceof FloatMetadataProperty && isset($this->npcBases[$packet->actorRuntimeId])){
+				$this->npcBases[$packet->actorRuntimeId][1] = $height->getValue();
+			}
+			return $packet;
 		}
 		if($packet instanceof MovePlayerPacket && isset($this->npcs[$packet->actorRuntimeId])){
 			return MoveActorAbsolutePacket::create($packet->actorRuntimeId, $packet->position->subtract(0, self::HUMAN_EYE_OFFSET, 0), $packet->pitch, $packet->yaw, $packet->headYaw, 0);
@@ -106,7 +211,10 @@ final class JavaPacketFixer{
 			return $packet;
 		}
 		if($packet instanceof RemoveActorPacket){
-			unset($this->markers[$packet->actorUniqueId], $this->npcs[$packet->actorUniqueId]);
+			if(isset($this->npcs[$packet->actorUniqueId])){
+				$this->showNpcName($packet->actorUniqueId, "");
+			}
+			unset($this->markers[$packet->actorUniqueId], $this->npcs[$packet->actorUniqueId], $this->npcBases[$packet->actorUniqueId], $this->npcNames[$packet->actorUniqueId]);
 		}
 		return $packet;
 	}

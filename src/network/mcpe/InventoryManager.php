@@ -526,8 +526,15 @@ class InventoryManager{
 		}
 
 		$typeConverter = $this->session->getTypeConverter();
-		$leftExtraData = $typeConverter->deserializeItemStackExtraData($left->getRawExtraData(), $left->getId());
-		$rightExtraData = $typeConverter->deserializeItemStackExtraData($right->getRawExtraData(), $right->getId());
+		try{
+			$leftExtraData = $typeConverter->deserializeItemStackExtraData($left->getRawExtraData(), $left->getId());
+			$rightExtraData = $typeConverter->deserializeItemStackExtraData($right->getRawExtraData(), $right->getId());
+		}catch(\pmmp\encoding\DataDecodeException | \pocketmine\nbt\NbtDataException $e){
+			//BetterPMMP: unreadable extra data from a client (e.g. an empty blob from a protocol proxy) must not crash
+			//the server - treat the prediction as wrong, the slot is then synced with the real item
+			$this->session->getLogger()->debug("Unreadable item extra data in slot prediction: " . $e->getMessage());
+			return false;
+		}
 
 		$leftNbt = $leftExtraData->getNbt();
 		$rightNbt = $rightExtraData->getNbt();
