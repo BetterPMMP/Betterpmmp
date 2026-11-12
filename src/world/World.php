@@ -2479,11 +2479,18 @@ class World implements ChunkManager{
 			return false;
 		}
 
+		//BetterPMMP: a Java Edition player's placement reaches the server separately from its movement (the Java bridge
+		//cannot bundle them like a Bedrock client does), so the server position lags behind and the placing player
+		//itself seems to be in the way when building fast (speed bridging). The Java client already refuses to place
+		//blocks into its own hitbox, so the placing Java player is not counted.
+		$ignore = $player !== null && \pocketmine\network\JavaBridge::isJavaPlayer($player) ? $player : null;
 		foreach($tx->getBlocks() as [$x, $y, $z, $block]){
 			$block->position($this, $x, $y, $z);
 			foreach($block->getCollisionBoxes() as $collisionBox){
-				if(count($this->getCollidingEntities($collisionBox)) > 0){
-					return false;  //Entity in block
+				foreach($this->getCollidingEntities($collisionBox) as $colliding){
+					if($colliding !== $ignore){
+						return false;  //Entity in block
+					}
 				}
 			}
 		}

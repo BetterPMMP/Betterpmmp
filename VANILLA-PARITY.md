@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.42-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.43-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -49,6 +49,12 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Mobs mit Standard-KI | Piglin-Barbar, Hoglin/Zoglin, Fuchs, Schildkröte (Eier legen), Delfin, Axolotl, Panda, Eisbär, Lama (Truhe, Spucken), Mooshroom (Scheren), Kaninchen, Fledermaus, Allay, Plagegeist, Endermilbe, Silberfischchen (aus Blöcken), neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel) |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.43
+
+| System | Stand |
+|---|---|
+| Java-Bridge: Speed-Bridging | ✅ Das Blocksetzen eines Java-Spielers kommt getrennt von seiner Bewegung an (Bedrock bündelt beides), die Server-Position hinkt beim schnellen Bauen hinterher und der Spieler selbst stand „im Weg“. Für Java-Spieler zählt der setzende Spieler bei der Kollisionsprüfung nicht mehr mit (der Java-Client verhindert Blöcke im eigenen Körper selbst); andere Spieler und Mobs blockieren weiter |
 
 ## Neu in 5.42
 
