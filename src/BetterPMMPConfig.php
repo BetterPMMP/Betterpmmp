@@ -14,6 +14,18 @@ use pocketmine\utils\Config;
 use pocketmine\world\World;
 use Symfony\Component\Filesystem\Path;
 use function copy;
+use function str_starts_with;
+use function str_replace;
+use function rtrim;
+use function preg_match;
+use function implode;
+use function file_put_contents;
+use function file_get_contents;
+use function explode;
+use function count;
+use function array_slice;
+use function array_keys;
+use function array_key_exists;
 use function file_exists;
 use function in_array;
 use function is_array;
@@ -35,8 +47,9 @@ final class BetterPMMPConfig{
 	public static function load(string $dataPath, string $defaultWorld) : void{
 		self::$defaultWorld = $defaultWorld;
 		$file = Path::join($dataPath, "betterpmmp.yml");
+		$defaults = Path::join(\pocketmine\RESOURCE_PATH, "betterpmmp.yml");
 		if(!file_exists($file)){
-			@copy(Path::join(\pocketmine\RESOURCE_PATH, "betterpmmp.yml"), $file);
+			@copy($defaults, $file);
 		}
 		try{
 			$config = new Config($file, Config::YAML, []);
@@ -45,6 +58,46 @@ final class BetterPMMPConfig{
 			self::$data = [];
 		}
 		self::$loaded = true;
+		self::addMissingSections($file, $defaults);
+	}
+
+	/**
+	 * Sections added in newer versions (e.g. java-bridge) are appended to an existing betterpmmp.yml, with their
+	 * comments, so they show up for the owner. Existing settings are never touched.
+	 */
+	private static function addMissingSections(string $file, string $defaultsFile) : void{
+		$default = @file_get_contents($defaultsFile);
+		$current = @file_get_contents($file);
+		if($default === false || $current === false || self::$data === []){
+			return;
+		}
+		$lines = explode("\n", str_replace("\r\n", "\n", $default));
+		$added = [];
+		foreach($lines as $index => $line){
+			if(preg_match('/^([a-z0-9-]+):/', $line, $m) !== 1 || array_key_exists($m[1], self::$data)){
+				continue;
+			}
+			$start = $index;
+			while($start > 0 && str_starts_with($lines[$start - 1], "#")){
+				--$start;
+			}
+			$end = $index + 1;
+			while($end < count($lines) && ($lines[$end] === "" || str_starts_with($lines[$end], " ") || str_starts_with($lines[$end], "\t"))){
+				++$end;
+			}
+			$added[$m[1]] = rtrim(implode("\n", array_slice($lines, $start, $end - $start)));
+		}
+		if($added === []){
+			return;
+		}
+		if(@file_put_contents($file, rtrim($current) . "\n\n" . implode("\n\n", $added) . "\n") === false){
+			return;
+		}
+		try{
+			self::$data = (new Config($file, Config::YAML, []))->getAll();
+		}catch(\Throwable){
+		}
+		\GlobalLogger::get()->info("[BetterPMMP] betterpmmp.yml um neue Abschnitte ergänzt: " . implode(", ", array_keys($added)));
 	}
 
 	private static function get(string $section, string $key, mixed $default) : mixed{
