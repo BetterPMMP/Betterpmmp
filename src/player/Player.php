@@ -1534,6 +1534,9 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		if($this->dimensionChunkLoadCount !== -1 && $currentTick - $this->dimensionChangeTick > 100){
 			$this->finishDimensionChange(); //BetterPMMP: never leave the client on the loading screen
 		}
+		if($this->startAction > -1 && $this->getItemUseDuration() >= self::JAVA_EAT_TICKS && \pocketmine\network\JavaBridge::isJavaPlayer($this)){
+			$this->finishJavaItemUse();
+		}
 
 		if($tickDiff <= 0){
 			return true;
@@ -2965,6 +2968,23 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		}
 
 		return false;
+	}
+
+	/** BetterPMMP: ticks a Java player eats or drinks (vanilla Java: 32, i.e. 1.6 seconds) */
+	private const JAVA_EAT_TICKS = 32;
+
+	/**
+	 * BetterPMMP: a Bedrock client finishes eating by sending the use action a second time; a Java client (Java
+	 * bridge) never does - on Java the server completes it. Do that for Java players.
+	 */
+	private function finishJavaItemUse() : void{
+		if(!$this->inventory->getItemInHand() instanceof ConsumableItem){
+			return; // bows, shields, tridents ... are released by the client
+		}
+		if(!$this->consumeHeldItem()){
+			$this->getAttributeMap()->get(\pocketmine\entity\Attribute::HUNGER)?->markSynchronized(false);
+		}
+		$this->setUsingItem(false);
 	}
 
 	/**
