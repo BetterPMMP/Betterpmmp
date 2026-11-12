@@ -86,6 +86,10 @@ final class ExtraVanillaBlocks{
 		"minecraft:pointed_dripstone" => [VanillaPointedDripstone::class, null],
 		"minecraft:turtle_egg" => [VanillaTurtleEgg::class, null],
 		"minecraft:scaffolding" => [VanillaScaffolding::class, null],
+		"minecraft:cherry_sapling" => [VanillaSapling::class, null],
+		"minecraft:pale_oak_sapling" => [VanillaSapling::class, null],
+		"minecraft:poplar_sapling" => [VanillaSapling::class, null],
+		"minecraft:kelp" => [VanillaKelp::class, null],
 	];
 
 	public static function getAll() : array{

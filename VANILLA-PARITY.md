@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.43-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.44-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -45,10 +45,17 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Bereich | Offen |
 |---|---|
 | Kern | Wasserbindung (Blöcke im Wasser), Bündel, Kisten-/Trichter-/Befehlsblock-Lore, Leitstein-Kompass, Nautilus-Rüstung, Befehlsblöcke, Strukturblöcke |
-| Blöcke ohne Funktion | Seetang und Seegras (Wachstum), Tropfstein-Wachstum und fallende Stalaktiten, Blasensäule, Aquisator, Verzierter Krug (Inventar), Kupfertruhen (Inventar), Sculk-Katalysator und -Ader (Ausbreitung), Leitstein, neue Setzlinge (Kirsche, Blasseiche, Mangrove, Pappel wachsen nicht), Pappel-Holzset (Türen, Falltüren, Knöpfe, Schilder ohne Funktion), Beton-/Woll-Stufen und -Treppen (Form), Regale, Strohbett |
+| Blöcke ohne Funktion | Seegras (Wachstum), Tropfstein-Wachstum und fallende Stalaktiten, Blasensäule, Aquisator, Verzierter Krug (Inventar), Kupfertruhen (Inventar), Sculk-Katalysator und -Ader (Ausbreitung), Leitstein, Mangroven-Keimling (wächst nicht), Pappel-Holzset (Türen, Falltüren, Knöpfe, Schilder ohne Funktion), Beton-/Woll-Stufen und -Treppen (Form), Regale, Strohbett |
 | Mobs mit Standard-KI | Piglin-Barbar, Hoglin/Zoglin, Fuchs, Schildkröte (Eier legen), Delfin, Axolotl, Panda, Eisbär, Lama (Truhe, Spucken), Mooshroom (Scheren), Kaninchen, Fledermaus, Allay, Plagegeist, Endermilbe, Silberfischchen (aus Blöcken), neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel) |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.44
+
+| System | Stand |
+|---|---|
+| Kirsch-, Blasseichen-, Pappel-Setzling | ✅ wachsen in zwei Stufen (Zufallsticks, Licht ≥ 9) oder mit Knochenmehl (45 %); Blasseiche braucht wie in Vanilla 2×2 Setzlinge; Kirsche und Blasseiche nutzen die Bäume der Weltgenerierung, Pappel ist ein hoher, schmaler Baum mit gelben/orangen/roten Blättern. Der Baum entsteht als eine Block-Transaktion mit StructureGrowEvent (Schutz-Plugins können es verhindern); Setzlinge brauchen Erde/Gras/Moos darunter |
+| Seetang | ✅ wächst in stilles Wasser nach oben (14 % pro Zufallstick) bis Alter 25, Knochenmehl lässt ihn 1–3 Blöcke wachsen, Abbauen hinterlässt Wasser, bricht ohne Halt |
 
 ## Neu in 5.43
 
