@@ -97,6 +97,16 @@ final class JavaBridge{
 		return self::$active && self::$process !== null && ($ip === "127.0.0.1" || $ip === "::1");
 	}
 
+	/**
+	 * Diagnosis for Java building, written to the normal server log (no debug level needed).
+	 * Turned off with java-bridge.build-log: false in betterpmmp.yml.
+	 */
+	public static function buildLog(string $message) : void{
+		if(BetterPMMPConfig::flag("java-bridge", "build-log", true)){
+			\GlobalLogger::get()->info("[Java-Bau] " . $message);
+		}
+	}
+
 	/** Whether this player plays Java Edition through the bridge (no Xbox account, connected via the local proxy). */
 	public static function isJavaPlayer(\pocketmine\player\Player $player) : bool{
 		return $player->getXuid() === "" && self::isBridgeAddress($player->getNetworkSession()->getIp());
