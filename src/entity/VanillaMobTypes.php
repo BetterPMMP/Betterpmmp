@@ -638,6 +638,42 @@ class DonkeyMob extends GenericAnimalMob implements \pocketmine\entity\riding\Ri
 }
 
 class DrownedMob extends GenericHostileMob{
+	/** BetterPMMP: vanilla drowned - 15 % carry a trident and throw it from up to 20 blocks (every 2 s); the thrown trident cannot be picked up, 8.5 % drop theirs */
+	private bool $hasTrident = false;
+	private int $throwCooldown = 40;
+	protected function burnsInDaylight() : bool{ return !$this->isUnderwater(); }
+	public function canBreathe() : bool{ return true; }
+	protected function initEntity(CompoundTag $nbt) : void{ parent::initEntity($nbt); $tag = $nbt->getTag("BetterPMMPTrident"); $this->hasTrident = $tag instanceof \pocketmine\nbt\tag\ByteTag ? $tag->getValue() === 1 : mt_rand(0, 99) < 15; }
+	public function saveNBT() : CompoundTag{ return parent::saveNBT()->setByte("BetterPMMPTrident", $this->hasTrident ? 1 : 0); }
+	public function hasTrident() : bool{ return $this->hasTrident; }
+	public function getDrops() : array{ $drops = parent::getDrops(); if($this->hasTrident && mt_rand(0, 999) < 85){ $drops[] = VanillaItems::TRIDENT()->setDamage(mt_rand(0, 200)); } return $drops; }
+	public function spawnTo(Player $player) : void{
+		parent::spawnTo($player);
+		if($this->hasTrident && $player->isConnected() && isset($this->getViewers()[spl_object_id($player)])){
+			$session = $player->getNetworkSession();
+			$session->sendDataPacket(MobEquipmentPacket::create($this->getId(), ItemStackWrapper::legacy($session->getTypeConverter()->coreItemStackToNet(VanillaItems::TRIDENT())), 0, 0, ContainerIds::INVENTORY));
+		}
+	}
+	protected function tickWandering(int $tickDiff) : void{
+		$this->throwCooldown = max(0, $this->throwCooldown - $tickDiff);
+		$target = $this->hasTrident ? $this->findTarget($tickDiff) : null;
+		if($target !== null && ($d = $target->getPosition()->subtractVector($this->getPosition()))->lengthSquared() > 9 && $d->lengthSquared() < 20 * 20 && $this->canSeeEntity($target)){
+			$this->getNavigator()->stop();
+			$this->setRotation(rad2deg(atan2(-$d->x, $d->z)), 0.0);
+			if($this->throwCooldown === 0){
+				$this->throwCooldown = 40;
+				$eye = $this->getPosition()->add(0, 1.5, 0);
+				$aim = $target->getPosition()->add(0, $target->getSize()->getHeight() * 0.6, 0)->subtractVector($eye);
+				$flat = sqrt($aim->x * $aim->x + $aim->z * $aim->z);
+				$trident = new \pocketmine\entity\projectile\MobTrident(Location::fromObject($eye, $this->getWorld()), VanillaItems::TRIDENT(), $this);
+				$trident->setMotion((new \pocketmine\math\Vector3($aim->x, $aim->y + $flat * 0.15, $aim->z))->normalize()->multiply(1.6));
+				$trident->spawnToAll();
+				$this->getWorld()->addSound($eye, new \pocketmine\world\sound\VanillaSound(\pocketmine\network\mcpe\protocol\types\LevelSoundEvent::ITEM_TRIDENT_THROW));
+			}
+			return;
+		}
+		parent::tickWandering($tickDiff);
+	}
 	protected const ENTITY_ID = EntityIds::DROWNED;
 	protected const DISPLAY_NAME = "Drowned";
 	protected const SPAWN_EGG_GETTER = "DROWNED_SPAWN_EGG";
@@ -646,6 +682,56 @@ class DrownedMob extends GenericHostileMob{
 }
 
 class ElderGuardianMob extends GenericHostileSwimmingMob{
+	protected const LASER_CHARGE = 60;
+	protected const LASER_DAMAGE = 8;
+	private int $curseTicks = 100;
+	/** BetterPMMP: every minute the elder guardian gives Mining Fatigue III (5 min) to players within 50 blocks */
+	protected function entityBaseTick(int $tickDiff = 1) : bool{
+		$update = parent::entityBaseTick($tickDiff);
+		if($this->isAlive() && ($this->curseTicks -= $tickDiff) <= 0){
+			$this->curseTicks = 1200;
+			foreach($this->getWorld()->getPlayers() as $player){
+				if(!$player->isCreative() && !$player->isSpectator() && $player->getPosition()->distanceSquared($this->getPosition()) < 50 * 50){
+					$player->getEffects()->add(new \pocketmine\entity\effect\EffectInstance(\pocketmine\entity\effect\VanillaEffects::MINING_FATIGUE(), 6000, 2));
+					$player->getNetworkSession()->sendDataPacket(\pocketmine\network\mcpe\protocol\LevelEventPacket::create(\pocketmine\network\mcpe\protocol\types\LevelEvent::GUARDIAN_CURSE, 0, $player->getPosition()));
+				}
+			}
+		}
+		return $update;
+	}
+	/** BetterPMMP: vanilla guardian laser - locks on a visible player within 15 blocks, charges for 2 s (the beam is shown) and then hits; spikes hurt melee attackers */
+	private int $laserTicks = 0;
+	private int $laserCooldown = 40;
+	private ?Player $laserTarget = null;
+	private function setLaserTarget(?Player $target) : void{
+		if($this->laserTarget !== $target){ $this->laserTarget = $target; $this->laserTicks = 0; $this->networkPropertiesDirty = true; }
+	}
+	protected function syncNetworkData(EntityMetadataCollection $properties) : void{ parent::syncNetworkData($properties); $properties->setLong(EntityMetadataProperties::TARGET_EID, $this->laserTarget !== null ? $this->laserTarget->getId() : -1); }
+	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{
+		parent::attack($source);
+		if(!$source->isCancelled() && $source instanceof \pocketmine\event\entity\EntityDamageByEntityEvent && !$source instanceof \pocketmine\event\entity\EntityDamageByChildEntityEvent && $this->laserTarget === null && ($d = $source->getDamager()) instanceof Living){
+			$d->attack(new \pocketmine\event\entity\EntityDamageByEntityEvent($this, $d, \pocketmine\event\entity\EntityDamageEvent::CAUSE_MAGIC, 2));
+		}
+	}
+	protected function tickWandering(int $tickDiff) : void{
+		$this->laserCooldown = max(0, $this->laserCooldown - $tickDiff);
+		$target = $this->nearestSurvivalPlayer(15);
+		if($target === null || !$this->seesPlayer($target) || $this->laserCooldown > 0){
+			$this->setLaserTarget(null);
+			GenericFreeMotionMob::tickWandering($tickDiff);
+			$this->constrainToWater();
+			return;
+		}
+		$this->setLaserTarget($target);
+		$d = $target->getPosition()->subtractVector($this->getPosition());
+		$this->setRotation(rad2deg(atan2(-$d->x, $d->z)), 0.0);
+		$this->setMotion(new \pocketmine\math\Vector3(0, 0, 0));
+		if(($this->laserTicks += $tickDiff) >= static::LASER_CHARGE){
+			$target->attack(new \pocketmine\event\entity\EntityDamageByEntityEvent($this, $target, \pocketmine\event\entity\EntityDamageEvent::CAUSE_MAGIC, static::LASER_DAMAGE));
+			$this->setLaserTarget(null);
+			$this->laserCooldown = 60;
+		}
+	}
 	protected const ENTITY_ID = EntityIds::ELDER_GUARDIAN;
 	protected const DISPLAY_NAME = "Elder Guardian";
 	protected const SPAWN_EGG_GETTER = "ELDER_GUARDIAN_SPAWN_EGG";
@@ -1230,6 +1316,41 @@ class GoatMob extends GenericAnimalMob{
 }
 
 class GuardianMob extends GenericHostileSwimmingMob{
+	protected const LASER_CHARGE = 40;
+	protected const LASER_DAMAGE = 6;
+	/** BetterPMMP: vanilla guardian laser - locks on a visible player within 15 blocks, charges for 2 s (the beam is shown) and then hits; spikes hurt melee attackers */
+	private int $laserTicks = 0;
+	private int $laserCooldown = 40;
+	private ?Player $laserTarget = null;
+	private function setLaserTarget(?Player $target) : void{
+		if($this->laserTarget !== $target){ $this->laserTarget = $target; $this->laserTicks = 0; $this->networkPropertiesDirty = true; }
+	}
+	protected function syncNetworkData(EntityMetadataCollection $properties) : void{ parent::syncNetworkData($properties); $properties->setLong(EntityMetadataProperties::TARGET_EID, $this->laserTarget !== null ? $this->laserTarget->getId() : -1); }
+	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{
+		parent::attack($source);
+		if(!$source->isCancelled() && $source instanceof \pocketmine\event\entity\EntityDamageByEntityEvent && !$source instanceof \pocketmine\event\entity\EntityDamageByChildEntityEvent && $this->laserTarget === null && ($d = $source->getDamager()) instanceof Living){
+			$d->attack(new \pocketmine\event\entity\EntityDamageByEntityEvent($this, $d, \pocketmine\event\entity\EntityDamageEvent::CAUSE_MAGIC, 2));
+		}
+	}
+	protected function tickWandering(int $tickDiff) : void{
+		$this->laserCooldown = max(0, $this->laserCooldown - $tickDiff);
+		$target = $this->nearestSurvivalPlayer(15);
+		if($target === null || !$this->seesPlayer($target) || $this->laserCooldown > 0){
+			$this->setLaserTarget(null);
+			GenericFreeMotionMob::tickWandering($tickDiff);
+			$this->constrainToWater();
+			return;
+		}
+		$this->setLaserTarget($target);
+		$d = $target->getPosition()->subtractVector($this->getPosition());
+		$this->setRotation(rad2deg(atan2(-$d->x, $d->z)), 0.0);
+		$this->setMotion(new \pocketmine\math\Vector3(0, 0, 0));
+		if(($this->laserTicks += $tickDiff) >= static::LASER_CHARGE){
+			$target->attack(new \pocketmine\event\entity\EntityDamageByEntityEvent($this, $target, \pocketmine\event\entity\EntityDamageEvent::CAUSE_MAGIC, static::LASER_DAMAGE));
+			$this->setLaserTarget(null);
+			$this->laserCooldown = 60;
+		}
+	}
 	protected const ENTITY_ID = EntityIds::GUARDIAN;
 	protected const DISPLAY_NAME = "Guardian";
 	protected const SPAWN_EGG_GETTER = "GUARDIAN_SPAWN_EGG";
@@ -1649,6 +1770,38 @@ class ParrotMob extends GenericFlyingAnimalMob implements TameablePet{
 }
 
 class PhantomMob extends GenericHostileFlyingMob{
+	/** BetterPMMP: vanilla phantom - circles 10-20 blocks above its target and swoops down to bite (6 damage), then climbs again; burns in daylight */
+	private int $swoopCooldown = 100;
+	private bool $swooping = false;
+	private float $circleAngle = 0.0;
+	protected function burnsInDaylight() : bool{ return true; }
+	protected function calculateFallDamage(float $fallDistance) : float{ return 0.0; }
+	protected function tickWandering(int $tickDiff) : void{
+		$target = $this->nearestSurvivalPlayer(64);
+		if($target === null){ GenericFreeMotionMob::tickWandering($tickDiff); return; }
+		$pos = $this->getPosition();
+		$tpos = $target->getPosition();
+		if($this->swooping){
+			$to = $tpos->add(0, 1.0, 0)->subtractVector($pos);
+			$len = $to->length();
+			if($len < 1.6){
+				if($this->attackTime <= 0){ $this->attackTime = 20; $target->attack(new \pocketmine\event\entity\EntityDamageByEntityEvent($this, $target, \pocketmine\event\entity\EntityDamageEvent::CAUSE_ENTITY_ATTACK, 6)); }
+				$this->swooping = false; $this->swoopCooldown = mt_rand(100, 200);
+			}else{
+				$this->setMotion($to->multiply(0.55 / $len));
+				$this->setRotation(rad2deg(atan2(-$to->x, $to->z)), -rad2deg(atan2($to->y, sqrt($to->x * $to->x + $to->z * $to->z))));
+			}
+			if($this->isCollidedHorizontally || $this->isCollidedVertically){ $this->swooping = false; $this->swoopCooldown = 60; }
+			return;
+		}
+		$this->circleAngle += 0.05 * $tickDiff;
+		$goal = $tpos->add(cos($this->circleAngle) * 12, 14, sin($this->circleAngle) * 12);
+		$to = $goal->subtractVector($pos);
+		$len = max(0.1, $to->length());
+		$this->setMotion($to->multiply(min(0.35, $len * 0.1) / $len));
+		$this->setRotation(rad2deg(atan2(-$to->x, $to->z)), 0.0);
+		if(($this->swoopCooldown -= $tickDiff) <= 0 && $this->seesPlayer($target)){ $this->swooping = true; }
+	}
 	protected const ENTITY_ID = EntityIds::PHANTOM;
 	protected const DISPLAY_NAME = "Phantom";
 	protected const SPAWN_EGG_GETTER = "PHANTOM_SPAWN_EGG";
@@ -1799,6 +1952,51 @@ class SalmonMob extends GenericSwimmingAnimalMob{
 }
 
 class ShulkerMob extends GenericHostileMob{
+	/** BetterPMMP: vanilla shulker - stays where it is, shoots homing bullets (4 damage + levitation) at visible players within 16 blocks, takes little damage while closed and teleports away when badly hurt */
+	private int $shootCooldown = 40;
+	private int $openTicks = 0;
+	protected function getInitialGravity() : float{ return 0.0; }
+	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{
+		if($this->openTicks <= 0 && $source->getCause() !== \pocketmine\event\entity\EntityDamageEvent::CAUSE_VOID){
+			if($source instanceof \pocketmine\event\entity\EntityDamageByChildEntityEvent && $source->getChild() instanceof \pocketmine\entity\projectile\Arrow){ $source->cancel(); } // arrows bounce off a closed shell
+			else{ $source->setModifier(-$source->getFinalDamage() * 0.8, \pocketmine\event\entity\EntityDamageEvent::MODIFIER_ARMOR); }
+		}
+		parent::attack($source);
+		if($this->isAlive() && !$source->isCancelled() && $this->getHealth() < $this->getMaxHealth() / 2 && mt_rand(0, 3) === 0){
+			$world = $this->getWorld(); $pos = $this->getPosition();
+			for($i = 0; $i < 12; ++$i){
+				$x = $pos->getFloorX() + mt_rand(-8, 8); $y = $pos->getFloorY() + mt_rand(-4, 4); $z = $pos->getFloorZ() + mt_rand(-8, 8);
+				if($world->isInWorld($x, $y, $z) && $world->isChunkLoaded($x >> 4, $z >> 4) && $world->getBlockAt($x, $y, $z)->getTypeId() === \pocketmine\block\BlockTypeIds::AIR && $world->getBlockAt($x, $y - 1, $z)->isSolid()){
+					$this->teleport(new \pocketmine\math\Vector3($x + 0.5, $y, $z + 0.5));
+					$world->addSound($pos, new \pocketmine\world\sound\EndermanTeleportSound());
+					break;
+				}
+			}
+		}
+	}
+	protected function syncNetworkData(EntityMetadataCollection $properties) : void{ parent::syncNetworkData($properties); $properties->setInt(EntityMetadataProperties::SHULKER_PEEK_ID, $this->openTicks > 0 ? 100 : 0); }
+	protected function tickWandering(int $tickDiff) : void{
+		$this->setMotion(new \pocketmine\math\Vector3(0, 0, 0));
+		$this->shootCooldown = max(0, $this->shootCooldown - $tickDiff);
+		$wasOpen = $this->openTicks > 0;
+		$this->openTicks = max(0, $this->openTicks - $tickDiff);
+		$target = null;
+		foreach($this->getWorld()->getPlayers() as $player){
+			if($player->isAlive() && !$player->isCreative() && !$player->isSpectator() && $player->getPosition()->distanceSquared($this->getPosition()) < 16 * 16 && $this->canSeeEntity($player)){ $target = $player; break; }
+		}
+		if($target !== null){
+			$this->openTicks = 30;
+			if($this->shootCooldown === 0){
+				$this->shootCooldown = mt_rand(20, 110);
+				$bullet = new \pocketmine\entity\projectile\ShulkerBullet(Location::fromObject($this->getPosition()->add(0, 0.5, 0), $this->getWorld()), $this);
+				$bullet->setTarget($target);
+				$bullet->setMotion(new \pocketmine\math\Vector3(0, 0.15, 0));
+				$bullet->spawnToAll();
+				$this->getWorld()->broadcastPacketToViewers($this->getPosition(), \pocketmine\network\mcpe\protocol\LevelSoundEventPacket::create(\pocketmine\network\mcpe\protocol\types\LevelSoundEvent::SHOOT, $this->getPosition(), -1, EntityIds::SHULKER, false, false, $this->getId(), null));
+			}
+		}
+		if($wasOpen !== ($this->openTicks > 0)){ $this->networkPropertiesDirty = true; }
+	}
 	protected const ENTITY_ID = EntityIds::SHULKER;
 	protected const DISPLAY_NAME = "Shulker";
 	protected const SPAWN_EGG_GETTER = "SHULKER_SPAWN_EGG";

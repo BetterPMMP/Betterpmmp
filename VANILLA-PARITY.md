@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.26-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.27-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -38,7 +38,7 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 | Drachenkampf | ✅/🟡 | **neu in 4.9**: Kampf-Manager wie Vanilla (Zustand im Weltordner), 10 Kristalle einmalig, genau ein Drache, Bossbar für alle im Kampfgebiet, Flugphasen (Kreisen, Sturzflug, Feuerball-Wolke, Landung auf dem Portal mit Atem-Angriff, Abheben), Heilung durch Kristalle, Flügel-Rückstoß, 10 s Todesanimation mit 12000/500 EP, Ausgangsportal, Drachenei beim ersten Sieg, End-Gateways zu den Außeninseln (mit Rück-Gateway) |
 | Portale (Nether/End) | ✅/🟡 | Nether/End werden beim Serverstart angelegt; Ankunft im End auf der Obsidian-Plattform; **4.9/5.0**: Enderauge fliegt direkt zum Portalraum der nächsten Festung (jede Festung hat ein vollständiges Portal, geprüft) |
 
-## Was noch fehlt (Bestandsaufnahme 5.26)
+## Was noch fehlt (Bestandsaufnahme 5.27)
 
 Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch kein eigenes Vanilla-Verhalten haben.
 
@@ -46,9 +46,18 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 |---|---|
 | Kern | Wasserbindung (Blöcke im Wasser), Bündel, Kisten-/Trichter-/Befehlsblock-Lore, Leitstein-Kompass, Nautilus-Rüstung, Befehlsblöcke, Strukturblöcke |
 | Blöcke ohne Funktion | Bienenstock/-nest (Honig), Gerüst, Seetang und Seegras (Wachstum), Honigblock (Rutschen/Kleben am Spieler), Pulverschnee (Einsinken/Erfrieren), Spitzer Tropfstein (Schaden, Wachstum), Schildkrötenei, Blasensäule, Aquisator, Verzierter Krug (Inventar), Kupfertruhen (Inventar), Sculk-Katalysator und -Ader (Ausbreitung), Leitstein, neue Setzlinge (Kirsche, Blasseiche, Mangrove, Pappel wachsen nicht), Pappel-Holzset (Türen, Falltüren, Knöpfe, Schilder ohne Funktion), Beton-/Woll-Stufen und -Treppen (Form), Regale, Strohbett |
-| Mobs mit Standard-KI | Phantome (Schlafmangel-Spawn, Sturzflug), Wächter (Laser), Shulker (Geschosse, Schweben), Ertrunkene (Dreizack), Piglin-Barbar, Hoglin/Zoglin, Biene, Fuchs, Schildkröte, Delfin, Axolotl, Panda, Eisbär, Lama (Truhe, Spucken), Mooshroom (Scheren), Kaninchen, Fledermaus, Allay, Plagegeist, Endermilbe, Silberfischchen (aus Blöcken), neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel) |
+| Mobs mit Standard-KI | Piglin-Barbar, Hoglin/Zoglin, Biene, Fuchs, Schildkröte, Delfin, Axolotl, Panda, Eisbär, Lama (Truhe, Spucken), Mooshroom (Scheren), Kaninchen, Fledermaus, Allay, Plagegeist, Endermilbe, Silberfischchen (aus Blöcken), neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel) |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.27
+
+| System | Stand |
+|---|---|
+| Phantome | ✅ erscheinen nachts über Spielern, die 3 Spieltage nicht geschlafen haben (über Meereshöhe, freier Himmel, alle 1–2 min, 1–4 Stück), kreisen und stoßen herab (6 Schaden), brennen am Tag; Schlafen setzt den Zähler zurück (Zähler gilt bis zum Server-Neustart) |
+| Wächter, Großer Wächter | ✅ Laser: visiert sichtbare Spieler in 15 Blöcken an, lädt 2 s (3 s) mit sichtbarem Strahl, 6 (8) Schaden; Stacheln verletzen Nahkämpfer; Großer Wächter gibt jede Minute Abbaulähmung III in 50 Blöcken |
+| Shulker | ✅ bleibt an seinem Platz, öffnet sich und schießt zielsuchende Geschosse (4 Schaden + 10 s Schweben), geschlossen 80 % weniger Schaden und Pfeile prallen ab, teleportiert sich bei wenig Leben; Geschosse lassen sich wegschlagen |
+| Ertrunkene | ✅ 15 % tragen einen Dreizack und werfen ihn (bis 20 Blöcke, alle 2 s), geworfene Dreizacke sind nicht aufhebbar, 8,5 % lassen ihren fallen; brennen nur außerhalb des Wassers |
 
 ## Neu in 5.26
 

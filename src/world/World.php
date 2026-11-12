@@ -1015,6 +1015,7 @@ class World implements ChunkManager{
 		$this->getTrialManager()->tick();
 		$this->getRaidManager()->tick();
 		SculkVibrations::tick($this);
+		PhantomSpawner::tick($this);
 		$this->sunAnglePercentage = $this->computeSunAnglePercentage(); //Sun angle depends on the current time
 		$this->skyLightReduction = $this->computeSkyLightReduction(); //Sky light reduction depends on the sun angle
 
@@ -1161,6 +1162,7 @@ class World implements ChunkManager{
 				$this->getWeather()->clearAfterSleep();
 
 				foreach($this->getPlayers() as $p){
+					PhantomSpawner::rested($p); //BetterPMMP: sleeping keeps phantoms away
 					$p->stopSleep();
 				}
 			}
