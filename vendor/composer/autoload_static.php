@@ -248,6 +248,8 @@ class ComposerStaticInit01c34b5648e4177bfa963b48f7da5526
         'pocketmine\\entity\\projectile\\MobTrident' => __DIR__ . '/../..' . '/src/entity/projectile/MobTrident.php',
         'pocketmine\\world\\PhantomSpawner' => __DIR__ . '/../..' . '/src/world/PhantomSpawner.php',
         'pocketmine\\block\\ExtraVanillaBlocks' => __DIR__ . '/../..' . '/src/block/ExtraVanillaBlocks.php',
+        'pocketmine\\entity\\ai\\AnimalCombatAI' => __DIR__ . '/../..' . '/src/entity/ai/MobBehaviours.php',
+        'pocketmine\\entity\\ai\\MobBehaviours' => __DIR__ . '/../..' . '/src/entity/ai/MobBehaviours.php',
         'pocketmine\\inventory\\BundleInventory' => __DIR__ . '/../..' . '/src/inventory/BundleInventory.php',
         'pocketmine\\entity\\object\\MinecartInventory' => __DIR__ . '/../..' . '/src/entity/object/StorageMinecartEntity.php',
         'pocketmine\\entity\\object\\StorageMinecartEntity' => __DIR__ . '/../..' . '/src/entity/object/StorageMinecartEntity.php',

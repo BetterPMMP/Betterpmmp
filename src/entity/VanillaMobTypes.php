@@ -26,6 +26,20 @@ use pocketmine\event\entity\EntityPreExplodeEvent;
 
 /** Shared native representation for Bedrock entities not yet specialized. */
 abstract class GenericVanillaMob extends Mob{
+	/** BetterPMMP: piglins, piglin brutes and hoglins outside the Nether turn into zombified piglins / zoglins after 15 s */
+	private int $zombifyTicks = 0;
+	protected function entityBaseTick(int $tickDiff = 1) : bool{
+		$hasUpdate = parent::entityBaseTick($tickDiff);
+		if($this->isAlive() && \pocketmine\entity\ai\MobBehaviours::isZombifiable(static::ENTITY_ID)){
+			if(!\pocketmine\entity\ai\MobBehaviours::outsideNether($this)){
+				$this->zombifyTicks = 0;
+			}elseif(($this->zombifyTicks += $tickDiff) >= 300){
+				$this->getWorld()->addSound($this->getPosition(), new \pocketmine\world\sound\VanillaSound(static::ENTITY_ID === EntityIds::HOGLIN ? \pocketmine\network\mcpe\protocol\types\LevelSoundEvent::MOB_HOGLIN_CONVERTED_TO_ZOMBIFIED : \pocketmine\network\mcpe\protocol\types\LevelSoundEvent::CONVERTED_TO_ZOMBIFIED));
+				\pocketmine\entity\ai\MobBehaviours::transform($this, static::ENTITY_ID === EntityIds::HOGLIN ? ZoglinMob::class : ZombiePigmanMob::class);
+			}
+		}
+		return $hasUpdate;
+	}
 	protected const ENTITY_ID = "";
 	protected const DISPLAY_NAME = "Mob";
 	protected const SPAWN_EGG_GETTER = "";
@@ -304,6 +318,97 @@ class AllayMob extends GenericFlyingAnimalMob{
 	protected const SPAWN_EGG_GETTER = "ALLAY_SPAWN_EGG";
 	protected const HEIGHT = 0.35;
 	protected const WIDTH = 0.6;
+	/**
+	 * BetterPMMP: give an allay an item and it collects matching dropped items
+	 * (up to 32 blocks away) and brings them to you; right-click with an
+	 * empty hand takes the item back.
+	 */
+	private ?Item $allayItem = null;
+	private ?string $likedPlayer = null;
+	/** @var Item[] */
+	private array $collected = [];
+	private int $allayScanTicks = 0;
+	private ?\pocketmine\entity\object\ItemEntity $allayTarget = null;
+	protected function initEntity(CompoundTag $nbt) : void{
+		parent::initEntity($nbt);
+		$tag = $nbt->getCompoundTag("AllayItem");
+		try{ $this->allayItem = $tag === null ? null : Item::nbtDeserialize($tag); }catch(\Throwable){ $this->allayItem = null; }
+		if($this->allayItem !== null && $this->allayItem->isNull()){ $this->allayItem = null; }
+		$this->likedPlayer = $nbt->getString("LikedPlayer", "") === "" ? null : $nbt->getString("LikedPlayer");
+	}
+	public function saveNBT() : CompoundTag{
+		$nbt = parent::saveNBT();
+		if($this->allayItem !== null){ $nbt->setTag("AllayItem", $this->allayItem->nbtSerialize()); }
+		$nbt->setString("LikedPlayer", $this->likedPlayer ?? "");
+		return $nbt;
+	}
+	public function getInteractButtonText(Player $player) : string{
+		return $this->allayItem === null ? ($player->getInventory()->getItemInHand()->isNull() ? "" : "action.interact.allay") : ($player->getInventory()->getItemInHand()->isNull() ? "action.interact.allay" : "");
+	}
+	public function onInteract(Player $player, \pocketmine\math\Vector3 $clickPos) : bool{
+		$held = $player->getInventory()->getItemInHand();
+		if($this->allayItem === null && !$held->isNull()){
+			$this->allayItem = (clone $held)->setCount(1);
+			$this->likedPlayer = $player->getName();
+			if($player->hasFiniteResources()){ $held->pop(); $player->getInventory()->setItemInHand($held); }
+			$this->sendHeldItem();
+			return true;
+		}
+		if($this->allayItem !== null && $held->isNull()){
+			$player->getInventory()->setItemInHand($this->allayItem);
+			foreach($this->collected as $item){ foreach($player->getInventory()->addItem($item) as $left){ $this->getWorld()->dropItem($player->getPosition(), $left); } }
+			$this->allayItem = null;
+			$this->likedPlayer = null;
+			$this->collected = [];
+			$this->sendHeldItem();
+			return true;
+		}
+		return false;
+	}
+	private function collectedCount() : int{ $n = 0; foreach($this->collected as $item){ $n += $item->getCount(); } return $n; }
+	private function sendHeldItem() : void{ foreach($this->getViewers() as $viewer){ $this->sendHeldItemTo($viewer); } }
+	private function sendHeldItemTo(Player $player) : void{
+		$session = $player->getNetworkSession();
+		$session->sendDataPacket(MobEquipmentPacket::create($this->getId(), ItemStackWrapper::legacy($session->getTypeConverter()->coreItemStackToNet($this->allayItem ?? VanillaItems::AIR())), 0, 0, ContainerIds::INVENTORY));
+	}
+	public function spawnTo(Player $player) : void{
+		parent::spawnTo($player);
+		if($this->allayItem !== null && isset($this->getViewers()[spl_object_id($player)])){ $this->sendHeldItemTo($player); }
+	}
+	protected function tickWandering(int $tickDiff) : void{
+		if($this->allayItem === null){ parent::tickWandering($tickDiff); return; }
+		$owner = $this->likedPlayer === null ? null : $this->getWorld()->getServer()->getPlayerExact($this->likedPlayer);
+		if($owner !== null && ($owner->getWorld() !== $this->getWorld() || $owner->getPosition()->distanceSquared($this->getPosition()) > 64 * 64)){ $owner = null; }
+		$full = $this->collectedCount() >= $this->allayItem->getMaxStackSize();
+		// look for matching items
+		if(!$full && ($this->allayTarget === null || $this->allayTarget->isFlaggedForDespawn() || $this->allayTarget->isClosed())){
+			$this->allayTarget = null;
+			if(($this->allayScanTicks -= $tickDiff) <= 0){
+				$this->allayScanTicks = 10;
+				$item = $this->allayItem;
+				$found = \pocketmine\entity\ai\MobBehaviours::nearest($this, 32.0, fn(Entity $e) : bool => $e instanceof \pocketmine\entity\object\ItemEntity && !$e->isFlaggedForDespawn() && $e->getPickupDelay() <= 0 && $e->getItem()->equals($item, true, false));
+				$this->allayTarget = $found instanceof \pocketmine\entity\object\ItemEntity ? $found : null;
+			}
+		}
+		if(!$full && $this->allayTarget !== null){
+			if(\pocketmine\entity\ai\MobBehaviours::flyToward($this, $this->allayTarget->getPosition()->add(0, 0.5, 0), 0.3) < 1.5){
+				$stack = $this->allayTarget->getItem();
+				$take = min($stack->getCount(), $this->allayItem->getMaxStackSize() - $this->collectedCount());
+				$this->collected[] = (clone $stack)->setCount($take);
+				if($take >= $stack->getCount()){ $this->allayTarget->flagForDespawn(); }else{ $this->allayTarget->setStackSize($stack->getCount() - $take); }
+				$this->allayTarget = null;
+			}
+			return;
+		}
+		if($owner === null){ parent::tickWandering($tickDiff); return; }
+		$distance = \pocketmine\entity\ai\MobBehaviours::flyToward($this, $owner->getPosition()->add(0, 1.5, 0), $this->collected === [] && $owner->getPosition()->distanceSquared($this->getPosition()) < 36 ? 0.0 : 0.3);
+		if($this->collected !== [] && $distance < 3){
+			foreach($this->collected as $item){
+				$this->getWorld()->dropItem($this->getPosition(), $item, $owner->getPosition()->subtractVector($this->getPosition())->normalize()->multiply(0.2));
+			}
+			$this->collected = [];
+		}
+	}
 }
 
 class ArmadilloMob extends GenericAnimalMob{
@@ -361,6 +466,25 @@ class AxolotlMob extends GenericSwimmingAnimalMob{
 	protected const SPAWN_EGG_GETTER = "AXOLOTL_SPAWN_EGG";
 	protected const HEIGHT = 0.75;
 	protected const WIDTH = 0.42;
+	/** BetterPMMP: axolotls hunt fish, squid, drowned and guardians in water, and play dead (regeneration) when badly hurt */
+	use \pocketmine\entity\ai\CombatAI { findCombatTarget as private findRevengeTarget; }
+	protected function isNeutralMob() : bool{ return true; }
+	protected function findCombatTarget() : ?\pocketmine\entity\Living{
+		$target = $this->findRevengeTarget();
+		if($target !== null || mt_rand(1, 8) !== 1){ return $target; }
+		$found = \pocketmine\entity\ai\MobBehaviours::nearest($this, 8.0, fn(Entity $e) : bool => $e instanceof \pocketmine\entity\Living && $e->isAlive() && in_array($e::getNetworkTypeId(), [EntityIds::COD, EntityIds::SALMON, EntityIds::TROPICALFISH, EntityIds::PUFFERFISH, EntityIds::SQUID, EntityIds::GLOW_SQUID, EntityIds::DROWNED, EntityIds::GUARDIAN, EntityIds::ELDER_GUARDIAN], true) && \pocketmine\entity\ai\MobBehaviours::isInWater($e));
+		return $found instanceof \pocketmine\entity\Living ? $found : null;
+	}
+	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{ parent::attack($source); if($this->isAlive()){ $this->onCombatHurt($source); $this->onSwimmerHurt(); } }
+	protected function tickWandering(int $tickDiff) : void{
+		$target = $this->updateCombatTarget($tickDiff);
+		if($target === null || !\pocketmine\entity\ai\MobBehaviours::isInWater($target)){ parent::tickWandering($tickDiff); return; }
+		$distance = \pocketmine\entity\ai\MobBehaviours::flyToward($this, $target->getPosition()->add(0, $target->getSize()->getHeight() / 2, 0), min(0.35, max(0.15, $this->getMovementSpeed())));
+		if($distance < 1.8 && $this->attackTime <= 0){ $this->attackTime = 20; $this->broadcastAnimation(new \pocketmine\entity\animation\ArmSwingAnimation($this)); \pocketmine\entity\ai\MobBehaviours::hit($this, $target, $this->meleeDamage()); }
+	}
+	protected function onSwimmerHurt() : void{
+		if($this->getHealth() < $this->getMaxHealth() / 3 && mt_rand(1, 3) === 1){ $this->getEffects()->add(new \pocketmine\entity\effect\EffectInstance(\pocketmine\entity\effect\VanillaEffects::REGENERATION(), 200, 0)); $this->setMotion(new \pocketmine\math\Vector3(0, 0, 0)); }
+	}
 }
 
 class BatMob extends GenericFlyingAnimalMob{
@@ -811,6 +935,24 @@ class DolphinMob extends GenericSwimmingAnimalMob{
 	protected const SPAWN_EGG_GETTER = "DOLPHIN_SPAWN_EGG";
 	protected const HEIGHT = 0.9;
 	protected const WIDTH = 0.6;
+	/** BetterPMMP: dolphins fight back (and their pod with them) */
+	use \pocketmine\entity\ai\CombatAI { findCombatTarget as private findRevengeTarget; }
+	protected function isNeutralMob() : bool{ return true; }
+	protected function findCombatTarget() : ?\pocketmine\entity\Living{
+		return $this->findRevengeTarget();
+	}
+	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{ parent::attack($source); if($this->isAlive()){ $this->onCombatHurt($source); $this->onSwimmerHurt(); } }
+	protected function tickWandering(int $tickDiff) : void{
+		$target = $this->updateCombatTarget($tickDiff);
+		if($target === null || !\pocketmine\entity\ai\MobBehaviours::isInWater($target)){ parent::tickWandering($tickDiff); return; }
+		$distance = \pocketmine\entity\ai\MobBehaviours::flyToward($this, $target->getPosition()->add(0, $target->getSize()->getHeight() / 2, 0), min(0.35, max(0.15, $this->getMovementSpeed())));
+		if($distance < 1.8 && $this->attackTime <= 0){ $this->attackTime = 20; $this->broadcastAnimation(new \pocketmine\entity\animation\ArmSwingAnimation($this)); \pocketmine\entity\ai\MobBehaviours::hit($this, $target, $this->meleeDamage()); }
+	}
+	protected function onSwimmerHurt() : void{
+		$target = $this->getCombatTarget();
+		if($target === null){ return; }
+		foreach($this->getWorld()->getNearbyEntities($this->getBoundingBox()->expandedCopy(10, 5, 10), $this) as $entity){ if($entity instanceof self && $entity->getCombatTarget() === null){ $entity->angerAt($target); } }
+	}
 }
 
 class DonkeyMob extends GenericAnimalMob implements \pocketmine\entity\riding\Rideable{
@@ -1325,6 +1467,14 @@ class EndermiteMob extends GenericHostileMob{
 	protected const SPAWN_EGG_GETTER = "ENDERMITE_SPAWN_EGG";
 	protected const HEIGHT = 1.8;
 	protected const WIDTH = 0.6;
+	/** BetterPMMP: endermites despawn after 2 minutes unless they have a name */
+	private int $lifetime = 0;
+	protected function entityBaseTick(int $tickDiff = 1) : bool{
+		$hasUpdate = parent::entityBaseTick($tickDiff);
+		$this->lifetime += $tickDiff;
+		if($this->lifetime >= 2400 && $this->getNameTag() === "" && $this->isAlive()){ $this->flagForDespawn(); }
+		return $hasUpdate;
+	}
 }
 
 class EvokerMob extends GenericHostileMob{
@@ -1346,6 +1496,13 @@ class FoxMob extends GenericAnimalMob{
 	protected const SPAWN_EGG_GETTER = "FOX_SPAWN_EGG";
 	protected const HEIGHT = 0.7;
 	protected const WIDTH = 0.7;
+	/** BetterPMMP: foxes hunt chickens, rabbits and fish, fight back when hurt and keep away from players that are not sneaking */
+	use \pocketmine\entity\ai\AnimalCombatAI { tickWandering as private combatTickWandering; }
+	protected function preyIds() : array{ return [EntityIds::CHICKEN, EntityIds::RABBIT, EntityIds::COD, EntityIds::SALMON, EntityIds::TROPICALFISH]; }
+	protected function tickWandering(int $tickDiff) : void{
+		if(!$this->isPanicking() && $this->getCombatTarget() === null && ($player = \pocketmine\entity\ai\MobBehaviours::nearestPlayer($this, 6.0, true)) !== null){ $this->startPanic($player->getPosition(), 40); }
+		$this->combatTickWandering($tickDiff);
+	}
 }
 
 class FrogMob extends GenericAnimalMob{
@@ -1693,6 +1850,21 @@ class HoglinMob extends GenericHostileMob{
 	protected const SPAWN_EGG_GETTER = "HOGLIN_SPAWN_EGG";
 	protected const HEIGHT = 1.8;
 	protected const WIDTH = 0.6;
+	/** BetterPMMP: hoglins throw their target up, and keep away from warped fungus */
+	protected function onMeleeHit(\pocketmine\entity\Living $target) : void{ parent::onMeleeHit($target); $motion = $target->getMotion(); $target->setMotion(new \pocketmine\math\Vector3($motion->x, 0.5, $motion->z)); }
+	protected function tickWandering(int $tickDiff) : void{
+		if(mt_rand(1, 40) === 1 && ($fungus = $this->findWarpedFungus()) !== null){ $this->startPanic($fungus, 60); }
+		if($this->isPanicking()){ \pocketmine\entity\Mob::tickWandering($tickDiff); return; }
+		parent::tickWandering($tickDiff);
+	}
+	private function findWarpedFungus() : ?\pocketmine\math\Vector3{
+		$pos = $this->getPosition()->floor(); $world = $this->getWorld();
+		for($dx = -7; $dx <= 7; ++$dx){ for($dy = -2; $dy <= 2; ++$dy){ for($dz = -7; $dz <= 7; ++$dz){
+			$y = $pos->getFloorY() + $dy;
+			if($y >= $world->getMinY() && $y < $world->getMaxY() && $world->getBlockAt($pos->getFloorX() + $dx, $y, $pos->getFloorZ() + $dz)->getTypeId() === \pocketmine\block\BlockTypeIds::WARPED_FUNGUS){ return $pos->add($dx, $dy, $dz); }
+		} } }
+		return null;
+	}
 }
 
 class HorseMob extends GenericAnimalMob implements \pocketmine\entity\riding\Rideable{
@@ -1774,6 +1946,22 @@ class LlamaMob extends GenericAnimalMob{
 	protected const SPAWN_EGG_GETTER = "LLAMA_SPAWN_EGG";
 	protected const HEIGHT = 0.9;
 	protected const WIDTH = 1.87;
+	/** BetterPMMP: llamas spit at whoever hurt them (1 damage, every 2 s, up to 12 blocks) */
+	use \pocketmine\entity\ai\AnimalCombatAI;
+	private int $spitCooldown = 0;
+	protected function tickCombat(\pocketmine\entity\Living $target, int $tickDiff) : void{
+		$this->spitCooldown -= $tickDiff;
+		$distance = $this->getPosition()->distance($target->getPosition());
+		$navigator = $this->getNavigator();
+		if($distance > 6){ $navigator->moveTo($target->getPosition(), $this->getWalkSpeed(true), 4.0); $navigator->tick($tickDiff); }else{ $navigator->stop(); }
+		$dx = $target->getPosition()->x - $this->getPosition()->x; $dz = $target->getPosition()->z - $this->getPosition()->z;
+		if($dx * $dx + $dz * $dz > 0.0001){ $this->setRotation(rad2deg(atan2(-$dx, $dz)), 0.0); }
+		if($this->spitCooldown <= 0 && $distance <= 12 && $this->canSeeEntity($target)){
+			$this->spitCooldown = 40;
+			$eye = $this->getEyePos(); $this->getWorld()->broadcastPacketToViewers($eye, \pocketmine\network\mcpe\protocol\PlaySoundPacket::create("mob.llama.spit", $eye->x, $eye->y, $eye->z, 1.0, 1.0, 0, false, null, null));
+			\pocketmine\entity\ai\MobBehaviours::hit($this, $target, 1.0, \pocketmine\event\entity\EntityDamageEvent::CAUSE_PROJECTILE);
+		}
+	}
 }
 
 class MagmaCubeMob extends GenericHostileMob{
@@ -1824,6 +2012,24 @@ class MooshroomMob extends GenericAnimalMob{
 	protected const SPAWN_EGG_GETTER = "MOOSHROOM_SPAWN_EGG";
 	protected const HEIGHT = 1.4;
 	protected const WIDTH = 0.9;
+	/** BetterPMMP: shears turn a mooshroom into a cow (5 mushrooms), a bowl gives mushroom stew */
+	public function onInteract(Player $player, \pocketmine\math\Vector3 $clickPos) : bool{
+		$held = $player->getInventory()->getItemInHand();
+		if($held instanceof \pocketmine\item\Shears && !$this->isBaby()){
+			for($i = 0; $i < 5; ++$i){ $this->getWorld()->dropItem($this->getPosition()->add(0, 1, 0), VanillaBlocks::RED_MUSHROOM()->asItem()); }
+			$this->getWorld()->addSound($this->getPosition(), new \pocketmine\world\sound\VanillaSound(\pocketmine\network\mcpe\protocol\types\LevelSoundEvent::CONVERT_MOOSHROOM));
+			if($player->hasFiniteResources()){ $held->applyDamage(1); $player->getInventory()->setItemInHand($held); }
+			\pocketmine\entity\ai\MobBehaviours::transform($this, Cow::class);
+			return true;
+		}
+		if($held->getTypeId() === VanillaItems::BOWL()->getTypeId() && !$this->isBaby()){
+			$stew = VanillaItems::MUSHROOM_STEW();
+			if($player->hasFiniteResources()){ $held->pop(); $player->getInventory()->setItemInHand($held); }
+			if($held->isNull()){ $player->getInventory()->setItemInHand($stew); }else{ $player->getInventory()->addItem($stew); }
+			return true;
+		}
+		return parent::onInteract($player, $clickPos);
+	}
 }
 
 class MuleMob extends GenericAnimalMob implements \pocketmine\entity\riding\Rideable{
@@ -1866,6 +2072,8 @@ class PandaMob extends GenericAnimalMob{
 	protected const SPAWN_EGG_GETTER = "PANDA_SPAWN_EGG";
 	protected const HEIGHT = 1.8;
 	protected const WIDTH = 0.6;
+	/** BetterPMMP: pandas fight back when hurt */
+	use \pocketmine\entity\ai\AnimalCombatAI;
 }
 
 class ParchedMob extends GenericRangedHostileMob{
@@ -2098,6 +2306,13 @@ class PolarBearMob extends GenericAnimalMob{
 	protected const SPAWN_EGG_GETTER = "POLAR_BEAR_SPAWN_EGG";
 	protected const HEIGHT = 1.3;
 	protected const WIDTH = 1.4;
+	/** BetterPMMP: polar bears fight back, and attack players that come close to their cubs */
+	use \pocketmine\entity\ai\AnimalCombatAI { tickWandering as private combatTickWandering; }
+	protected function preyIds() : array{ return [EntityIds::COD, EntityIds::SALMON]; }
+	protected function tickWandering(int $tickDiff) : void{
+		if(!$this->isBaby() && $this->getCombatTarget() === null && mt_rand(1, 20) === 1 && \pocketmine\entity\ai\MobBehaviours::nearest($this, 8.0, fn(Entity $e) : bool => $e instanceof self && $e->isBaby()) !== null && ($player = \pocketmine\entity\ai\MobBehaviours::nearestPlayer($this, 6.0)) !== null){ $this->angerAt($player); }
+		$this->combatTickWandering($tickDiff);
+	}
 }
 
 class PufferfishMob extends GenericSwimmingAnimalMob{
@@ -2114,6 +2329,17 @@ class RabbitMob extends GenericAnimalMob{
 	protected const SPAWN_EGG_GETTER = "RABBIT_SPAWN_EGG";
 	protected const HEIGHT = 0.4;
 	protected const WIDTH = 0.5;
+	/** BetterPMMP: rabbits hop, run from players without carrots and nibble grown carrots */
+	protected function tickWandering(int $tickDiff) : void{
+		if(!$this->isPanicking() && ($player = \pocketmine\entity\ai\MobBehaviours::nearestPlayer($this, 6.0, true)) !== null && !in_array($player->getInventory()->getItemInHand()->getTypeId(), [VanillaItems::CARROT()->getTypeId(), VanillaItems::GOLDEN_CARROT()->getTypeId(), VanillaBlocks::DANDELION()->asItem()->getTypeId()], true)){ $this->startPanic($player->getPosition(), 40); }
+		parent::tickWandering($tickDiff);
+		$motion = $this->getMotion();
+		if($this->onGround && $motion->x * $motion->x + $motion->z * $motion->z > 0.0004){ $this->setMotion(new \pocketmine\math\Vector3($motion->x * 1.6, 0.3, $motion->z * 1.6)); }
+		if(mt_rand(1, 200) === 1){
+			$block = $this->getWorld()->getBlock($this->getPosition());
+			if($block instanceof \pocketmine\block\Carrot && $block->getAge() > 0){ $this->getWorld()->setBlock($block->getPosition(), $block->setAge($block->getAge() - 1)); }
+		}
+	}
 }
 
 class RavagerMob extends GenericHostileMob{
@@ -2196,6 +2422,43 @@ class SilverfishMob extends GenericHostileMob{
 	protected const SPAWN_EGG_GETTER = "SILVERFISH_SPAWN_EGG";
 	protected const HEIGHT = 1.8;
 	protected const WIDTH = 0.6;
+	/** BetterPMMP: hurt silverfish wake the silverfish hidden in infested blocks nearby; idle ones hide in stone */
+	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{
+		parent::attack($source);
+		if(!$source->isCancelled() && $this->isAlive() && $source instanceof \pocketmine\event\entity\EntityDamageByEntityEvent){ $this->wakeOthers(); }
+	}
+	private function wakeOthers() : void{
+		$pos = $this->getPosition()->floor(); $world = $this->getWorld(); $woken = 0;
+		for($dx = -5; $dx <= 5 && $woken < 6; ++$dx){ for($dy = -3; $dy <= 3 && $woken < 6; ++$dy){ for($dz = -5; $dz <= 5 && $woken < 6; ++$dz){
+			$x = $pos->getFloorX() + $dx; $y = $pos->getFloorY() + $dy; $z = $pos->getFloorZ() + $dz;
+			if($y < $world->getMinY() || $y >= $world->getMaxY()){ continue; }
+			$block = $world->getBlockAt($x, $y, $z);
+			if($block instanceof \pocketmine\block\InfestedStone && mt_rand(0, 1) === 0){
+				$world->setBlockAt($x, $y, $z, $block->getImitatedBlock());
+				$fish = new self(Location::fromObject(new \pocketmine\math\Vector3($x + 0.5, $y, $z + 0.5), $world)); $fish->spawnToAll(); ++$woken;
+			}
+		} } }
+	}
+	protected function tickWandering(int $tickDiff) : void{
+		if($this->getCombatTarget() === null && mt_rand(1, 400) === 1 && $this->hideInBlock()){ return; }
+		parent::tickWandering($tickDiff);
+	}
+	private function hideInBlock() : bool{
+		$world = $this->getWorld(); $pos = $this->getPosition()->floor();
+		foreach([[0, -1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]] as [$dx, $dy, $dz]){
+			$x = $pos->getFloorX() + $dx; $y = $pos->getFloorY() + $dy; $z = $pos->getFloorZ() + $dz;
+			if($y < $world->getMinY() || $y >= $world->getMaxY()){ continue; }
+			$infested = match($world->getBlockAt($x, $y, $z)->getTypeId()){
+				\pocketmine\block\BlockTypeIds::STONE => VanillaBlocks::INFESTED_STONE(),
+				\pocketmine\block\BlockTypeIds::COBBLESTONE => VanillaBlocks::INFESTED_COBBLESTONE(),
+				\pocketmine\block\BlockTypeIds::STONE_BRICKS => VanillaBlocks::INFESTED_STONE_BRICK(),
+				\pocketmine\block\BlockTypeIds::DEEPSLATE => VanillaBlocks::INFESTED_DEEPSLATE(),
+				default => null,
+			};
+			if($infested !== null){ $world->setBlockAt($x, $y, $z, $infested); $this->flagForDespawn(); return true; }
+		}
+		return false;
+	}
 }
 
 class SkeletonMob extends GenericRangedHostileMob{
@@ -2399,6 +2662,22 @@ class TraderLlamaMob extends GenericAnimalMob{
 	protected const SPAWN_EGG_GETTER = "TRADER_LLAMA_SPAWN_EGG";
 	protected const HEIGHT = 1.8;
 	protected const WIDTH = 0.6;
+	/** BetterPMMP: llamas spit at whoever hurt them (1 damage, every 2 s, up to 12 blocks) */
+	use \pocketmine\entity\ai\AnimalCombatAI;
+	private int $spitCooldown = 0;
+	protected function tickCombat(\pocketmine\entity\Living $target, int $tickDiff) : void{
+		$this->spitCooldown -= $tickDiff;
+		$distance = $this->getPosition()->distance($target->getPosition());
+		$navigator = $this->getNavigator();
+		if($distance > 6){ $navigator->moveTo($target->getPosition(), $this->getWalkSpeed(true), 4.0); $navigator->tick($tickDiff); }else{ $navigator->stop(); }
+		$dx = $target->getPosition()->x - $this->getPosition()->x; $dz = $target->getPosition()->z - $this->getPosition()->z;
+		if($dx * $dx + $dz * $dz > 0.0001){ $this->setRotation(rad2deg(atan2(-$dx, $dz)), 0.0); }
+		if($this->spitCooldown <= 0 && $distance <= 12 && $this->canSeeEntity($target)){
+			$this->spitCooldown = 40;
+			$eye = $this->getEyePos(); $this->getWorld()->broadcastPacketToViewers($eye, \pocketmine\network\mcpe\protocol\PlaySoundPacket::create("mob.llama.spit", $eye->x, $eye->y, $eye->z, 1.0, 1.0, 0, false, null, null));
+			\pocketmine\entity\ai\MobBehaviours::hit($this, $target, 1.0, \pocketmine\event\entity\EntityDamageEvent::CAUSE_PROJECTILE);
+		}
+	}
 }
 
 class TropicalFishMob extends GenericSwimmingAnimalMob{
@@ -2415,6 +2694,29 @@ class TurtleMob extends GenericAnimalMob{
 	protected const SPAWN_EGG_GETTER = "TURTLE_SPAWN_EGG";
 	protected const HEIGHT = 1.2;
 	protected const WIDTH = 0.4;
+	/** BetterPMMP: a bred turtle carries eggs and lays 1-4 of them on sand */
+	private bool $hasEgg = false;
+	private int $eggTicks = 0;
+	protected function initEntity(CompoundTag $nbt) : void{ parent::initEntity($nbt); $this->hasEgg = $nbt->getByte("HasEgg", 0) === 1; }
+	public function saveNBT() : CompoundTag{ $nbt = parent::saveNBT(); $nbt->setByte("HasEgg", $this->hasEgg ? 1 : 0); return $nbt; }
+	protected function layEggs(\pocketmine\entity\BreedableAnimal $partner) : bool{ $this->hasEgg = true; $this->eggTicks = 0; $this->networkPropertiesDirty = true; return true; }
+	protected function tickWandering(int $tickDiff) : void{
+		parent::tickWandering($tickDiff);
+		if(!$this->hasEgg){ return; }
+		$this->eggTicks += $tickDiff;
+		$pos = $this->getPosition()->floor(); $world = $this->getWorld();
+		if($this->eggTicks < 200 || !$this->onGround || $pos->getFloorY() - 1 < $world->getMinY()){ return; }
+		$below = $world->getBlockAt($pos->getFloorX(), $pos->getFloorY() - 1, $pos->getFloorZ())->getTypeId();
+		$here = $world->getBlockAt($pos->getFloorX(), $pos->getFloorY(), $pos->getFloorZ());
+		$egg = \pocketmine\block\ExtraVanillaBlocks::get("minecraft:turtle_egg");
+		if($egg !== null && ($below === \pocketmine\block\BlockTypeIds::SAND || $below === \pocketmine\block\BlockTypeIds::RED_SAND) && $here->getTypeId() === \pocketmine\block\BlockTypeIds::AIR){
+			$world->setBlockAt($pos->getFloorX(), $pos->getFloorY(), $pos->getFloorZ(), $egg->withProperties(["turtle_egg_count" => ["one_egg", "two_egg", "three_egg", "four_egg"][mt_rand(0, 3)]]));
+			$world->addSound($this->getPosition(), new \pocketmine\world\sound\VanillaSound(\pocketmine\network\mcpe\protocol\types\LevelSoundEvent::LAY_EGG));
+			$this->hasEgg = false;
+			$this->networkPropertiesDirty = true;
+		}
+	}
+	protected function syncNetworkData(EntityMetadataCollection $properties) : void{ parent::syncNetworkData($properties); $properties->setGenericFlag(EntityMetadataFlags::LAYING_EGG, $this->hasEgg); }
 }
 
 class VexMob extends GenericHostileFlyingMob{
@@ -2423,6 +2725,15 @@ class VexMob extends GenericHostileFlyingMob{
 	protected const SPAWN_EGG_GETTER = "VEX_SPAWN_EGG";
 	protected const HEIGHT = 1.8;
 	protected const WIDTH = 0.6;
+	/** BetterPMMP: vexes fly through blocks and start dying 30-119 s after being summoned */
+	private int $lifeTicks = 0;
+	protected function initEntity(CompoundTag $nbt) : void{ parent::initEntity($nbt); $this->keepMovement = true; $this->lifeTicks = $nbt->getInt("LifeTicks", 20 * (30 + mt_rand(0, 89))); }
+	public function saveNBT() : CompoundTag{ $nbt = parent::saveNBT(); $nbt->setInt("LifeTicks", $this->lifeTicks); return $nbt; }
+	protected function entityBaseTick(int $tickDiff = 1) : bool{
+		$hasUpdate = parent::entityBaseTick($tickDiff);
+		if($this->isAlive()){ $before = $this->lifeTicks; $this->lifeTicks -= $tickDiff; if($this->lifeTicks <= 0 && intdiv(-$before, 20) !== intdiv(-$this->lifeTicks, 20)){ $this->attack(new \pocketmine\event\entity\EntityDamageEvent($this, \pocketmine\event\entity\EntityDamageEvent::CAUSE_STARVATION, 1)); } }
+		return $hasUpdate;
+	}
 }
 
 class VindicatorMob extends GenericHostileMob{
@@ -2931,6 +3242,14 @@ class ZoglinMob extends GenericHostileMob{
 	protected const SPAWN_EGG_GETTER = "ZOGLIN_SPAWN_EGG";
 	protected const HEIGHT = 1.8;
 	protected const WIDTH = 0.6;
+	/** BetterPMMP: zoglins attack every mob except creepers, ghasts and other zoglins, and throw their target up */
+	protected function findCombatTarget() : ?\pocketmine\entity\Living{
+		$target = parent::findCombatTarget();
+		if($target !== null){ return $target; }
+		$found = \pocketmine\entity\ai\MobBehaviours::nearest($this, 16.0, fn(Entity $e) : bool => $e instanceof \pocketmine\entity\Living && !$e instanceof Player && $e->isAlive() && !in_array($e::getNetworkTypeId(), [EntityIds::ZOGLIN, EntityIds::CREEPER, EntityIds::GHAST], true));
+		return $found instanceof \pocketmine\entity\Living ? $found : null;
+	}
+	protected function onMeleeHit(\pocketmine\entity\Living $target) : void{ parent::onMeleeHit($target); $motion = $target->getMotion(); $target->setMotion(new \pocketmine\math\Vector3($motion->x, 0.5, $motion->z)); }
 }
 
 class ZombieHorseMob extends GenericAnimalMob{

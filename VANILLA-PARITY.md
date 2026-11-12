@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.48-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.49-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -46,9 +46,29 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 |---|---|
 | Kern | Befehlsblock-Lore, Nautilus-Rüstung, Befehlsblöcke, Strukturblöcke |
 | Blöcke ohne Funktion | Fallende Stalaktiten, Sculk-Ader (eigene Ausbreitung), Pappel-Schilder (Text), Regale, Strohbett |
-| Mobs mit Standard-KI | Piglin-Barbar, Hoglin/Zoglin, Fuchs, Schildkröte (Eier legen), Delfin, Axolotl, Panda, Eisbär, Lama (Truhe, Spucken), Mooshroom (Scheren), Kaninchen, Fledermaus, Allay, Plagegeist, Endermilbe, Silberfischchen (aus Blöcken), neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel) |
+| Mobs mit Standard-KI | Fledermaus (hängt nicht kopfüber), Panda-Persönlichkeiten, Lama-Karawanen, neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel) |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.49
+
+| Mob | Stand |
+|---|---|
+| Fuchs | ✅ Jagt Hühner, Kaninchen und Fische, wehrt sich, hält Abstand zu Spielern (außer schleichenden) |
+| Eisbär | ✅ Wehrt sich, greift Spieler an, die seinen Jungen zu nahe kommen |
+| Panda | ✅ Wehrt sich, wenn er angegriffen wird |
+| Lama / Händlerlama | ✅ Spuckt den Angreifer an (1 Schaden, alle 2 s, bis 12 Blöcke) |
+| Delfin | ✅ Wehrt sich im Wasser, die ganze Gruppe hilft mit |
+| Axolotl | ✅ Jagt Fische, Tintenfische, Ertrunkene und Wächter im Wasser, stellt sich tot (Regeneration) wenn schwer verletzt |
+| Hoglin / Zoglin | ✅ Schleudern ihr Ziel hoch, Hoglins meiden Wirrpilze, Zoglins greifen alle Mobs außer Creepern, Ghasts und Zoglins an |
+| Zombifizierung | ✅ Piglins, Piglin-Barbaren und Hoglins werden außerhalb des Nethers nach 15 s zu zombifizierten Piglins / Zoglins |
+| Kaninchen | ✅ Hoppeln, fliehen vor Spielern ohne Karotten, knabbern reife Karotten an |
+| Allay | ✅ Gib ihm einen Gegenstand: sammelt passende Gegenstände (32 Blöcke) und bringt sie dir, mit leerer Hand nimmst du den Gegenstand zurück (hält ihn sichtbar in der Hand) |
+| Plagegeist | ✅ Fliegt durch Blöcke, stirbt 30–119 s nach der Beschwörung langsam |
+| Endermilbe | ✅ Verschwindet nach 2 Minuten (außer mit Namen) |
+| Silberfischchen | ✅ Verletzt weckt es Silberfischchen in befallenen Blöcken in der Nähe, untätig versteckt es sich in Stein/Bruchstein/Steinziegeln/Tiefenschiefer |
+| Schildkröte | ✅ Nach der Paarung trägt sie Eier und legt 1–4 Eier auf Sand |
+| Pilzkuh | ✅ Schere → wird zur Kuh und lässt 5 Pilze fallen, Schüssel → Pilzsuppe |
 
 ## Neu in 5.48
 
