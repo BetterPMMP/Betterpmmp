@@ -41,6 +41,7 @@ final class SessionStartPacketHandler extends PacketHandler{
 	public function handleRequestNetworkSettings(RequestNetworkSettingsPacket $packet) : bool{
 		$protocolVersion = $packet->getProtocolVersion();
 		if(!$this->isCompatibleProtocol($protocolVersion)){
+			\pocketmine\network\JavaBridge::reportProtocolMismatch($this->session->getIp(), $protocolVersion);
 			$this->session->disconnectIncompatibleProtocol($protocolVersion);
 
 			return true;

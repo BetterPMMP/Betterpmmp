@@ -69,6 +69,7 @@ java-bridge:
   port: 25565                       # Java-Port (TCP)
   java-path: "java"                 # eigenes Java, sonst wird es geladen
   auto-download: true               # Java und ViaProxy automatisch laden
+  viaproxy-channel: "dev"           # dev = neuester Build (nötig für neue Bedrock-Versionen), stable = nur Releases
   online-mode: true                 # nur echte (gekaufte) Java-Konten
   name-prefix: "J_"                 # Namen von Java-Spielern, z. B. J_Steve
   target-version: "Bedrock 1.26.60" # Bedrock-Version für ViaProxy

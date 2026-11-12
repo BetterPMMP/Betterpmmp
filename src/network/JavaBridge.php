@@ -29,6 +29,7 @@ use function is_dir;
 use function is_resource;
 use function is_string;
 use function json_decode;
+use function json_encode;
 use function dirname;
 use function mkdir;
 use function php_uname;
@@ -38,6 +39,7 @@ use function proc_close;
 use function proc_get_status;
 use function proc_open;
 use function proc_terminate;
+use function rename;
 use function str_contains;
 use function str_ends_with;
 use function stream_get_contents;
@@ -64,6 +66,7 @@ use const PHP_OS_FAMILY;
 final class JavaBridge{
 
 	private const RELEASES_URL = "https://api.github.com/repos/ViaVersion/ViaProxy/releases/latest";
+	private const CI_URL = "https://ci.viaversion.com/job/ViaProxy/lastSuccessfulBuild/";
 	private const JRE_URL = "https://api.adoptium.net/v3/binary/latest/21/ga/linux/%s/jre/hotspot/normal/eclipse";
 	private const JAR = "ViaProxy.jar";
 	private const MAX_RESTARTS = 5;
@@ -76,6 +79,7 @@ final class JavaBridge{
 	private static array $command = [];
 	private static string $dir = "";
 	private static int $logOffset = 0;
+	private static bool $mismatchReported = false;
 	private static int $versionChecks = 0;
 
 	public static function isEnabled() : bool{
@@ -93,6 +97,17 @@ final class JavaBridge{
 		return strlen($name) > 16 ? substr($name, 0, 16) : $name;
 	}
 
+	/** Explains in the console why Java players get "Outdated client!" (ViaProxy speaks an older Bedrock version). */
+	public static function reportProtocolMismatch(string $ip, int $protocol) : void{
+		if(!self::isBridgeAddress($ip) || self::$mismatchReported){
+			return;
+		}
+		self::$mismatchReported = true;
+		$needed = \pocketmine\network\mcpe\protocol\ProtocolInfo::CURRENT_PROTOCOL;
+		Server::getInstance()->getLogger()->warning("[Java-Bridge] ViaProxy spricht Bedrock-Protokoll $protocol, BetterPMMP braucht $needed (" . \pocketmine\network\mcpe\protocol\ProtocolInfo::MINECRAFT_VERSION_NETWORK . "). " .
+			"Java-Spieler sehen \"Outdated client\". BetterPMMP sucht beim nächsten Start ein neueres ViaProxy (viaproxy-channel: dev).");
+	}
+
 	public static function start(Server $server) : void{
 		if(!self::isEnabled() || self::$process !== null){
 			return;
@@ -108,7 +123,7 @@ final class JavaBridge{
 			return;
 		}
 		$jar = Path::join(self::$dir, self::JAR);
-		if(!file_exists($jar) && !self::downloadViaProxy($jar, $server)){
+		if(!self::ensureViaProxy($jar, $logger)){
 			return;
 		}
 		$port = BetterPMMPConfig::int("java-bridge", "port", 25565);
@@ -311,41 +326,89 @@ final class JavaBridge{
 		return $m[1] === "1" && isset($m[2]) ? (int) $m[2] : (int) $m[1];
 	}
 
-	private static function downloadViaProxy(string $target, Server $server) : bool{
-		$logger = $server->getLogger();
+	/**
+	 * Makes sure java-bridge/ViaProxy.jar exists and is up to date. BetterPMMP
+	 * always speaks the newest Bedrock protocol, which the stable ViaProxy
+	 * releases often support only weeks later ("Outdated client!"), so the
+	 * dev builds from the ViaVersion CI are used by default (channel "dev").
+	 * Checked on every start; without internet the existing jar is kept.
+	 */
+	private static function ensureViaProxy(string $jar, \Logger $logger) : bool{
+		$exists = file_exists($jar);
 		if(!BetterPMMPConfig::flag("java-bridge", "auto-download", true)){
-			$logger->error("[Java-Bridge] $target fehlt. ViaProxy.jar herunterladen und dort ablegen (oder auto-download: true).");
+			if(!$exists){
+				$logger->error("[Java-Bridge] $jar fehlt. ViaProxy.jar herunterladen und dort ablegen (oder auto-download: true).");
+			}
+			return $exists;
+		}
+		$infoFile = Path::join(self::$dir, "viaproxy.json");
+		$info = $exists ? json_decode((string) @file_get_contents($infoFile), true) : null;
+		$installed = is_array($info) && is_string($info["id"] ?? null) ? $info["id"] : "";
+
+		$channel = strtolower(BetterPMMPConfig::string("java-bridge", "viaproxy-channel", "dev"));
+		$candidate = $channel === "stable" ? self::latestRelease() : (self::latestDevBuild() ?? self::latestRelease());
+		if($candidate === null){
+			if($exists){
+				$logger->warning("[Java-Bridge] Keine Verbindung zum ViaProxy-Download, nutze vorhandene ViaProxy.jar");
+				return true;
+			}
+			$logger->error("[Java-Bridge] ViaProxy konnte nicht gefunden werden. ViaProxy.jar selbst in java-bridge/ ablegen.");
 			return false;
 		}
-		$logger->info("[Java-Bridge] Lade ViaProxy herunter...");
-		$release = Internet::getURL(self::RELEASES_URL, 15, ["User-Agent: BetterPMMP", "Accept: application/vnd.github+json"], $err);
-		$data = $release === null ? null : json_decode($release->getBody(), true);
-		$url = null;
-		$name = "";
-		if(is_array($data) && is_array($data["assets"] ?? null)){
-			foreach($data["assets"] as $asset){
-				$assetName = is_array($asset) && is_string($asset["name"] ?? null) ? $asset["name"] : "";
-				if(str_ends_with($assetName, ".jar") && !str_contains(strtolower($assetName), "java8") && is_string($asset["browser_download_url"] ?? null)){
-					$url = $asset["browser_download_url"];
-					$name = $assetName;
-					break;
-				}
+		[$id, $url, $label] = $candidate;
+		if($exists && $installed === $id){
+			return true;
+		}
+		$logger->info("[Java-Bridge] Lade $label herunter...");
+		$result = Internet::getURL($url, 180, ["User-Agent: BetterPMMP"], $err);
+		if($result === null || $result->getCode() !== 200 || strlen($result->getBody()) < 100_000 || substr($result->getBody(), 0, 2) !== "PK"){
+			$logger->error("[Java-Bridge] Download von $label fehlgeschlagen" . (is_string($err) && $err !== "" ? ": $err" : ""));
+			return $exists;
+		}
+		$tmp = $jar . ".new";
+		if(@file_put_contents($tmp, $result->getBody()) === false || !@rename($tmp, $jar)){
+			@unlink($tmp);
+			$logger->error("[Java-Bridge] $jar kann nicht gespeichert werden");
+			return $exists;
+		}
+		@file_put_contents($infoFile, json_encode(["id" => $id, "label" => $label]));
+		$logger->info("[Java-Bridge] $label installiert (" . (int) (strlen($result->getBody()) / 1024) . " KB)");
+		return true;
+	}
+
+	/** @return array{string, string, string}|null [id, download url, label] of the newest ViaProxy dev build */
+	private static function latestDevBuild() : ?array{
+		$result = Internet::getURL(self::CI_URL . "api/json?tree=number,artifacts%5BfileName,relativePath%5D", 15, ["User-Agent: BetterPMMP"]);
+		$data = $result === null || $result->getCode() !== 200 ? null : json_decode($result->getBody(), true);
+		if(!is_array($data) || !is_array($data["artifacts"] ?? null)){
+			return null;
+		}
+		$number = (int) ($data["number"] ?? 0);
+		foreach($data["artifacts"] as $artifact){
+			$name = is_array($artifact) && is_string($artifact["fileName"] ?? null) ? $artifact["fileName"] : "";
+			$path = is_array($artifact) && is_string($artifact["relativePath"] ?? null) ? $artifact["relativePath"] : "";
+			$lower = strtolower($name);
+			if(str_ends_with($lower, ".jar") && !str_contains($lower, "java8") && !str_contains($lower, "sources") && !str_contains($lower, "javadoc")){
+				return ["dev-$number", self::CI_URL . "artifact/" . $path, "ViaProxy Dev-Build #$number ($name)"];
 			}
 		}
-		if($url === null){
-			$logger->error("[Java-Bridge] ViaProxy-Release nicht gefunden" . (is_string($err) && $err !== "" ? ": $err" : "") . ". ViaProxy.jar selbst in java-bridge/ ablegen.");
-			return false;
+		return null;
+	}
+
+	/** @return array{string, string, string}|null [id, download url, label] of the newest stable ViaProxy release */
+	private static function latestRelease() : ?array{
+		$result = Internet::getURL(self::RELEASES_URL, 15, ["User-Agent: BetterPMMP", "Accept: application/vnd.github+json"]);
+		$data = $result === null || $result->getCode() !== 200 ? null : json_decode($result->getBody(), true);
+		if(!is_array($data) || !is_array($data["assets"] ?? null)){
+			return null;
 		}
-		$jar = Internet::getURL($url, 120, ["User-Agent: BetterPMMP"], $err);
-		if($jar === null || $jar->getCode() !== 200 || strlen($jar->getBody()) < 100_000 || substr($jar->getBody(), 0, 2) !== "PK"){
-			$logger->error("[Java-Bridge] Download von $name fehlgeschlagen" . (is_string($err) && $err !== "" ? ": $err" : ""));
-			return false;
+		$tag = is_string($data["tag_name"] ?? null) ? $data["tag_name"] : "?";
+		foreach($data["assets"] as $asset){
+			$name = is_array($asset) && is_string($asset["name"] ?? null) ? $asset["name"] : "";
+			if(str_ends_with($name, ".jar") && !str_contains(strtolower($name), "java8") && is_string($asset["browser_download_url"] ?? null)){
+				return ["release-$tag", $asset["browser_download_url"], "ViaProxy $tag ($name)"];
+			}
 		}
-		if(@file_put_contents($target, $jar->getBody()) === false){
-			$logger->error("[Java-Bridge] $target kann nicht gespeichert werden");
-			return false;
-		}
-		$logger->info("[Java-Bridge] $name heruntergeladen (" . (int) (filesize($target) / 1024) . " KB)");
-		return true;
+		return null;
 	}
 }
