@@ -1534,7 +1534,7 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		if($this->dimensionChunkLoadCount !== -1 && $currentTick - $this->dimensionChangeTick > 100){
 			$this->finishDimensionChange(); //BetterPMMP: never leave the client on the loading screen
 		}
-		if($this->startAction > -1 && $this->getItemUseDuration() >= self::JAVA_EAT_TICKS && \pocketmine\network\JavaBridge::isJavaPlayer($this)){
+		if($this->javaEatStart >= 0 && $currentTick - $this->javaEatStart >= self::JAVA_EAT_TICKS){
 			$this->finishJavaItemUse();
 		}
 
@@ -1722,6 +1722,7 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 
 		$this->inventory->setHeldItemIndex($hotbarSlot);
 		$this->setUsingItem(false);
+		$this->javaEatStart = -1;
 
 		return true;
 	}
@@ -1805,6 +1806,13 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		$this->returnItemsFromAction($oldItem, $item, $returnedItems);
 
 		$this->setUsingItem($item instanceof Releasable && $item->canStartUsingItem($this));
+		if($item instanceof ConsumableItem && \pocketmine\network\JavaBridge::isJavaPlayer($this)){
+			//BetterPMMP: a Java client never sends "finished eating", the server completes it (see onUpdate)
+			$started = $item->canStartUsingItem($this);
+			$this->javaEatStart = $started ? $this->server->getTick() : -1;
+			$this->javaEatSlot = $this->inventory->getHeldItemIndex();
+			$this->logger->debug("[Java-Bridge] eating " . $item->getName() . ": " . ($started ? "started" : "not allowed (not hungry?)"));
+		}
 
 		return true;
 	}
@@ -1815,6 +1823,7 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 	 * @return bool if the consumption succeeded.
 	 */
 	public function consumeHeldItem() : bool{
+		$this->javaEatStart = -1; //BetterPMMP: finished (by the client's own request or the Java timer)
 		$slot = $this->inventory->getItemInHand();
 		if($slot instanceof ConsumableItem){
 			$oldItem = clone $slot;
@@ -1848,6 +1857,7 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 	 * @return bool if it did something.
 	 */
 	public function releaseHeldItem() : bool{
+		$this->javaEatStart = -1; //BetterPMMP: let go before finishing
 		try{
 			$item = $this->inventory->getItemInHand();
 			if(!$this->isUsingItem() || $this->hasItemCooldown($item)){
@@ -2978,14 +2988,22 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 	 * bridge) never does - on Java the server completes it. Do that for Java players.
 	 */
 	private function finishJavaItemUse() : void{
-		if(!$this->inventory->getItemInHand() instanceof ConsumableItem){
-			return; // bows, shields, tridents ... are released by the client
+		$slot = $this->javaEatSlot;
+		$this->javaEatStart = -1;
+		if($slot !== $this->inventory->getHeldItemIndex() || !$this->inventory->getItemInHand() instanceof ConsumableItem){
+			return;
 		}
-		if(!$this->consumeHeldItem()){
+		$consumed = $this->consumeHeldItem();
+		$this->logger->debug("[Java-Bridge] eating finished: " . ($consumed ? "consumed" : "refused"));
+		if(!$consumed){
 			$this->getAttributeMap()->get(\pocketmine\entity\Attribute::HUNGER)?->markSynchronized(false);
 		}
 		$this->setUsingItem(false);
 	}
+
+	/** BetterPMMP: server tick a Java player started eating/drinking (-1 = not eating) and the hotbar slot used */
+	private int $javaEatStart = -1;
+	private int $javaEatSlot = -1;
 
 	/**
 	 * BetterPMMP: tells the client that the terrain of the new dimension is sent, which closes its loading screen

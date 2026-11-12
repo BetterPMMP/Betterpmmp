@@ -31,7 +31,7 @@ use function str_repeat;
 
 final class VersionInfo{
 	public const NAME = "BetterPMMP";
-	public const BETTERPMMP_BUILD = "5.41-vanilla-beta.1";
+	public const BETTERPMMP_BUILD = "5.42-vanilla-beta.1";
 	public const BASE_VERSION = "5.51.0";
 	public const IS_DEVELOPMENT_BUILD = true;
 	public const BUILD_CHANNEL = "beta";
