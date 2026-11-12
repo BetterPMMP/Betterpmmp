@@ -306,6 +306,13 @@ final class TrialManager{
 		$mobs = array_filter($mobs, fn(int $id) => ($e = $this->world->getEntity($id)) instanceof Living && $e->isAlive());
 
 		if($total === 0){
+			if(count($players) === 0 && $this->world->getServer()->getTick() % 200 === 0){
+				foreach($this->world->getPlayers() as $p){
+					if($p->getPosition()->distanceSquared($pos->add(0.5, 0.5, 0.5)) <= self::DETECT_RANGE ** 2){
+						$this->world->getLogger()->debug("[Prüfungsspawner] " . self::key($pos) . ": " . $p->getName() . " wird ignoriert (" . ($p->isCreative() ? "Kreativmodus" : ($p->isSpectator() ? "Zuschauer" : "tot")) . ")");
+					}
+				}
+			}
 			if(count($players) === 0){
 				$this->active[$key] = [$pos, [], 0, 0, [], 0, 0];
 				return;
@@ -320,6 +327,7 @@ final class TrialManager{
 			$this->ominous[$key] = $ominous;
 			$total = 6 + 2 * (count($participants) - 1) + ($ominous ? 4 : 0);
 			$this->setSpawnerState($pos, 2, $ominous);
+			$this->world->getLogger()->debug("[Prüfungsspawner] " . self::key($pos) . " startet: " . $total . " Mobs (" . (new \ReflectionClass(self::mobFor($key)))->getShortName() . ")" . ($this->world->getDifficulty() === World::DIFFICULTY_PEACEFUL ? " - ACHTUNG: Schwierigkeit Friedlich, Monster verschwinden sofort" : ""));
 			if($ominous){
 				$this->world->addSound($pos, new VanillaSound(LevelSoundEvent::TRIAL_SPAWNER_CHARGE_ACTIVATE));
 			}
@@ -332,6 +340,9 @@ final class TrialManager{
 			$maxAlive = 2 + (count($participants) - 1);
 			if(count($mobs) < $maxAlive && $tick >= $nextSpawn){
 				$id = $this->spawnMob($pos, $key);
+				if($id === null){
+					$this->world->getLogger()->debug("[Prüfungsspawner] " . self::key($pos) . ": kein Platz zum Spawnen (4 Blöcke um den Spawner brauchen festen Boden und 2 Blöcke Luft)");
+				}
 				if($id !== null){
 					$mobs[] = $id;
 					++$spawned;
@@ -462,6 +473,7 @@ final class TrialManager{
 		$pos = $vault->getPosition();
 		$ominousTag = $vault->getStateData()->getStates()["ominous"] ?? null;
 		$ominous = $ominousTag !== null && (int) $ominousTag->getValue() === 1;
+		$this->world->getLogger()->debug("[Tresor] " . $player->getName() . " benutzt Tresor bei " . self::key($pos) . " mit " . ($name === "" ? $held->getName() : $name) . ($ominous ? " (ominöser Tresor)" : ""));
 		if($name !== ($ominous ? "minecraft:ominous_trial_key" : "minecraft:trial_key")){
 			if($name === "minecraft:trial_key" || $name === "minecraft:ominous_trial_key"){
 				$this->world->addSound($pos, new VanillaSound(LevelSoundEvent::VAULT_INSERT_ITEM_FAIL));

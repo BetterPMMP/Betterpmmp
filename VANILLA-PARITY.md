@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.51-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.52-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -49,6 +49,12 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel), Lama mit Truhe, Panda-Aussehen je Gen |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.52
+
+| System | Stand |
+|---|---|
+| Diagnose | Mit `debug: level: 2` in der pocketmine.yml schreibt der Server: Waffen-Treffer (Speer, Streitkolben) mit Schaden und ob er abgebrochen wurde, Speer-Ansturm-Treffer, Tresor-Benutzung, warum ein Prüfungsspawner nicht startet (Kreativmodus, Friedlich, kein Platz) und wenn ein Plugin die Benutzung eines Blocks verhindert |
 
 ## Neu in 5.51
 

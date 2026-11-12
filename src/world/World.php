@@ -2503,6 +2503,10 @@ class World implements ChunkManager{
 			}
 
 			$ev->call();
+			if($ev->isCancelled() && $blockClicked instanceof \pocketmine\block\GenericBedrockBlock){
+				//BetterPMMP: diagnosis - a plugin (world protection) blocked using this block
+				$this->logger->debug("[Block] " . $player->getName() . " darf " . $blockClicked->getBedrockName() . " nicht benutzen: PlayerInteractEvent wurde abgebrochen (Schutz-Plugin?)");
+			}
 			if(!$ev->isCancelled()){
 				if($ev->useBlock() && $blockClicked->onInteract($item, $face, $clickVector, $player, $returnedItems)){
 					return true;

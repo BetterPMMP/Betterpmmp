@@ -2124,6 +2124,10 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 
 		$entity->attack($ev);
 		$this->broadcastAnimation(new ArmSwingAnimation($this), $this->getViewers());
+		if($heldItem instanceof Spear || $heldItem instanceof \pocketmine\item\Mace){
+			//BetterPMMP: diagnosis for weapon damage reports (debug level 2 in pocketmine.yml)
+			$this->logger->debug("[Waffe] " . $heldItem->getName() . " -> " . $entity->getName() . ": Grundschaden " . $ev->getBaseDamage() . ", Endschaden " . $ev->getFinalDamage() . ($ev->isCancelled() ? ", ABGEBROCHEN (Schutz-Plugin, PvP aus oder zu weit weg)" : ", ok"));
+		}
 
 		$soundPos = $entity->getPosition()->add(0, $entity->size->getHeight() / 2, 0);
 		if($ev->isCancelled()){
@@ -3065,6 +3069,7 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 			$ev = new EntityDamageByEntityEvent($this, $entity, EntityDamageEvent::CAUSE_ENTITY_ATTACK, max((float) $spear->getAttackPoints(), $spear->getKineticDamage($relative)), [], 0.7);
 			$entity->attack($ev);
 			$this->spearHits[$entity->getId()] = $currentTick;
+			$this->logger->debug("[Speer-Ansturm] " . $entity->getName() . ": Tempo " . round($speed, 1) . " Bl/s, Schaden " . round($ev->getFinalDamage(), 1) . ($ev->isCancelled() ? ", ABGEBROCHEN (Schutz-Plugin / PvP aus)" : ""));
 			if(!$ev->isCancelled()){
 				$this->getWorld()->addSound($center, new EntityAttackSound());
 				if($this->hasFiniteResources()){
