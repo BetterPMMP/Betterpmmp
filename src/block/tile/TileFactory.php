@@ -85,6 +85,8 @@ final class TileFactory{
 		$this->register(MobHead::class, ["Skull", "minecraft:skull"]);
 		$this->register(GlowingItemFrame::class, ["GlowItemFrame"]);
 		$this->register(HangingSign::class, ["HangingSign", "minecraft:hanging_sign"]);
+		$this->register(DecoratedPot::class, ["DecoratedPot", "minecraft:decorated_pot"]); //BetterPMMP
+		$this->register(Conduit::class, ["Conduit", "minecraft:conduit"]); //BetterPMMP
 
 		//TODO: ChalkboardBlock
 		//TODO: ChemistryTable

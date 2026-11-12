@@ -91,6 +91,21 @@ final class ExtraVanillaBlocks{
 		"minecraft:pale_oak_sapling" => [VanillaSapling::class, null],
 		"minecraft:poplar_sapling" => [VanillaSapling::class, null],
 		"minecraft:kelp" => [VanillaKelp::class, null],
+		"minecraft:copper_chest" => [VanillaCopperChest::class, \pocketmine\block\tile\Chest::class],
+		"minecraft:exposed_copper_chest" => [VanillaCopperChest::class, \pocketmine\block\tile\Chest::class],
+		"minecraft:oxidized_copper_chest" => [VanillaCopperChest::class, \pocketmine\block\tile\Chest::class],
+		"minecraft:weathered_copper_chest" => [VanillaCopperChest::class, \pocketmine\block\tile\Chest::class],
+		"minecraft:waxed_copper_chest" => [VanillaCopperChest::class, \pocketmine\block\tile\Chest::class],
+		"minecraft:waxed_exposed_copper_chest" => [VanillaCopperChest::class, \pocketmine\block\tile\Chest::class],
+		"minecraft:waxed_oxidized_copper_chest" => [VanillaCopperChest::class, \pocketmine\block\tile\Chest::class],
+		"minecraft:waxed_weathered_copper_chest" => [VanillaCopperChest::class, \pocketmine\block\tile\Chest::class],
+		"minecraft:decorated_pot" => [VanillaDecoratedPot::class, \pocketmine\block\tile\DecoratedPot::class],
+		"minecraft:mangrove_propagule" => [VanillaMangrovePropagule::class, null],
+		"minecraft:seagrass" => [VanillaSeagrass::class, null],
+		"minecraft:bubble_column" => [VanillaBubbleColumn::class, null],
+		"minecraft:conduit" => [VanillaConduit::class, \pocketmine\block\tile\Conduit::class],
+		"minecraft:lodestone" => [VanillaLodestone::class, null],
+		"minecraft:sculk_catalyst" => [VanillaSculkCatalyst::class, null],
 	];
 
 	public static function getAll() : array{

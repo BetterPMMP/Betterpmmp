@@ -30,6 +30,11 @@ use pocketmine\event\entity\EntityDamageEvent;
 
 class Magma extends Opaque{
 
+	//BetterPMMP: bubble columns
+	public function onNearbyBlockChange() : void{
+		VanillaBubbleColumn::updateAbove($this);
+	}
+
 	public function getLightLevel() : int{
 		return 3;
 	}

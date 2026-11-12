@@ -633,6 +633,12 @@ class InGamePacketHandler extends PacketHandler{
 		return true;
 	}
 
+	public function handlePositionTrackingDBClientRequest(\pocketmine\network\mcpe\protocol\PositionTrackingDBClientRequestPacket $packet) : bool{
+		//BetterPMMP: lodestone compasses ask where their lodestone is
+		$this->session->sendDataPacket(\pocketmine\world\LodestoneTracker::answer($packet->getTrackingId()));
+		return true;
+	}
+
 	public function handleScriptMessage(\pocketmine\network\mcpe\protocol\ScriptMessagePacket $packet) : bool{
 		//BetterPMMP: inventory clicks of Java Edition players, forwarded by the BetterPMMP-Bridge ViaProxy plugin
 		if($packet->getMessageId() === "betterpmmp:java_click" && \pocketmine\network\JavaBridge::isJavaPlayer($this->player)){

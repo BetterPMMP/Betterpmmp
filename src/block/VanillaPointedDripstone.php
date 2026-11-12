@@ -87,6 +87,10 @@ class VanillaPointedDripstone extends GenericBedrockBlock{
 		if(!$lava && !$liquid instanceof Water){
 			return;
 		}
+		if(!$lava && mt_rand(1, 1000) <= 11 && $top - $y < 6){
+			$this->growDown();
+			return;
+		}
 		if(mt_rand(0, 255) >= ($lava ? 15 : 45)){
 			return;
 		}
@@ -109,5 +113,20 @@ class VanillaPointedDripstone extends GenericBedrockBlock{
 				return;
 			}
 		}
+	}
+
+	/** Grows the stalactite one block down (water above the dripstone block). */
+	private function growDown() : void{
+		$world = $this->position->getWorld();
+		$below = $this->position->subtract(0, 1, 0);
+		if($world->getBlock($below)->getTypeId() !== BlockTypeIds::AIR){
+			return;
+		}
+		$above = $this->getSide(Facing::UP);
+		if($above instanceof self && $above->thickness() === "frustum"){
+			$world->setBlock($above->position, $above->withProperties(["dripstone_thickness" => "middle"]));
+		}
+		$world->setBlock($this->position, $this->withProperties(["dripstone_thickness" => "frustum"]));
+		$world->setBlock($below, $this->withProperties(["dripstone_thickness" => "tip", "hanging" => 1]));
 	}
 }

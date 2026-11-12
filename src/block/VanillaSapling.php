@@ -122,8 +122,23 @@ class VanillaSapling extends GenericBedrockBlock{
 			}
 		}
 		[$cx, $cz] = $corner;
+		$kind = $this->kind();
+		return self::growStructure($this, $player, $cx, $y, $cz, $this->saplingPositions($cx, $cz), fn(BlockWriter $writer, Random $random) : bool => match($kind){
+			"cherry" => VanillaFeatures::cherry($writer, $cx, $y - 1, $cz, $random),
+			"pale_oak" => VanillaFeatures::paleOak($writer, $cx, $y - 1, $cz, $random),
+			default => self::poplar($writer, $cx, $y - 1, $cz, $random),
+		});
+	}
 
-		// build the tree in a copy of the surrounding chunks
+	/**
+	 * Builds a feature in a copy of the chunks around (cx, cz) and applies the
+	 * difference as one block transaction (StructureGrowEvent).
+	 *
+	 * @param list<array{int, int}> $clear sapling positions at height y cleared first
+	 * @phpstan-param \Closure(BlockWriter, Random) : bool $feature
+	 */
+	public static function growStructure(Block $source, ?Player $player, int $cx, int $y, int $cz, array $clear, \Closure $feature) : bool{
+		$world = $source->getPosition()->getWorld();
 		$copy = new SimpleChunkManager($world->getMinY(), $world->getMaxY());
 		for($chunkX = ($cx >> 4) - 1; $chunkX <= ($cx >> 4) + 1; ++$chunkX){
 			for($chunkZ = ($cz >> 4) - 1; $chunkZ <= ($cz >> 4) + 1; ++$chunkZ){
@@ -136,16 +151,10 @@ class VanillaSapling extends GenericBedrockBlock{
 		}
 		$writer = new BlockWriter($copy);
 		$random = new Random(mt_rand());
-		// saplings are not "air" for the space check, clear them in the copy first
-		foreach($this->saplingPositions($cx, $cz) as [$sx, $sz]){
+		foreach($clear as [$sx, $sz]){
 			$writer->setBlock($sx, $y, $sz, VanillaBlocks::AIR());
 		}
-		$grown = match($this->kind()){
-			"cherry" => VanillaFeatures::cherry($writer, $cx, $y - 1, $cz, $random),
-			"pale_oak" => VanillaFeatures::paleOak($writer, $cx, $y - 1, $cz, $random),
-			default => self::poplar($writer, $cx, $y - 1, $cz, $random),
-		};
-		if(!$grown){
+		if(!$feature($writer, $random)){
 			return false;
 		}
 
@@ -172,7 +181,7 @@ class VanillaSapling extends GenericBedrockBlock{
 		if($changes === 0){
 			return false;
 		}
-		$ev = new StructureGrowEvent($this, $transaction, $player);
+		$ev = new StructureGrowEvent($source, $transaction, $player);
 		$ev->call();
 		return !$ev->isCancelled() && $transaction->apply();
 	}

@@ -28,6 +28,11 @@ use pocketmine\math\Facing;
 
 class SoulSand extends Opaque{
 
+	//BetterPMMP: bubble columns
+	public function onNearbyBlockChange() : void{
+		VanillaBubbleColumn::updateAbove($this);
+	}
+
 	protected function recalculateCollisionBoxes() : array{
 		return [AxisAlignedBB::one()->trim(Facing::UP, 1 / 8)];
 	}

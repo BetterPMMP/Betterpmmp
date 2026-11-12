@@ -140,6 +140,9 @@ abstract class Liquid extends Transparent{
 	}
 
 	protected function getEffectiveFlowDecay(Block $block) : int{
+		if(!($block instanceof Liquid) && ($held = $this->heldLiquid($block)) !== null){
+			$block = $held;
+		}
 		if(!($block instanceof Liquid) || !$block->hasSameTypeId($this)){
 			return -1;
 		}
@@ -343,6 +346,9 @@ abstract class Liquid extends Transparent{
 
 	/** @phpstan-impure */
 	private function getSmallestFlowDecay(Block $block, int $decay) : int{
+		if(!($block instanceof Liquid) && ($held = $this->heldLiquid($block)) !== null){
+			$block = $held; // a waterlogged block counts as a source
+		}
 		if(!($block instanceof Liquid) || !$block->hasSameTypeId($this)){
 			return $decay;
 		}
@@ -356,6 +362,19 @@ abstract class Liquid extends Transparent{
 		}
 
 		return ($decay >= 0 && $blockDecay >= $decay) ? $decay : $blockDecay;
+	}
+
+	/** The liquid held by a waterlogged block (liquid layer), if any. */
+	private function heldLiquid(Block $block) : ?Liquid{
+		if(!$block->getPosition()->isValid()){
+			return null;
+		}
+		if($block instanceof VanillaBubbleColumn){
+			return VanillaBlocks::WATER(); // bubble columns are water sources
+		}
+		$pos = $block->getPosition();
+		$held = $pos->getWorld()->getLiquidAt($pos->getFloorX(), $pos->getFloorY(), $pos->getFloorZ());
+		return $held instanceof Liquid ? $held : null;
 	}
 
 	protected function checkForHarden() : bool{

@@ -1073,6 +1073,9 @@ class World implements ChunkManager{
 				$entity->onNearbyBlockChange();
 			}
 			$block->onNearbyBlockChange();
+			if(!$block instanceof \pocketmine\block\Liquid && ($held = $this->getLiquidAt($x, $y, $z)) instanceof \pocketmine\block\Water){
+				Waterlogging::flowFrom($this, $x, $y, $z, $held);
+			}
 		}
 
 		$this->timings->neighbourBlockUpdates->stopTiming();

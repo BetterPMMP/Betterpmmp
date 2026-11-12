@@ -69,4 +69,43 @@ final class Waterlogging{
 	public static function isWaterSource(Block $block) : bool{
 		return $block instanceof Water && $block->isSource() && !$block->isFalling();
 	}
+
+	/**
+	 * Water held by a waterlogged block flows out like a source block: down if
+	 * it can, and to the sides. The core liquid code takes over from there and
+	 * treats the waterlogged block as a source (see Liquid).
+	 */
+	public static function flowFrom(World $world, int $x, int $y, int $z, Water $water) : void{
+		if(!$water->isSource()){
+			return;
+		}
+		$below = $world->getBlockAt($x, $y - 1, $z);
+		if(self::canFlowInto($world, $below)){
+			self::flowInto($world, $below, $water, 0, true);
+		}
+		foreach([[1, 0], [-1, 0], [0, 1], [0, -1]] as [$dx, $dz]){
+			$side = $world->getBlockAt($x + $dx, $y, $z + $dz);
+			if(self::canFlowInto($world, $side) && !(self::canHold($side) && $world->getLiquidAt($x + $dx, $y, $z + $dz) !== null)){
+				self::flowInto($world, $side, $water, $water->getFlowDecayPerBlock(), false);
+			}
+		}
+	}
+
+	private static function canFlowInto(World $world, Block $block) : bool{
+		$pos = $block->getPosition();
+		return $world->isInWorld($pos->getFloorX(), $pos->getFloorY(), $pos->getFloorZ()) && $block->canBeFlowedInto() && !$block instanceof \pocketmine\block\Liquid;
+	}
+
+	private static function flowInto(World $world, Block $block, Water $source, int $decay, bool $falling) : void{
+		$new = \pocketmine\block\VanillaBlocks::WATER()->setDecay($falling ? 0 : $decay)->setFalling($falling);
+		$ev = new \pocketmine\event\block\BlockSpreadEvent($block, $source, $new);
+		$ev->call();
+		if($ev->isCancelled()){
+			return;
+		}
+		if($block->getTypeId() !== \pocketmine\block\BlockTypeIds::AIR){
+			$world->useBreakOn($block->getPosition());
+		}
+		$world->setBlock($block->getPosition(), $ev->getNewState());
+	}
 }

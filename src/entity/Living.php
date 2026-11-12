@@ -690,7 +690,12 @@ abstract class Living extends Entity{
 		}
 
 		//TODO: check death conditions (must have been damaged by player < 5 seconds from death)
-		$this->getWorld()->dropExperience($this->location, $ev->getXpDropAmount());
+		$xp = $ev->getXpDropAmount();
+		//BetterPMMP: a sculk catalyst nearby turns the experience into sculk
+		if(!$this instanceof Human && $xp > 0 && \pocketmine\block\VanillaSculkCatalyst::absorb($this->getPosition(), $xp)){
+			$xp = 0;
+		}
+		$this->getWorld()->dropExperience($this->location, $xp);
 
 		$this->startDeathAnimation();
 	}
