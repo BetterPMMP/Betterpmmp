@@ -143,6 +143,11 @@ class LoginPacketHandler extends PacketHandler{
 	}
 
 	private function processLoginCommon(LoginPacket $packet, string $username, UuidInterface $legacyUuid, string $xuid, ClientData $clientData) : ?bool{
+		//BetterPMMP: Java Edition players through the ViaProxy started by BetterPMMP (Mojang account checked by ViaProxy)
+		$javaBridge = $xuid === "" && \pocketmine\network\JavaBridge::isBridgeAddress($this->session->getIp());
+		if($javaBridge){
+			$username = \pocketmine\network\JavaBridge::bridgeName($username);
+		}
 		if(!Player::isValidUserName($username)){
 			$this->session->disconnectWithError(KnownTranslationFactory::disconnectionScreen_invalidName());
 
@@ -211,7 +216,7 @@ class LoginPacketHandler extends PacketHandler{
 			return null;
 		}
 
-		return $ev->isAuthRequired();
+		return $javaBridge ? false : $ev->isAuthRequired();
 	}
 
 	/**

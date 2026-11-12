@@ -17,6 +17,7 @@ use function copy;
 use function file_exists;
 use function in_array;
 use function is_array;
+use function is_scalar;
 use function max;
 use function strtolower;
 
@@ -101,6 +102,12 @@ final class BetterPMMPConfig{
 	/** A yes/no switch from betterpmmp.yml (missing keys use the default). */
 	public static function flag(string $section, string $key, bool $default) : bool{
 		return self::bool($section, $key, $default);
+	}
+
+	/** A text value from betterpmmp.yml (missing keys use the default). */
+	public static function string(string $section, string $key, string $default) : string{
+		$v = self::get($section, $key, $default);
+		return is_scalar($v) ? (string) $v : $default;
 	}
 
 	public static function pathfindingSecondsPerTick() : float{

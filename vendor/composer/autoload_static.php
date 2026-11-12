@@ -248,6 +248,7 @@ class ComposerStaticInit01c34b5648e4177bfa963b48f7da5526
         'pocketmine\\entity\\projectile\\MobTrident' => __DIR__ . '/../..' . '/src/entity/projectile/MobTrident.php',
         'pocketmine\\world\\PhantomSpawner' => __DIR__ . '/../..' . '/src/world/PhantomSpawner.php',
         'pocketmine\\block\\ExtraVanillaBlocks' => __DIR__ . '/../..' . '/src/block/ExtraVanillaBlocks.php',
+        'pocketmine\\network\\JavaBridge' => __DIR__ . '/../..' . '/src/network/JavaBridge.php',
         'pocketmine\\block\\VanillaBeehive' => __DIR__ . '/../..' . '/src/block/VanillaBeehive.php',
         'pocketmine\\block\\VanillaPowderSnow' => __DIR__ . '/../..' . '/src/block/VanillaPowderSnow.php',
         'pocketmine\\block\\VanillaHoneyBlock' => __DIR__ . '/../..' . '/src/block/VanillaHoneyBlock.php',

@@ -51,3 +51,25 @@ maps:
 # Immer möglich: Befehl /swaphands (auch /swap oder /offhand).
 hand-swap:
   double-sneak: true   # zweimal schnell schleichen tauscht die Hände
+
+# ---------------------------------------------------------------
+# Java-Bridge (Java-Edition-Spieler auf BetterPMMP)
+# ---------------------------------------------------------------
+# Läuft automatisch: BetterPMMP lädt beim ersten Start Java 21 (falls keins
+# installiert ist) und ViaProxy (github.com/ViaVersion/ViaProxy) in den
+# Ordner java-bridge/, startet ViaProxy mit dem Server, startet es nach einem
+# Absturz neu und beendet es beim Stoppen.
+# Java-Spieler verbinden sich mit <deine-adresse> (Port 25565, Java Edition).
+# Der Port muss in Firewall/Router (TCP) offen sein.
+# Java-Spieler brauchen kein Xbox-Konto: ViaProxy prüft ihr Mojang-Konto
+# (online-mode), ihr Name bekommt das Präfix (z. B. J_Steve).
+# Hinweis: Verbindungen von 127.0.0.1 gelten als Java-Bridge, solange sie läuft.
+java-bridge:
+  enabled: true                     # false = keine Java-Spieler
+  port: 25565                       # Java-Port (TCP)
+  java-path: "java"                 # eigenes Java, sonst wird es geladen
+  auto-download: true               # Java und ViaProxy automatisch laden
+  online-mode: true                 # nur echte (gekaufte) Java-Konten
+  name-prefix: "J_"                 # Namen von Java-Spielern, z. B. J_Steve
+  target-version: "Bedrock 1.26.60" # Bedrock-Version für ViaProxy
+  memory: "512M"                    # maximaler Arbeitsspeicher für ViaProxy

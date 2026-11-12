@@ -12,7 +12,7 @@ vanilla game engine on top so that you can play survival from start to finish.
 
 GitHub: https://github.com/BetterPMMP/Betterpmmp
 
-Current version: **5.28-vanilla-beta.1** (API 5.51.0, plugins for PocketMine-MP 5 keep working).
+Current version: **5.29-vanilla-beta.1** (API 5.51.0, plugins for PocketMine-MP 5 keep working).
 
 > Status: beta. Many systems behave like vanilla, but not every detail matches
 > the official Bedrock Dedicated Server yet. See `VANILLA-PARITY.md` for an honest
@@ -84,6 +84,12 @@ Current version: **5.28-vanilla-beta.1** (API 5.51.0, plugins for PocketMine-MP 
 - Maps: filled maps that draw while you walk, cartography table (zoom, copy, lock,
   rename), buried treasure maps and explorer maps from cartographers.
 
+### Java Edition players (Java bridge)
+- Java players can join directly: on first start BetterPMMP downloads Java 21 (if none
+  is installed) and ViaProxy, runs it in the background on port 25565, restarts it when
+  it crashes and stops it with the server. Java accounts are checked by Mojang, names
+  get the prefix `J_`. Settings: `java-bridge` in `betterpmmp.yml`.
+
 ### Bees and cave blocks
 - Bees fly to flowers, collect nectar, pollinate crops and fill beehives and bee nests
   with honey; shears give honeycomb, glass bottles give honey bottles; bees get angry
@@ -120,7 +126,7 @@ Anfang bis Ende spielen kann.
 
 GitHub: https://github.com/BetterPMMP/Betterpmmp
 
-Aktuelle Version: **5.28-vanilla-beta.1** (API 5.51.0, Plugins für PocketMine-MP 5 laufen weiter).
+Aktuelle Version: **5.29-vanilla-beta.1** (API 5.51.0, Plugins für PocketMine-MP 5 laufen weiter).
 
 > Stand: Beta. Viele Systeme verhalten sich wie in Vanilla, aber noch nicht jedes
 > Detail stimmt mit dem offiziellen Bedrock Dedicated Server überein. Den ehrlichen
@@ -198,6 +204,12 @@ Aktuelle Version: **5.28-vanilla-beta.1** (API 5.51.0, Plugins für PocketMine-M
   Wolfsrüstung, Pulverschnee-Eimer, Windkugeln, bunte Eier.
 - Karten: Karten, die sich beim Laufen zeichnen, Kartentisch (Vergrößern, Kopieren,
   Sperren, Umbenennen), Schatzkarten und Entdeckerkarten vom Kartografen.
+
+### Java-Edition-Spieler (Java-Bridge)
+- Java-Spieler joinen direkt: Beim ersten Start lädt BetterPMMP Java 21 (falls keins
+  installiert ist) und ViaProxy, startet es im Hintergrund auf Port 25565, startet es nach
+  Abstürzen neu und beendet es mit dem Server. Java-Konten prüft Mojang, Namen bekommen
+  das Präfix `J_`. Einstellungen: `java-bridge` in `betterpmmp.yml`.
 
 ### Bienen und Höhlenblöcke
 - Bienen fliegen zu Blumen, sammeln Nektar, bestäuben Pflanzen und füllen Bienenstöcke

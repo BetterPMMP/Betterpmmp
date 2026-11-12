@@ -1094,6 +1094,7 @@ class Server{
 				$this->forceShutdownExit();
 				return;
 			}
+			\pocketmine\network\JavaBridge::start($this); //BetterPMMP: Java Edition players via ViaProxy
 
 			if($this->configGroup->getPropertyBool(Yml::ANONYMOUS_STATISTICS_ENABLED, true)){
 				$this->sendUsageTicker = self::TICKS_PER_STATS_REPORT;
@@ -1590,6 +1591,8 @@ class Server{
 				$this->pluginManager->disablePlugins();
 			}
 
+			\pocketmine\network\JavaBridge::stop();
+
 			if(isset($this->network)){
 				$this->network->getSessionManager()->close($this->configGroup->getPropertyString(Yml::SETTINGS_SHUTDOWN_MESSAGE, "Server closed"));
 			}
@@ -1926,6 +1929,9 @@ class Server{
 		Timings::$serverTick->startTiming();
 
 		++$this->tickCounter;
+		if($this->tickCounter % 200 === 0){
+			\pocketmine\network\JavaBridge::watchdog($this);
+		}
 
 		Timings::$scheduler->startTiming();
 		$this->pluginManager->tickSchedulers($this->tickCounter);
