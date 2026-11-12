@@ -117,6 +117,17 @@ class ItemStackRequestExecutor{
 	 * @throws ItemStackRequestProcessException
 	 */
 	protected function getBuilderInventoryAndSlot(ItemStackRequestSlotInfo $info) : array{
+		if($info->getContainerName()->getContainerId() === ContainerUIIds::DYNAMIC){
+			//BetterPMMP: bundle contents
+			$bundle = $this->inventoryManager->getBundleInventory($info->getContainerName()->getDynamicId() ?? -1);
+			if($bundle === null || !$bundle->slotExists($info->getSlotId())){
+				throw new ItemStackRequestProcessException("No bundle with ID " . ($info->getContainerName()->getDynamicId() ?? "none") . " (slot " . $info->getSlotId() . ")");
+			}
+			if($info->getStackId() !== $this->request->getRequestId()){
+				$this->matchItemStack($bundle, $info->getSlotId(), $info->getStackId());
+			}
+			return [$this->builder->getInventory($bundle), $info->getSlotId()];
+		}
 		[$windowId, $slotId] = ItemStackContainerIdTranslator::translate($info->getContainerName()->getContainerId(), $this->inventoryManager->getCurrentWindowId(), $info->getSlotId());
 		$windowAndSlot = $this->inventoryManager->locateWindowAndSlot($windowId, $slotId);
 		if($windowAndSlot === null){
@@ -183,6 +194,19 @@ class ItemStackRequestExecutor{
 		}
 
 		$existingItem = $inventory->getItem($slot);
+		if($slotInfo->getContainerName()->getContainerId() === ContainerUIIds::DYNAMIC){
+			//BetterPMMP: bundles hold 64 weight, and not themselves
+			if(\pocketmine\inventory\BundleInventory::isBundle($item) && \pocketmine\inventory\BundleInventory::getId($item) === $slotInfo->getContainerName()->getDynamicId()){
+				throw new ItemStackRequestProcessException("A bundle cannot go inside itself");
+			}
+			$weight = \pocketmine\inventory\BundleInventory::itemWeight((clone $item)->setCount($count));
+			foreach($inventory->getContents() as $inner){
+				$weight += \pocketmine\inventory\BundleInventory::itemWeight($inner);
+			}
+			if($weight > \pocketmine\inventory\BundleInventory::CAPACITY){
+				throw new ItemStackRequestProcessException("The bundle is full");
+			}
+		}
 		if(!$existingItem->isNull() && !$existingItem->canStackWith($item)){
 			throw new ItemStackRequestProcessException($this->prettyInventoryAndSlot($inventory, $slot) . ": Can only add items to an empty slot, or a slot containing the same item");
 		}
@@ -467,7 +491,7 @@ class ItemStackRequestExecutor{
 	public function getItemStackResponseBuilder() : ItemStackResponseBuilder{
 		$builder = new ItemStackResponseBuilder($this->request->getRequestId(), $this->inventoryManager);
 		foreach($this->requestSlotInfos as $requestInfo){
-			$builder->addSlot($requestInfo->getContainerName()->getContainerId(), $requestInfo->getSlotId());
+			$builder->addSlot($requestInfo->getContainerName()->getContainerId(), $requestInfo->getSlotId(), $requestInfo->getContainerName()->getDynamicId());
 		}
 
 		return $builder;

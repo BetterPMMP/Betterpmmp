@@ -41,6 +41,7 @@ use pocketmine\inventory\transaction\action\SlotChangeAction;
 use pocketmine\inventory\transaction\InventoryTransaction;
 use pocketmine\item\enchantment\EnchantingOption;
 use pocketmine\item\enchantment\EnchantmentInstance;
+use pocketmine\inventory\BundleInventory;
 use pocketmine\item\Item;
 use pocketmine\network\mcpe\cache\CreativeInventoryCache;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
@@ -55,6 +56,7 @@ use pocketmine\network\mcpe\protocol\types\BlockPosition;
 use pocketmine\network\mcpe\protocol\types\Enchant;
 use pocketmine\network\mcpe\protocol\types\EnchantOption as ProtocolEnchantOption;
 use pocketmine\network\mcpe\protocol\types\inventory\ContainerIds;
+use pocketmine\network\mcpe\protocol\types\inventory\ContainerUIIds;
 use pocketmine\network\mcpe\protocol\types\inventory\FullContainerName;
 use pocketmine\network\mcpe\protocol\types\inventory\ItemStack;
 use pocketmine\network\mcpe\protocol\types\inventory\ItemStackWrapper;
@@ -449,6 +451,10 @@ class InventoryManager{
 			};
 			return [ContainerOpenPacket::blockInv($id, $windowType, $blockPosition)];
 		}
+		if($inv instanceof \pocketmine\entity\object\MinecartInventory){
+			//BetterPMMP: minecarts with chest / hopper are entity containers
+			return [ContainerOpenPacket::entityInv($id, $inv->getHolder()->getWindowType(), $inv->getHolder()->getId())];
+		}
 		return null;
 	}
 
@@ -574,6 +580,7 @@ class InventoryManager{
 		}
 
 		unset($inventoryEntry->predictions[$slot]);
+		$this->noticeBundle($inventory, $slot);
 	}
 
 	private function sendInventorySlotPackets(int $windowId, int $netSlot, ItemStackWrapper $itemStackWrapper) : void{
@@ -627,6 +634,10 @@ class InventoryManager{
 	}
 
 	public function syncSlot(Inventory $inventory, int $slot, ItemStack $itemStack) : void{
+		if($inventory instanceof BundleInventory){
+			$this->syncContents($inventory);
+			return;
+		}
 		$entry = $this->inventories[spl_object_id($inventory)] ?? null;
 		if($entry === null){
 			throw new \LogicException("Cannot sync an untracked inventory");
@@ -679,7 +690,15 @@ class InventoryManager{
 				$info = $this->trackItemStack($entry, $slot, $itemStack, null);
 				$contents[] = new ItemStackWrapper($info->getStackId(), $itemStack);
 			}
-			if($entry->complexSlotMap !== null){
+			if($inventory instanceof BundleInventory){
+				//BetterPMMP: bundle contents are a dynamic container
+				$this->session->sendDataPacket(InventoryContentPacket::create(
+					ContainerIds::CONTAINER_ID_REGISTRY,
+					$contents,
+					new FullContainerName(ContainerUIIds::DYNAMIC, $inventory->getBundleId()),
+					new ItemStackWrapper(0, ItemStack::null())
+				));
+			}elseif($entry->complexSlotMap !== null){
 				foreach($contents as $slotId => $info){
 					$packetSlot = $entry->complexSlotMap->mapCoreToNet($slotId) ?? null;
 					if($packetSlot === null){
@@ -689,6 +708,116 @@ class InventoryManager{
 				}
 			}else{
 				$this->sendInventoryContentPackets($windowId, $contents);
+			}
+			foreach($inventory->getContents() as $slot => $item){
+				$this->noticeBundle($inventory, $slot);
+			}
+		}
+	}
+
+	/** BetterPMMP: bundle contents by bundle id */
+	private array $bundles = [];
+	private int $nextBundleWindow = 0x10000;
+	private bool $bundleUpdating = false;
+
+	/** The contents of a bundle the player can reach (inventory, cursor, open container). */
+	public function getBundleInventory(int $bundleId) : ?BundleInventory{
+		if(isset($this->bundles[$bundleId])){
+			return $this->bundles[$bundleId];
+		}
+		$found = $this->findBundle($bundleId);
+		return $found === null ? null : $this->trackBundle($bundleId, $found[0]->getItem($found[1]));
+	}
+
+	/**
+	 * @return array{Inventory, int}|null
+	 */
+	private function findBundle(int $bundleId) : ?array{
+		$inventories = [$this->player->getInventory(), $this->player->getCursorInventory(), $this->player->getOffHandInventory()];
+		$window = $this->player->getCurrentWindow();
+		if($window !== null){
+			$inventories[] = $window;
+		}
+		$inventories = [...$inventories, ...$this->bundles];
+		foreach($inventories as $inventory){
+			foreach($inventory->getContents() as $slot => $item){
+				if(BundleInventory::isBundle($item) && BundleInventory::getId($item) === $bundleId){
+					return [$inventory, $slot];
+				}
+			}
+		}
+		return null;
+	}
+
+	private function trackBundle(int $bundleId, Item $item) : BundleInventory{
+		$inventory = new BundleInventory($bundleId);
+		$inventory->setContents(BundleInventory::readContents($item));
+		$writeBack = function() use ($bundleId) : void{
+			$this->writeBackBundle($bundleId);
+		};
+		$inventory->getListeners()->add(new \pocketmine\inventory\CallbackInventoryListener(
+			function(Inventory $inv, int $slot, Item $old) use ($writeBack) : void{ $writeBack(); },
+			function(Inventory $inv, array $old) use ($writeBack) : void{ $writeBack(); }
+		));
+		$this->add($this->nextBundleWindow++, $inventory);
+		$this->bundles[$bundleId] = $inventory;
+		$inventory->onOpen($this->player);
+		$this->syncContents($inventory);
+		return $inventory;
+	}
+
+	/** Stores changed bundle contents back in the bundle item. */
+	private function writeBackBundle(int $bundleId) : void{
+		if($this->bundleUpdating || !isset($this->bundles[$bundleId])){
+			return;
+		}
+		$found = $this->findBundle($bundleId);
+		if($found === null){
+			return;
+		}
+		[$holder, $slot] = $found;
+		$this->bundleUpdating = true;
+		try{
+			$holder->setItem($slot, BundleInventory::writeContents($holder->getItem($slot), $this->bundles[$bundleId]));
+		}finally{
+			$this->bundleUpdating = false;
+		}
+	}
+
+	/** A bundle showed up in a slot: give it an id and send its contents. */
+	private function noticeBundle(Inventory $inventory, int $slot) : void{
+		if($this->bundleUpdating){
+			return;
+		}
+		$item = $inventory->getItem($slot);
+		if(!BundleInventory::isBundle($item)){
+			return;
+		}
+		$id = BundleInventory::getId($item);
+		if($id === null){
+			$this->bundleUpdating = true;
+			try{
+				$inventory->setItem($slot, BundleInventory::withId($item));
+			}finally{
+				$this->bundleUpdating = false;
+			}
+			$item = $inventory->getItem($slot);
+			$id = BundleInventory::getId($item) ?? 0;
+		}
+		if(!isset($this->bundles[$id])){
+			if(count($this->bundles) < 128){
+				$this->trackBundle($id, $item);
+			}
+			return;
+		}
+		// the item may have been changed elsewhere (another player, a plugin): refresh
+		$tracked = $this->bundles[$id];
+		if(!BundleInventory::writeContents($item, $tracked)->equalsExact($item)){
+			$this->bundleUpdating = true;
+			try{
+				$tracked->setContents(BundleInventory::readContents($item));
+			}finally{
+				$this->bundleUpdating = false;
 			}
 		}
 	}

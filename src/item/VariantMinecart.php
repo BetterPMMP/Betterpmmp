@@ -15,11 +15,16 @@ use pocketmine\entity\object\TntMinecartEntity;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 
-/** Minecart with TNT (and the other variants as plain carts until they get their own entity). */
+/** Minecarts with TNT, chest or hopper (other variants are placed as plain carts). */
 class VariantMinecart extends GenericBedrockItem{
 
 	public function onInteractBlock(Player $player, Block $blockReplace, Block $blockClicked, int $face, Vector3 $clickVector, array &$returnedItems) : ItemUseResult{
-		$class = $this->getBedrockName() === "minecraft:tnt_minecart" ? TntMinecartEntity::class : MinecartEntity::class;
+		$class = match($this->getBedrockName()){
+			"minecraft:tnt_minecart" => TntMinecartEntity::class,
+			"minecraft:chest_minecart" => \pocketmine\entity\object\ChestMinecartEntity::class,
+			"minecraft:hopper_minecart" => \pocketmine\entity\object\HopperMinecartEntity::class,
+			default => MinecartEntity::class,
+		};
 		if(MinecartEntity::placeOnRail($player, $player->getWorld(), $blockClicked->getPosition(), $class)){
 			if($player->hasFiniteResources()){
 				$this->pop();

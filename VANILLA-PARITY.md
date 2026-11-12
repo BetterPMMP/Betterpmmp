@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.47-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.48-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -44,11 +44,19 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 
 | Bereich | Offen |
 |---|---|
-| Kern | Bündel, Kisten-/Trichter-/Befehlsblock-Lore, Nautilus-Rüstung, Befehlsblöcke, Strukturblöcke |
+| Kern | Befehlsblock-Lore, Nautilus-Rüstung, Befehlsblöcke, Strukturblöcke |
 | Blöcke ohne Funktion | Fallende Stalaktiten, Sculk-Ader (eigene Ausbreitung), Pappel-Schilder (Text), Regale, Strohbett |
 | Mobs mit Standard-KI | Piglin-Barbar, Hoglin/Zoglin, Fuchs, Schildkröte (Eier legen), Delfin, Axolotl, Panda, Eisbär, Lama (Truhe, Spucken), Mooshroom (Scheren), Kaninchen, Fledermaus, Allay, Plagegeist, Endermilbe, Silberfischchen (aus Blöcken), neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel) |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.48
+
+| System | Stand |
+|---|---|
+| Lore mit Truhe | ✅ Eigenes Entity mit 27 Slots (Rechtsklick öffnet, gespeichert), beim Zerstören fällt der Inhalt heraus |
+| Lore mit Trichter | ✅ 5 Slots, saugt Gegenstände auf und zieht alle 4 Ticks einen Gegenstand aus dem Container darüber, eine aktivierte Aktivierungsschiene sperrt ihn |
+| Bündel | ✅ Alle Bündel (auch farbige) über das Bedrock-Bündel-Inventar (dynamischer Container): Gegenstände hinein- und herausnehmen, Gewicht wie Vanilla (64, Bündel im Bündel = 4 + Inhalt, kein Bündel in sich selbst), Inhalt im Gegenstand gespeichert (bleibt beim Ablegen, Wegwerfen, in Truhen). Vorher wurden Spieler beim Benutzen eines Bündels gekickt |
 
 ## Neu in 5.47
 

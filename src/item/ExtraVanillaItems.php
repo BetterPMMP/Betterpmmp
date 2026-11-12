@@ -151,6 +151,8 @@ final class ExtraVanillaItems{
 			$name === "minecraft:wind_charge" => new WindChargeItem($id, "Wind Charge"),
 			$name === "minecraft:ominous_bottle" => new OminousBottle($id, "Ominous Bottle", $name, 64),
 			$name === "minecraft:tnt_minecart" => new VariantMinecart($id, "Minecart with TNT", $name, 1),
+			$name === "minecraft:chest_minecart" => new VariantMinecart($id, "Minecart with Chest", $name, 1),
+			$name === "minecraft:hopper_minecart" => new VariantMinecart($id, "Minecart with Hopper", $name, 1),
 			$name === "minecraft:powder_snow_bucket" => new PlacingBucket($id, "Powder Snow Bucket", $name, 1),
 			$name === "minecraft:blue_egg" || $name === "minecraft:brown_egg" => new ColoredEgg($id, $display),
 			$name === "minecraft:armor_stand" => new PlaceableEntityItem($id, "Armor Stand", $name, 16),

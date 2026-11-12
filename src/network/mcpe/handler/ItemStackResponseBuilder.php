@@ -46,7 +46,14 @@ final class ItemStackResponseBuilder{
 		private InventoryManager $inventoryManager
 	){}
 
-	public function addSlot(int $containerInterfaceId, int $slotId) : void{
+	/** @phpstan-var array<int, array<int, int>> BetterPMMP: bundle (dynamic container) slots by bundle id */
+	private array $dynamicSlots = [];
+
+	public function addSlot(int $containerInterfaceId, int $slotId, ?int $dynamicId = null) : void{
+		if($containerInterfaceId === ContainerUIIds::DYNAMIC){
+			$this->dynamicSlots[$dynamicId ?? -1][$slotId] = $slotId;
+			return;
+		}
 		$this->changedSlots[$containerInterfaceId][$slotId] = $slotId;
 	}
 
@@ -102,6 +109,22 @@ final class ItemStackResponseBuilder{
 		$responseContainerInfos = [];
 		foreach($responseInfosByContainer as $containerInterfaceId => $responseInfos){
 			$responseContainerInfos[] = new ItemStackResponseContainerInfo(new FullContainerName($containerInterfaceId), $responseInfos);
+		}
+		foreach($this->dynamicSlots as $bundleId => $slotIds){
+			$bundle = $this->inventoryManager->getBundleInventory($bundleId);
+			if($bundle === null){
+				continue;
+			}
+			$responseInfos = [];
+			foreach($slotIds as $slotId){
+				$itemStackInfo = $this->inventoryManager->getItemStackInfo($bundle, $slotId);
+				if($itemStackInfo === null){
+					continue;
+				}
+				$item = $bundle->getItem($slotId);
+				$responseInfos[] = new ItemStackResponseSlotInfo($slotId, $slotId, $item->getCount(), $itemStackInfo->getStackId(), $item->getCustomName(), $item->getCustomName(), $item instanceof Durable ? $item->getDamage() : 0);
+			}
+			$responseContainerInfos[] = new ItemStackResponseContainerInfo(new FullContainerName(ContainerUIIds::DYNAMIC, $bundleId), $responseInfos);
 		}
 
 		return new ItemStackResponse(ItemStackResponse::RESULT_OK, $this->requestId, $responseContainerInfos);

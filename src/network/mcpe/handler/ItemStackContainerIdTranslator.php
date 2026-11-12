@@ -93,6 +93,9 @@ final class ItemStackContainerIdTranslator{
 
 			//all preview slots are ignored, since the client shouldn't be modifying those directly
 
+			//BetterPMMP: bundles are looked up by their dynamic ID, not by a window
+			ContainerUIIds::DYNAMIC => [-1, $slotId],
+
 			default => throw new PacketHandlingException("Unexpected container UI ID $containerInterfaceId")
 		};
 	}
