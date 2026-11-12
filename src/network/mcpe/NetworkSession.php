@@ -602,6 +602,9 @@ class NetworkSession{
 		if(\pocketmine\network\JavaBridge::isBridgeAddress($this->ip) && !$this->info instanceof XboxLivePlayerInfo){
 			//BetterPMMP: fixes for Java Edition players coming through the Java bridge
 			$packet = ($this->javaPacketFixer ??= new JavaPacketFixer())->fix($packet);
+			if($packet === null){
+				return true; // not meant for Java players
+			}
 		}
 
 		$timings = Timings::getSendDataPacketTimings($packet);
@@ -1054,6 +1057,13 @@ class NetworkSession{
 			$key = $packManager->getPackEncryptionKey($resourcePack->getPackId());
 			if($key !== null){
 				$keys[$resourcePack->getPackId()] = $key;
+			}
+		}
+		if(\pocketmine\network\JavaBridge::isBridgeAddress($this->ip) && !$this->info instanceof XboxLivePlayerInfo){
+			//BetterPMMP: Java players get the 3D models of the server's NPCs as an extra pack
+			$npcPack = \pocketmine\network\JavaNpcModels::buildPack($this->server);
+			if($npcPack !== null){
+				$resourcePacks[] = $npcPack;
 			}
 		}
 		$event = new PlayerResourcePackOfferEvent($this->info, $resourcePacks, $keys, $packManager->resourcePacksRequired());

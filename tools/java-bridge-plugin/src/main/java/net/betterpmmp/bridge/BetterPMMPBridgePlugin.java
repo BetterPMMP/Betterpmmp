@@ -9,6 +9,7 @@ import com.viaversion.viaversion.api.Via;
 import com.viaversion.viaversion.api.minecraft.BlockPosition;
 import com.viaversion.viaversion.api.protocol.packet.PacketWrapper;
 import com.viaversion.viaversion.api.type.Types;
+import com.viaversion.viaversion.api.type.types.version.VersionedTypes;
 import com.viaversion.viaversion.libs.mcstructs.text.TextComponent;
 import com.viaversion.viaversion.libs.mcstructs.text.components.TranslationComponent;
 import com.viaversion.viaversion.protocols.v26_2to26_3.packet.ClientboundPackets26_3;
@@ -50,6 +51,7 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
     public static final String CLICK_MESSAGE = "betterpmmp:java_click";
     public static final String SIZE_MESSAGE = "betterpmmp:container_size";
     public static final String TITLE_MESSAGE = "betterpmmp:window_title";
+    public static final String CRAFT_RESULT_MESSAGE = "betterpmmp:craft_result";
 
     @Override
     public void onEnable() {
@@ -83,6 +85,27 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
             wrapper.cancel();
             final String id = wrapper.read(BedrockTypes.STRING);
             final String value = wrapper.read(BedrockTypes.STRING);
+            if (CRAFT_RESULT_MESSAGE.equals(id)) {
+                final int windowId;
+                try {
+                    windowId = Integer.parseInt(value);
+                } catch (NumberFormatException e) {
+                    return;
+                }
+                final InventoryTracker inventoryTracker = wrapper.user().get(InventoryTracker.class);
+                if (windowId == 0) {
+                    // inventory screen: slot 0 is the result of the 2x2 grid
+                    final PacketWrapper setSlot = PacketWrapper.create(ClientboundPackets26_3.CONTAINER_SET_SLOT, wrapper.user());
+                    setSlot.write(Types.VAR_INT, 0); // container id
+                    setSlot.write(Types.VAR_INT, 0); // revision
+                    setSlot.write(Types.SHORT, (short) 0); // slot
+                    setSlot.write(VersionedTypes.V26_3.item, inventoryTracker.getHudContainer().getJavaItem(BridgeWorkbenchContainer.RESULT_SLOT)); // item
+                    setSlot.send(BedrockProtocol.class);
+                } else if (inventoryTracker.getCurrentContainer() instanceof BridgeWorkbenchContainer container && (container.containerId() & 0xFF) == windowId) {
+                    PacketFactory.sendJavaContainerSetContent(wrapper.user(), container);
+                }
+                return;
+            }
             if (TITLE_MESSAGE.equals(id)) {
                 final int colon = value.indexOf(':');
                 if (colon <= 0) {
@@ -161,6 +184,14 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
                     return;
                 }
                 case CONTAINER -> container = new BridgeChestContainer(wrapper.user(), containerId, title, position, rows * 9);
+                case WORKBENCH -> {
+                    final BridgeWorkbenchContainer workbench = new BridgeWorkbenchContainer(wrapper.user(), containerId, new TranslationComponent("container.crafting"), position);
+                    inventoryTracker.setCurrentContainer(workbench);
+                    wrapper.write(Types.VAR_INT, (int) containerId); // container id
+                    wrapper.write(Types.VAR_INT, BedrockProtocol.MAPPINGS.getBedrockToJavaContainers().get(ContainerType.WORKBENCH)); // type: crafting
+                    wrapper.write(Types.TAG, TextUtil.textComponentToNbt(workbench.title())); // title
+                    return;
+                }
                 case NONE, CAULDRON, JUKEBOX, ARMOR, HAND, HUD, DECORATED_POT -> {
                     wrapper.cancel();
                     return;

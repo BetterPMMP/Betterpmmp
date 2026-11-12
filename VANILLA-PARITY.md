@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.37-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.38-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -50,6 +50,13 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
 
+## Neu in 5.38
+
+| System | Stand |
+|---|---|
+| Java-Bridge: 3D-NPCs | 🟡 NPCs (Humans ohne Spieler) mit eigenem 3D-Modell im Skin baut BetterPMMP für Java-Spieler in ein Zusatz-Pack um (Geometrie, Textur, Render-Controller pro Modell) und schickt sie als eigenes Wesen statt als Spieler – ViaBedrock zeigt sie dann mit Modell. Klicken bleibt gleich. Setzt voraus, dass Java das Pack lädt (Port 25566) |
+| Java-Bridge: Craften | ✅ 2×2-Raster im Inventar und Werkbank: BetterPMMP berechnet das Ergebnis (Bedrock rechnet es im Client, Java braucht es vom Server), Klick aufs Ergebnis craftet in die Hand, Shift-Klick so oft wie möglich ins Inventar – als echte Crafting-Transaktion (CraftItemEvent für Plugins). BetterPMMP-Bridge 1.3.0 öffnet die Werkbank als Java-Crafting-Fenster |
+
 ## Neu in 5.37
 
 | System | Stand |
@@ -62,7 +69,7 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 |---|---|
 | Java-Bridge: Menü-Überschriften | ✅ BetterPMMP merkt sich für Java-Spieler den Namen von (Fake-)Kisten, die Menü-Plugins setzen, und schickt ihn beim Öffnen direkt mit – Überschriften kommen jetzt auch, wenn das Menü direkt nach einem Formular öffnet (Case-Opening, Aufgaben, Battle Pass). BetterPMMP-Bridge 1.2.0 |
 | Java-Bridge: Texture-Packs | ✅ ViaBedrock wandelt das Bedrock-Pack für Java um, bot es aber nur unter 127.0.0.1 an (Java-Client konnte es nicht laden). BetterPMMP stellt den Pack-Server jetzt öffentlich auf Port 25566 (`resource-pack-port`) mit der öffentlichen Adresse (`public-address`, leer = automatisch) |
-| Custom-NPCs (eigene Modelle) auf Java | ⚠️ nur mit der Client-Mod ViaBedrockUtility/BedrockSkinUtility (Fabric) – normales Java kann Bedrock-Modelle nicht darstellen |
+| Custom-NPCs (eigene Modelle) auf Java | seit 5.38 über ein erzeugtes NPC-Pack (siehe unten) |
 
 ## Neu in 5.35
 
