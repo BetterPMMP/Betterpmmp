@@ -154,6 +154,7 @@ use function assert;
 use function count;
 use function explode;
 use function floor;
+use function is_array;
 use function get_class;
 use function max;
 use function mb_strlen;
@@ -317,6 +318,8 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 	private int $lastEmoteTick = 0;
 
 	protected int $formIdCounter = 0;
+	/** BetterPMMP: form currently shown as a chat menu to a Java Edition player */
+	protected ?JavaChatForm $javaChatForm = null;
 	/** @var Form[] */
 	protected array $forms = [];
 
@@ -1664,6 +1667,16 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 					$messagePart = substr($messagePart, 1);
 				}
 
+				if($this->javaChatForm !== null && !str_starts_with($messagePart, "/")){
+					//BetterPMMP: answer to a form shown as a chat menu (Java Edition players)
+					$chatForm = $this->javaChatForm;
+					[$finished, $response] = $chatForm->answer($this, $messagePart);
+					if($finished){
+						$this->javaChatForm = null;
+						$this->onFormSubmit($chatForm->formId, $response);
+					}
+					continue;
+				}
 				if(str_starts_with($messagePart, "/")){
 					Timings::$playerCommand->startTiming();
 					$this->server->dispatchCommand($this, substr($messagePart, 1));
@@ -2443,6 +2456,16 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 	 */
 	public function sendForm(Form $form) : void{
 		$id = $this->formIdCounter++;
+		if(\pocketmine\network\JavaBridge::isJavaPlayer($this)){
+			//BetterPMMP: Java Edition players get forms as chat menus (ViaProxy cannot show form windows reliably)
+			$data = $form->jsonSerialize();
+			if(is_array($data)){
+				$this->forms[$id] = $form;
+				$this->javaChatForm = new JavaChatForm($id, $data);
+				$this->javaChatForm->show($this);
+				return;
+			}
+		}
 		if($this->getNetworkSession()->onFormSent($id, $form)){
 			$this->forms[$id] = $form;
 		}
@@ -2478,6 +2501,10 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 	 * Closes the current viewing form and forms in queue.
 	 */
 	public function closeAllForms() : void{
+		if($this->javaChatForm !== null){
+			$this->forms = [];
+			$this->javaChatForm = null;
+		}
 		$this->getNetworkSession()->onCloseAllForms();
 	}
 

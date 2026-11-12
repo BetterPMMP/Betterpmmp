@@ -91,6 +91,11 @@ final class JavaBridge{
 		return self::$active && self::$process !== null && ($ip === "127.0.0.1" || $ip === "::1");
 	}
 
+	/** Whether this player plays Java Edition through the bridge (no Xbox account, connected via the local proxy). */
+	public static function isJavaPlayer(\pocketmine\player\Player $player) : bool{
+		return $player->getXuid() === "" && self::isBridgeAddress($player->getNetworkSession()->getIp());
+	}
+
 	/** In-game name of a Java player (prefix + name, at most 16 characters). */
 	public static function bridgeName(string $username) : string{
 		$name = BetterPMMPConfig::string("java-bridge", "name-prefix", "J_") . $username;
