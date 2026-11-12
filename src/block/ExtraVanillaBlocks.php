@@ -24,6 +24,7 @@ use function max;
 use function min;
 use function round;
 use function str_contains;
+use function str_ends_with;
 use function str_replace;
 use function ucwords;
 
@@ -181,7 +182,7 @@ final class ExtraVanillaBlocks{
 			$light = (int) max(0, min(15, round($brightness * 15)));
 			$hasItem = array_key_exists($name, $itemMap) && !self::isTechnical($name);
 			$breakInfo = $hardness < 0 ? BlockBreakInfo::indestructible() : new BlockBreakInfo($hardness, self::toolType($name), 0, (float) ($props["blastResistance"] ?? $hardness * 5));
-			[$class, $tileClass] = self::BEHAVIOURS[$name] ?? [GenericBedrockBlock::class, null];
+			[$class, $tileClass] = self::BEHAVIOURS[$name] ?? [self::shapeClass($name, $states[$default] ?? null), null];
 			$blocks[$name] = new $class(
 				new BlockIdentifier(self::BASE_TYPE_ID + $index, $tileClass),
 				self::displayName($name),
@@ -239,6 +240,26 @@ final class ExtraVanillaBlocks{
 			"minecraft:jigsaw", "minecraft:structure_block", "minecraft:command_block", "minecraft:chain_command_block",
 			"minecraft:repeating_command_block", "minecraft:camera", "minecraft:chalkboard" => true,
 			default => false
+		};
+	}
+
+	/**
+	 * Building blocks recognised by name and states (new wood sets, concrete/wool slabs and stairs, ...).
+	 * @return class-string<GenericBedrockBlock>
+	 */
+	private static function shapeClass(string $name, ?BlockStateData $state) : string{
+		$states = $state?->getStates() ?? [];
+		return match(true){
+			str_ends_with($name, "_door") && isset($states["upper_block_bit"]) => VanillaDoorBlock::class,
+			str_ends_with($name, "_trapdoor") && isset($states["open_bit"]) => VanillaTrapdoorBlock::class,
+			str_ends_with($name, "_fence_gate") && isset($states["open_bit"]) => VanillaFenceGateBlock::class,
+			str_ends_with($name, "_button") && isset($states["button_pressed_bit"]) => VanillaButtonBlock::class,
+			str_ends_with($name, "_pressure_plate") && isset($states["redstone_signal"]) => VanillaPressurePlateBlock::class,
+			str_ends_with($name, "_double_slab") => VanillaDoubleSlabBlock::class,
+			str_ends_with($name, "_slab") && isset($states["minecraft:vertical_half"]) => VanillaSlabBlock::class,
+			str_ends_with($name, "_stairs") && isset($states["weirdo_direction"]) => VanillaStairsBlock::class,
+			str_ends_with($name, "_fence") && isset($states["minecraft:connection_north"]) => VanillaFenceBlock::class,
+			default => GenericBedrockBlock::class,
 		};
 	}
 

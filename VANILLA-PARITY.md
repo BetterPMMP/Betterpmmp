@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.44-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.45-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -45,10 +45,16 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Bereich | Offen |
 |---|---|
 | Kern | Wasserbindung (Blöcke im Wasser), Bündel, Kisten-/Trichter-/Befehlsblock-Lore, Leitstein-Kompass, Nautilus-Rüstung, Befehlsblöcke, Strukturblöcke |
-| Blöcke ohne Funktion | Seegras (Wachstum), Tropfstein-Wachstum und fallende Stalaktiten, Blasensäule, Aquisator, Verzierter Krug (Inventar), Kupfertruhen (Inventar), Sculk-Katalysator und -Ader (Ausbreitung), Leitstein, Mangroven-Keimling (wächst nicht), Pappel-Holzset (Türen, Falltüren, Knöpfe, Schilder ohne Funktion), Beton-/Woll-Stufen und -Treppen (Form), Regale, Strohbett |
+| Blöcke ohne Funktion | Seegras (Wachstum), Tropfstein-Wachstum und fallende Stalaktiten, Blasensäule, Aquisator, Verzierter Krug (Inventar), Kupfertruhen (Inventar), Sculk-Katalysator und -Ader (Ausbreitung), Leitstein, Mangroven-Keimling (wächst nicht), Pappel-Schilder (Text), Regale, Strohbett |
 | Mobs mit Standard-KI | Piglin-Barbar, Hoglin/Zoglin, Fuchs, Schildkröte (Eier legen), Delfin, Axolotl, Panda, Eisbär, Lama (Truhe, Spucken), Mooshroom (Scheren), Kaninchen, Fledermaus, Allay, Plagegeist, Endermilbe, Silberfischchen (aus Blöcken), neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel) |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.45
+
+| System | Stand |
+|---|---|
+| Bau-Blöcke ohne Core-Klasse | ✅ automatisch nach Name und Zuständen erkannt (Pappel-Holzset, 33 Beton-/Woll-Stufen, -Doppelstufen und -Treppen): Türen (zwei Hälften, Scharnier neben gleicher Tür, Hand/Redstone, Eisen nur Redstone), Falltüren (oben/unten, Hand/Redstone), Zauntore (öffnen vom Spieler weg, 1,5 Blöcke hoch), Knöpfe (1,5 s Holz / 1 s Stein, Redstone-Signal inkl. starker Energie in den Block), Druckplatten (Holz: alle Wesen, Stein: Lebewesen), Stufen (oben/unten, zwei werden zur Doppelstufe, die 2 Stufen droppt), Treppen (Richtung, umgedreht, Hitbox), Zäune (verbinden sich mit Zäunen, Toren und festen Blöcken) |
 
 ## Neu in 5.44
 
