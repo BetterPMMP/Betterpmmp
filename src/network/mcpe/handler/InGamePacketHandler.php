@@ -633,6 +633,22 @@ class InGamePacketHandler extends PacketHandler{
 		return true;
 	}
 
+	public function handleCommandBlockUpdate(\pocketmine\network\mcpe\protocol\CommandBlockUpdatePacket $packet) : bool{
+		//BetterPMMP: command block screen (operators in creative mode)
+		if(!$packet->isBlock || !\pocketmine\block\VanillaCommandBlock::canEdit($this->player)){
+			return true;
+		}
+		$pos = new Vector3($packet->blockPosition->getX(), $packet->blockPosition->getY(), $packet->blockPosition->getZ());
+		if($pos->distanceSquared($this->player->getLocation()) > 10000){
+			return true;
+		}
+		$block = $this->player->getWorld()->getBlock($pos);
+		if($block instanceof \pocketmine\block\VanillaCommandBlock){
+			$block->applySettings($packet->commandBlockMode, $packet->isConditional, $packet->isRedstoneMode, $packet->command, $packet->shouldTrackOutput, $packet->tickDelay, $packet->executeOnFirstTick, $packet->name);
+		}
+		return true;
+	}
+
 	public function handlePositionTrackingDBClientRequest(\pocketmine\network\mcpe\protocol\PositionTrackingDBClientRequestPacket $packet) : bool{
 		//BetterPMMP: lodestone compasses ask where their lodestone is
 		$this->session->sendDataPacket(\pocketmine\world\LodestoneTracker::answer($packet->getTrackingId()));
@@ -856,6 +872,24 @@ class InGamePacketHandler extends PacketHandler{
 		$nbt = $packet->nbt->getRoot();
 		if(!($nbt instanceof CompoundTag)) throw new AssumptionFailedError("PHPStan should ensure this is a CompoundTag"); //for phpstorm's benefit
 
+		if($block instanceof \pocketmine\block\VanillaGenericSign){
+			//BetterPMMP: signs of new wood types (poplar...)
+			foreach([Sign::TAG_FRONT_TEXT => true, Sign::TAG_BACK_TEXT => false] as $tagName => $front){
+				$textTag = $nbt->getTag($tagName);
+				$blob = $textTag instanceof CompoundTag ? $textTag->getTag(Sign::TAG_TEXT_BLOB) : null;
+				if($blob instanceof StringTag){
+					try{
+						$text = SignText::fromBlob($blob->getValue());
+					}catch(\InvalidArgumentException $e){
+						throw PacketHandlingException::wrap($e, "Invalid sign text update");
+					}
+					if($block->updateText($this->player, $front, $text)){
+						break;
+					}
+				}
+			}
+			return true;
+		}
 		if($block instanceof BaseSign){
 			if(!$this->updateSignText($nbt, Sign::TAG_FRONT_TEXT, true, $block, $pos)){
 				//only one side can be updated at a time

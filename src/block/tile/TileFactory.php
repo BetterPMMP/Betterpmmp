@@ -87,6 +87,8 @@ final class TileFactory{
 		$this->register(HangingSign::class, ["HangingSign", "minecraft:hanging_sign"]);
 		$this->register(DecoratedPot::class, ["DecoratedPot", "minecraft:decorated_pot"]); //BetterPMMP
 		$this->register(Conduit::class, ["Conduit", "minecraft:conduit"]); //BetterPMMP
+		$this->register(Shelf::class, ["Shelf", "minecraft:shelf"]); //BetterPMMP
+		$this->register(CommandBlock::class, ["CommandBlock", "minecraft:command_block"]); //BetterPMMP
 
 		//TODO: ChalkboardBlock
 		//TODO: ChemistryTable

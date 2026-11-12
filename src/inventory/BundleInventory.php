@@ -90,7 +90,9 @@ class BundleInventory extends SimpleInventory{
 		}
 		$list = [];
 		for($slot = 0; $slot <= $last; ++$slot){
-			$list[] = $inventory->getItem($slot)->nbtSerialize();
+			$item = $inventory->getItem($slot);
+			// empty slots inside the bundle are stored as an empty item, like Bedrock does
+			$list[] = $item->isNull() ? CompoundTag::create()->setString("Name", "")->setByte("Count", 0)->setShort("Damage", 0) : $item->nbtSerialize();
 		}
 		$nbt = $bundle->getNamedTag();
 		if($list === []){

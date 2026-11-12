@@ -62,8 +62,37 @@ class VanillaPointedDripstone extends GenericBedrockBlock{
 		$support = $this->getSide($this->isHanging() ? Facing::UP : Facing::DOWN);
 		$ok = $support->isSolid() || ($support instanceof self && $support->isHanging() === $this->isHanging());
 		if(!$ok){
+			if($this->isHanging()){
+				$this->fall();
+				return;
+			}
 			$this->position->getWorld()->useBreakOn($this->position);
 		}
+	}
+
+	/**
+	 * A stalactite without support falls: it hurts what is below it
+	 * (2 per block fallen, up to 40) and breaks into an item where it lands.
+	 */
+	private function fall() : void{
+		$world = $this->position->getWorld();
+		$x = $this->position->getFloorX();
+		$y = $this->position->getFloorY();
+		$z = $this->position->getFloorZ();
+		$world->setBlockAt($x, $y, $z, VanillaBlocks::AIR());
+		$landY = $y - 1;
+		while($landY > $world->getMinY() && $world->getBlockAt($x, $landY, $z)->canBeReplaced()){
+			--$landY;
+		}
+		$distance = $y - $landY;
+		$damage = min(40, 2 * $distance);
+		foreach($world->getNearbyEntities(new AxisAlignedBB($x, $landY + 1, $z, $x + 1, $y, $z + 1)) as $entity){
+			if($entity instanceof Living){
+				$entity->attack(new EntityDamageEvent($entity, EntityDamageEvent::CAUSE_FALLING_BLOCK, $damage));
+			}
+		}
+		$world->dropItem(new \pocketmine\math\Vector3($x + 0.5, $landY + 1.2, $z + 0.5), $this->asItem());
+		$world->addSound(new \pocketmine\math\Vector3($x + 0.5, $landY + 1, $z + 0.5), new VanillaSound(LevelSoundEvent::DRIP_WATER_POINTED_DRIPSTONE));
 	}
 
 	public function ticksRandomly() : bool{

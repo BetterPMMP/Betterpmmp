@@ -74,7 +74,7 @@ final class BetterPMMPConfig{
 		$lines = explode("\n", str_replace("\r\n", "\n", $default));
 		$added = [];
 		foreach($lines as $index => $line){
-			if(preg_match('/^([a-z0-9-]+):/', $line, $m) !== 1 || array_key_exists($m[1], self::$data)){
+			if(preg_match('/^([a-z0-9-]+):/', $line, $m) !== 1 || array_key_exists($m[1], self::$data) || preg_match('/^' . preg_quote($m[1], '/') . ':/m', $current) === 1){
 				continue;
 			}
 			$start = $index;

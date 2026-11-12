@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.49-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.50-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -44,11 +44,25 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 
 | Bereich | Offen |
 |---|---|
-| Kern | Befehlsblock-Lore, Nautilus-Rüstung, Befehlsblöcke, Strukturblöcke |
-| Blöcke ohne Funktion | Fallende Stalaktiten, Sculk-Ader (eigene Ausbreitung), Pappel-Schilder (Text), Regale, Strohbett |
-| Mobs mit Standard-KI | Fledermaus (hängt nicht kopfüber), Panda-Persönlichkeiten, Lama-Karawanen, neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel) |
+| Kern | Nautilus-Rüstung, Befehlsblöcke, Strukturblöcke |
+| Blöcke ohne Funktion | Sculk-Ader (eigene Ausbreitung), Regale mit Redstone (ganze Reihe tauschen) |
+| Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel), Lama mit Truhe, Panda-Aussehen je Gen |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.50
+
+| System | Stand |
+|---|---|
+| Regale | ✅ Alle Holzarten: 3 Plätze, Rechtsklick tauscht den Gegenstand in der Hand mit dem angeschauten Platz, gespeichert, beim Abbauen fällt alles heraus |
+| Befehlsblöcke | ✅ Impuls, Wiederholend, Kette: OPs im Kreativmodus bearbeiten sie im Bedrock-Befehlsblock-Fenster; Redstone oder „immer aktiv“, Verzögerung, Bedingt, letzte Ausgabe, Ketten bis 64 Blöcke |
+| Pappel-Schilder | ✅ Stehend, an der Wand, hängend: Schild-Editor öffnet sich, Text wird gespeichert und angezeigt, Rechtsklick bearbeitet erneut |
+| Strohbett | ✅ Zweiteiliges Bett, nachts/bei Gewitter schlafen, setzt den Spawnpunkt |
+| Fallende Stalaktiten | ✅ Ohne Halt fällt ein hängender Tropfstein, verletzt darunter (2 pro Block Fallhöhe, max. 40) und wird zum Gegenstand |
+| Fledermaus | ✅ Hängt kopfüber unter Blöcken und fliegt los, wenn ein Spieler nahe kommt oder sie getroffen wird |
+| Panda | ✅ Persönlichkeit (Gen): ängstliche fliehen und verstecken sich bei Gewitter, faule sind langsam, verspielte kugeln herum, alle anderen wehren sich; Pandas fressen Bambus vom Boden |
+| Lama-Karawane | ✅ Lamas folgen einem angeleinten Lama in einer Reihe (bis 10) |
+| Fixes | Bündel mit Lücken im Inhalt konnten nicht gespeichert werden; betterpmmp.yml wurde bei jedem Start erneut ergänzt |
 
 ## Neu in 5.49
 

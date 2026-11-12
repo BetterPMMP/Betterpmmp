@@ -493,6 +493,29 @@ class BatMob extends GenericFlyingAnimalMob{
 	protected const SPAWN_EGG_GETTER = "BAT_SPAWN_EGG";
 	protected const HEIGHT = 0.5;
 	protected const WIDTH = 0.9;
+	/** BetterPMMP: bats hang upside down under solid blocks and fly off when a player comes close */
+	private bool $resting = false;
+	protected function tickWandering(int $tickDiff) : void{
+		$pos = $this->getPosition();
+		$world = $this->getWorld();
+		$ceilingY = (int) floor($pos->y + $this->getSize()->getHeight() + 0.1);
+		$ceiling = $ceilingY < $world->getMaxY() && $world->getBlockAt((int) floor($pos->x), $ceilingY, (int) floor($pos->z))->isSolid();
+		if($this->resting){
+			if(!$ceiling || \pocketmine\entity\ai\MobBehaviours::nearestPlayer($this, 4.0, true) !== null || mt_rand(1, 400) === 1){
+				$this->setResting(false);
+			}else{
+				$this->setMotion(new \pocketmine\math\Vector3(0, 0, 0));
+				return;
+			}
+		}elseif($ceiling && mt_rand(1, 80) === 1){
+			$this->setResting(true);
+			return;
+		}
+		parent::tickWandering($tickDiff);
+	}
+	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{ $this->setResting(false); parent::attack($source); }
+	private function setResting(bool $resting) : void{ if($this->resting !== $resting){ $this->resting = $resting; $this->networkPropertiesDirty = true; } }
+	protected function syncNetworkData(EntityMetadataCollection $properties) : void{ parent::syncNetworkData($properties); $properties->setGenericFlag(EntityMetadataFlags::RESTING, $this->resting); }
 }
 
 class BeeMob extends GenericFlyingAnimalMob{
@@ -1947,7 +1970,7 @@ class LlamaMob extends GenericAnimalMob{
 	protected const HEIGHT = 0.9;
 	protected const WIDTH = 1.87;
 	/** BetterPMMP: llamas spit at whoever hurt them (1 damage, every 2 s, up to 12 blocks) */
-	use \pocketmine\entity\ai\AnimalCombatAI;
+	use \pocketmine\entity\ai\AnimalCombatAI { tickWandering as private combatTickWandering; }
 	private int $spitCooldown = 0;
 	protected function tickCombat(\pocketmine\entity\Living $target, int $tickDiff) : void{
 		$this->spitCooldown -= $tickDiff;
@@ -1961,6 +1984,42 @@ class LlamaMob extends GenericAnimalMob{
 			$eye = $this->getEyePos(); $this->getWorld()->broadcastPacketToViewers($eye, \pocketmine\network\mcpe\protocol\PlaySoundPacket::create("mob.llama.spit", $eye->x, $eye->y, $eye->z, 1.0, 1.0, 0, false, null, null));
 			\pocketmine\entity\ai\MobBehaviours::hit($this, $target, 1.0, \pocketmine\event\entity\EntityDamageEvent::CAUSE_PROJECTILE);
 		}
+	}
+	/** BetterPMMP: llama caravans - llamas follow a leashed llama (or the llama in front of them), up to 10 in a row */
+	private ?int $caravanHead = null;
+	private int $caravanScan = 0;
+	private function caravanLength(\pocketmine\entity\Living $llama) : int{
+		$n = 0;
+		while(($llama instanceof LlamaMob || $llama instanceof TraderLlamaMob) && $n < 12){ $id = $llama->caravanHeadId(); if($id === null){ break; } $llama = $this->getWorld()->getEntity($id); ++$n; }
+		return $n;
+	}
+	public function caravanHeadId() : ?int{ return $this->caravanHead; }
+	private function hasFollower(\pocketmine\entity\Entity $llama) : bool{
+		foreach($this->getWorld()->getNearbyEntities($llama->getBoundingBox()->expandedCopy(10, 4, 10)) as $e){ if(($e instanceof LlamaMob || $e instanceof TraderLlamaMob) && $e !== $this && $e->caravanHeadId() === $llama->getId()){ return true; } }
+		return false;
+	}
+	protected function tickCaravan(int $tickDiff) : bool{
+		if($this->getLeashHolder() !== null || $this->isBaby()){ $this->caravanHead = null; return false; }
+		$head = $this->caravanHead === null ? null : $this->getWorld()->getEntity($this->caravanHead);
+		if(!($head instanceof LlamaMob || $head instanceof TraderLlamaMob) || !$head->isAlive() || $head->getPosition()->distanceSquared($this->getPosition()) > 16 * 16 || ($head->getLeashHolder() === null && $head->caravanHeadId() === null)){
+			$this->caravanHead = null;
+			if(($this->caravanScan -= $tickDiff) > 0){ return false; }
+			$this->caravanScan = 40;
+			$found = \pocketmine\entity\ai\MobBehaviours::nearest($this, 8.0, fn(Entity $e) : bool => ($e instanceof LlamaMob || $e instanceof TraderLlamaMob) && $e->isAlive() && ($e->getLeashHolder() !== null || $e->caravanHeadId() !== null) && $e->caravanHeadId() !== $this->getId() && !$this->hasFollower($e) && $this->caravanLength($e) < 9);
+			if($found === null){ return false; }
+			$this->caravanHead = $found->getId();
+			$head = $found;
+		}
+		if($head->getPosition()->distanceSquared($this->getPosition()) > 9){
+			$navigator = $this->getNavigator();
+			$navigator->moveTo($head->getPosition(), $this->getWalkSpeed(true), 2.0);
+			$navigator->tick($tickDiff);
+		}
+		return true;
+	}
+	protected function tickWandering(int $tickDiff) : void{
+		if($this->getCombatTarget() === null && !$this->isPanicking() && $this->tickCaravan($tickDiff)){ return; }
+		$this->combatTickWandering($tickDiff);
 	}
 }
 
@@ -2072,8 +2131,52 @@ class PandaMob extends GenericAnimalMob{
 	protected const SPAWN_EGG_GETTER = "PANDA_SPAWN_EGG";
 	protected const HEIGHT = 1.8;
 	protected const WIDTH = 0.6;
-	/** BetterPMMP: pandas fight back when hurt */
-	use \pocketmine\entity\ai\AnimalCombatAI;
+	/**
+	 * BetterPMMP: pandas have a personality (main gene). Aggressive and normal
+	 * pandas fight back, worried ones run away and hide from thunderstorms,
+	 * lazy ones are slow, playful ones roll around. Pandas eat bamboo lying
+	 * on the ground.
+	 */
+	use \pocketmine\entity\ai\AnimalCombatAI { tickWandering as private combatTickWandering; shouldFleeFromAttacker as private combatShouldFlee; attack as private combatAttack; }
+	private const GENES = ["normal" => 30, "lazy" => 10, "worried" => 10, "playful" => 10, "brown" => 2, "weak" => 10, "aggressive" => 10];
+	private string $gene = "normal";
+	private int $eatTicks = 0;
+	protected function initEntity(CompoundTag $nbt) : void{
+		parent::initEntity($nbt);
+		$gene = $nbt->getString("MainGene", "");
+		if(!isset(self::GENES[$gene])){
+			$roll = mt_rand(1, array_sum(self::GENES));
+			foreach(self::GENES as $name => $weight){ $roll -= $weight; if($roll <= 0){ $gene = $name; break; } }
+		}
+		$this->gene = $gene;
+	}
+	public function saveNBT() : CompoundTag{ $nbt = parent::saveNBT(); $nbt->setString("MainGene", $this->gene); return $nbt; }
+	public function getGene() : string{ return $this->gene; }
+	protected function shouldFleeFromAttacker(\pocketmine\event\entity\EntityDamageByEntityEvent $source) : bool{ return $this->gene === "worried" || $this->combatShouldFlee($source); }
+	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{
+		if($this->gene === "worried"){ \pocketmine\entity\Mob::attack($source); return; }
+		$this->combatAttack($source);
+	}
+	public function getWalkSpeed(bool $chasing = false) : float{ return parent::getWalkSpeed($chasing) * ($this->gene === "lazy" ? 0.6 : 1.0); }
+	protected function tickWandering(int $tickDiff) : void{
+		if($this->gene === "worried" && $this->getWorld()->getWeather()->isThundering() && !$this->isPanicking() && mt_rand(1, 60) === 1){ $this->startPanic($this->getPosition()->add(mt_rand(-5, 5), 0, mt_rand(-5, 5)), 60); }
+		if($this->eatTicks > 0){ $this->eatTicks -= $tickDiff; $this->setMotion(new \pocketmine\math\Vector3(0, $this->getMotion()->y, 0)); return; }
+		if(mt_rand(1, 20) === 1){
+			$bamboo = \pocketmine\entity\ai\MobBehaviours::nearest($this, 1.8, fn(Entity $e) : bool => $e instanceof \pocketmine\entity\object\ItemEntity && !$e->isFlaggedForDespawn() && $e->getItem()->getTypeId() === VanillaBlocks::BAMBOO()->asItem()->getTypeId());
+			if($bamboo instanceof \pocketmine\entity\object\ItemEntity){
+				$stack = $bamboo->getItem();
+				if($stack->getCount() > 1){ $bamboo->setStackSize($stack->getCount() - 1); }else{ $bamboo->flagForDespawn(); }
+				$this->eatTicks = 80;
+				$this->heal(new \pocketmine\event\entity\EntityRegainHealthEvent($this, 2, \pocketmine\event\entity\EntityRegainHealthEvent::CAUSE_EATING));
+				return;
+			}
+		}
+		if($this->gene === "playful" && $this->onGround && mt_rand(1, 300) === 1){
+			$yaw = deg2rad($this->getLocation()->getYaw());
+			$this->setMotion(new \pocketmine\math\Vector3(-sin($yaw) * 0.4, 0.3, cos($yaw) * 0.4));
+		}
+		$this->combatTickWandering($tickDiff);
+	}
 }
 
 class ParchedMob extends GenericRangedHostileMob{
@@ -2663,7 +2766,7 @@ class TraderLlamaMob extends GenericAnimalMob{
 	protected const HEIGHT = 1.8;
 	protected const WIDTH = 0.6;
 	/** BetterPMMP: llamas spit at whoever hurt them (1 damage, every 2 s, up to 12 blocks) */
-	use \pocketmine\entity\ai\AnimalCombatAI;
+	use \pocketmine\entity\ai\AnimalCombatAI { tickWandering as private combatTickWandering; }
 	private int $spitCooldown = 0;
 	protected function tickCombat(\pocketmine\entity\Living $target, int $tickDiff) : void{
 		$this->spitCooldown -= $tickDiff;
@@ -2677,6 +2780,42 @@ class TraderLlamaMob extends GenericAnimalMob{
 			$eye = $this->getEyePos(); $this->getWorld()->broadcastPacketToViewers($eye, \pocketmine\network\mcpe\protocol\PlaySoundPacket::create("mob.llama.spit", $eye->x, $eye->y, $eye->z, 1.0, 1.0, 0, false, null, null));
 			\pocketmine\entity\ai\MobBehaviours::hit($this, $target, 1.0, \pocketmine\event\entity\EntityDamageEvent::CAUSE_PROJECTILE);
 		}
+	}
+	/** BetterPMMP: llama caravans - llamas follow a leashed llama (or the llama in front of them), up to 10 in a row */
+	private ?int $caravanHead = null;
+	private int $caravanScan = 0;
+	private function caravanLength(\pocketmine\entity\Living $llama) : int{
+		$n = 0;
+		while(($llama instanceof LlamaMob || $llama instanceof TraderLlamaMob) && $n < 12){ $id = $llama->caravanHeadId(); if($id === null){ break; } $llama = $this->getWorld()->getEntity($id); ++$n; }
+		return $n;
+	}
+	public function caravanHeadId() : ?int{ return $this->caravanHead; }
+	private function hasFollower(\pocketmine\entity\Entity $llama) : bool{
+		foreach($this->getWorld()->getNearbyEntities($llama->getBoundingBox()->expandedCopy(10, 4, 10)) as $e){ if(($e instanceof LlamaMob || $e instanceof TraderLlamaMob) && $e !== $this && $e->caravanHeadId() === $llama->getId()){ return true; } }
+		return false;
+	}
+	protected function tickCaravan(int $tickDiff) : bool{
+		if($this->getLeashHolder() !== null || $this->isBaby()){ $this->caravanHead = null; return false; }
+		$head = $this->caravanHead === null ? null : $this->getWorld()->getEntity($this->caravanHead);
+		if(!($head instanceof LlamaMob || $head instanceof TraderLlamaMob) || !$head->isAlive() || $head->getPosition()->distanceSquared($this->getPosition()) > 16 * 16 || ($head->getLeashHolder() === null && $head->caravanHeadId() === null)){
+			$this->caravanHead = null;
+			if(($this->caravanScan -= $tickDiff) > 0){ return false; }
+			$this->caravanScan = 40;
+			$found = \pocketmine\entity\ai\MobBehaviours::nearest($this, 8.0, fn(Entity $e) : bool => ($e instanceof LlamaMob || $e instanceof TraderLlamaMob) && $e->isAlive() && ($e->getLeashHolder() !== null || $e->caravanHeadId() !== null) && $e->caravanHeadId() !== $this->getId() && !$this->hasFollower($e) && $this->caravanLength($e) < 9);
+			if($found === null){ return false; }
+			$this->caravanHead = $found->getId();
+			$head = $found;
+		}
+		if($head->getPosition()->distanceSquared($this->getPosition()) > 9){
+			$navigator = $this->getNavigator();
+			$navigator->moveTo($head->getPosition(), $this->getWalkSpeed(true), 2.0);
+			$navigator->tick($tickDiff);
+		}
+		return true;
+	}
+	protected function tickWandering(int $tickDiff) : void{
+		if($this->getCombatTarget() === null && !$this->isPanicking() && $this->tickCaravan($tickDiff)){ return; }
+		$this->combatTickWandering($tickDiff);
 	}
 }
 
