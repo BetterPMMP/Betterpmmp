@@ -38,6 +38,7 @@ use function json_decode;
 use function json_encode;
 use function max;
 use function mt_rand;
+use function time;
 
 /**
  * Vanilla trial spawner: wakes up when players come within 14 blocks, spawns
@@ -52,14 +53,16 @@ use function mt_rand;
 final class TrialManager{
 
 	private const DETECT_RANGE = 14;
-	private const COOLDOWN = 36000;
+	/** 30 minutes in real seconds (the world time can be frozen, e.g. in a lobby) */
+	private const COOLDOWN_SECONDS = 1800;
+	private const VAULT_RANGE = 4;
 
 	/** @var array<int, true>|null */
 	private static ?array $spawnerStates = null;
 
 	/** @var array<string, array{Vector3, list<int>, int, int, array<string, true>, int, int}> pos => [pos, living mob ids, spawned, total, players, phase ticks, next spawn] */
 	private array $active = [];
-	/** @var array<string, int> pos => world tick when the cooldown ends */
+	/** @var array<string, int> pos => unix time when the cooldown ends */
 	private array $cooldowns = [];
 	/** @var array<string, array<string, true>> vault pos => rewarded player uuids */
 	private array $vaults = [];
@@ -84,7 +87,10 @@ final class TrialManager{
 					$this->mobOverrides[(string) $key] = (string) $id;
 				}
 				foreach(($data["cooldowns"] ?? []) as $key => $until){
-					$this->cooldowns[(string) $key] = (int) $until;
+					// older versions stored world ticks: drop those, the spawner is ready again
+					if((int) $until > 1_000_000_000 && (int) $until <= time() + self::COOLDOWN_SECONDS){
+						$this->cooldowns[(string) $key] = (int) $until;
+					}
 				}
 				foreach(($data["vaults"] ?? []) as $key => $players){
 					foreach(is_array($players) ? $players : [] as $uuid){
@@ -115,16 +121,34 @@ final class TrialManager{
 		return $pos->getFloorX() . ":" . $pos->getFloorY() . ":" . $pos->getFloorZ();
 	}
 
+	/** @var array<int, true>|null */
+	private static ?array $vaultStates = null;
+
 	private static function isSpawnerState(int $stateId) : bool{
-		if(self::$spawnerStates === null){
-			self::$spawnerStates = [];
-			foreach(RuntimeBlockStateRegistry::getInstance()->getAllKnownStates() as $id => $state){
-				if($state instanceof GenericBedrockBlock && $state->getBedrockName() === "minecraft:trial_spawner"){
+		self::loadStates();
+		return isset(self::$spawnerStates[$stateId]);
+	}
+
+	private static function isVaultState(int $stateId) : bool{
+		self::loadStates();
+		return isset(self::$vaultStates[$stateId]);
+	}
+
+	private static function loadStates() : void{
+		if(self::$spawnerStates !== null){
+			return;
+		}
+		self::$spawnerStates = [];
+		self::$vaultStates = [];
+		foreach(RuntimeBlockStateRegistry::getInstance()->getAllKnownStates() as $id => $state){
+			if($state instanceof GenericBedrockBlock){
+				if($state->getBedrockName() === "minecraft:trial_spawner"){
 					self::$spawnerStates[$id] = true;
+				}elseif($state->getBedrockName() === "minecraft:vault"){
+					self::$vaultStates[$id] = true;
 				}
 			}
 		}
-		return isset(self::$spawnerStates[$stateId]);
 	}
 
 	public function tick() : void{
@@ -137,6 +161,45 @@ final class TrialManager{
 		}
 		foreach($this->active as $key => $_){
 			$this->tickSpawner($key);
+		}
+		if($this->scanTicks % 10 === 0){
+			$this->tickVaults();
+		}
+	}
+
+	/** @var array<string, Vector3> vault positions near players */
+	private array $knownVaults = [];
+
+	/** Vaults light up (active) while a player that can still open them is within 4 blocks. */
+	private function tickVaults() : void{
+		foreach($this->knownVaults as $key => $pos){
+			if(!$this->world->isChunkLoaded($pos->getFloorX() >> 4, $pos->getFloorZ() >> 4)){
+				unset($this->knownVaults[$key]);
+				continue;
+			}
+			$block = $this->world->getBlock($pos);
+			if(!$block instanceof GenericBedrockBlock || $block->getBedrockName() !== "minecraft:vault"){
+				unset($this->knownVaults[$key]);
+				continue;
+			}
+			$state = $block->getStateData()->getStates()["vault_state"] ?? null;
+			$current = $state === null ? "inactive" : (string) $state->getValue();
+			if($current !== "active" && $current !== "inactive"){
+				continue; // unlocking / ejecting
+			}
+			$wanted = "inactive";
+			foreach($this->world->getPlayers() as $player){
+				if($player->isAlive() && !$player->isSpectator() && !isset($this->vaults[$key][$player->getUniqueId()->toString()]) && $player->getPosition()->distanceSquared($pos->add(0.5, 0.5, 0.5)) <= self::VAULT_RANGE ** 2){
+					$wanted = "active";
+					break;
+				}
+			}
+			if($wanted !== $current){
+				try{
+					$this->world->setBlock($pos, $block->withProperties(["vault_state" => $wanted]));
+				}catch(\InvalidArgumentException){
+				}
+			}
 		}
 	}
 
@@ -156,7 +219,7 @@ final class TrialManager{
 						$has = false;
 						foreach($sub->getBlockLayers() as $layer){
 							foreach($layer->getPalette() as $id){
-								if(self::isSpawnerState($id)){
+								if(self::isSpawnerState($id) || self::isVaultState($id)){
 									$has = true;
 									break 2;
 								}
@@ -168,9 +231,13 @@ final class TrialManager{
 						for($bx = 0; $bx < 16; ++$bx){
 							for($by = 0; $by < 16; ++$by){
 								for($bz = 0; $bz < 16; ++$bz){
-									if(self::isSpawnerState($sub->getBlockStateId($bx, $by, $bz))){
+									$stateId = $sub->getBlockStateId($bx, $by, $bz);
+									if(self::isSpawnerState($stateId)){
 										$pos = new Vector3(($x << 4) + $bx, ($sy << 4) + $by, ($z << 4) + $bz);
 										$this->active[self::key($pos)] ??= [$pos, [], 0, 0, [], 0, 0];
+									}elseif(self::isVaultState($stateId)){
+										$pos = new Vector3(($x << 4) + $bx, ($sy << 4) + $by, ($z << 4) + $bz);
+										$this->knownVaults[self::key($pos)] ??= $pos;
 									}
 								}
 							}
@@ -217,7 +284,7 @@ final class TrialManager{
 			return;
 		}
 		$tick = $this->world->getServer()->getTick();
-		$time = $this->world->getTime();
+		$time = time();
 		if(isset($this->cooldowns[$key])){
 			if($time < $this->cooldowns[$key]){
 				return;
@@ -301,7 +368,7 @@ final class TrialManager{
 			$this->world->addSound($pos, new VanillaSound(LevelSoundEvent::TRIAL_SPAWNER_CLOSE_SHUTTER));
 			$this->setSpawnerState($pos, 5, false);
 			unset($this->ominous[$key]);
-			$this->cooldowns[$key] = $time + self::COOLDOWN;
+			$this->cooldowns[$key] = $time + self::COOLDOWN_SECONDS;
 			$this->dirty = true;
 			$this->active[$key] = [$pos, [], 0, 0, [], 0, 0];
 			return;

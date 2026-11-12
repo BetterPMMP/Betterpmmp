@@ -1537,6 +1537,13 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		if($this->javaEatStart >= 0 && $currentTick - $this->javaEatStart >= self::JAVA_EAT_TICKS){
 			$this->finishJavaItemUse();
 		}
+		if($this->isUsingItem() && ($spear = $this->inventory->getItemInHand()) instanceof Spear){
+			$this->tickSpearCharge($spear, $currentTick);
+		}elseif($this->spearLastPos !== null){
+			$this->spearLastPos = null;
+			$this->spearChargeTicks = 0;
+			$this->spearHits = [];
+		}
 
 		if($tickDiff <= 0){
 			return true;
@@ -3003,6 +3010,70 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 
 	/** BetterPMMP: server tick a Java player started eating/drinking (-1 = not eating) and the hotbar slot used */
 	private int $javaEatStart = -1;
+
+	/** BetterPMMP: spear charge attack state */
+	private ?Vector3 $spearLastPos = null;
+	private int $spearChargeTicks = 0;
+	/** @var array<int, int> entity id => tick of the last charge hit */
+	private array $spearHits = [];
+	private const SPEAR_CHARGE_MAX_TICKS = 100;
+	private const SPEAR_REACH = 4.5;
+
+	/**
+	 * While a spear is held charged, everything in front of the player that the
+	 * player runs into fast enough takes kinetic damage (speed x tier multiplier),
+	 * each target at most every 10 ticks.
+	 */
+	private function tickSpearCharge(Spear $spear, int $currentTick) : void{
+		$pos = $this->location->asVector3();
+		$last = $this->spearLastPos;
+		$this->spearLastPos = $pos;
+		if($last === null || ++$this->spearChargeTicks > self::SPEAR_CHARGE_MAX_TICKS){
+			return;
+		}
+		$dx = $pos->x - $last->x;
+		$dz = $pos->z - $last->z;
+		$speed = sqrt($dx * $dx + $dz * $dz) * 20;
+		if($this->isSprinting()){
+			$speed = max($speed, 5.6);
+		}
+		if($speed < $spear->getKineticMinSpeed() * 0.65){
+			return;
+		}
+		$eye = $this->getEyePos();
+		$dir = $this->getDirectionVector();
+		$pvp = $this->server->getConfigGroup()->getConfigBool(ServerProperties::PVP);
+		foreach($this->getWorld()->getNearbyEntities($this->boundingBox->expandedCopy(self::SPEAR_REACH, 2, self::SPEAR_REACH), $this) as $entity){
+			if(!$entity instanceof Living || !$entity->isAlive() || ($entity instanceof Player && (!$pvp || $entity->isCreative() || $entity->isSpectator()))){
+				continue;
+			}
+			if(isset($this->spearHits[$entity->getId()]) && $currentTick - $this->spearHits[$entity->getId()] < 10){
+				continue;
+			}
+			$center = $entity->getPosition()->add(0, $entity->getSize()->getHeight() / 2, 0);
+			$to = $center->subtractVector($eye);
+			$along = $to->dot($dir);
+			if($along < 0 || $along > self::SPEAR_REACH + $entity->getSize()->getWidth() / 2){
+				continue;
+			}
+			$closest = $eye->addVector($dir->multiply($along));
+			if($closest->distance($center) > $entity->getSize()->getWidth() / 2 + max(0.6, $entity->getSize()->getHeight() / 2)){
+				continue;
+			}
+			$targetMotion = $entity->getMotion();
+			$relative = max($speed - sqrt($targetMotion->x ** 2 + $targetMotion->z ** 2) * 20 * 0.5, 0.0);
+			$ev = new EntityDamageByEntityEvent($this, $entity, EntityDamageEvent::CAUSE_ENTITY_ATTACK, max((float) $spear->getAttackPoints(), $spear->getKineticDamage($relative)), [], 0.7);
+			$entity->attack($ev);
+			$this->spearHits[$entity->getId()] = $currentTick;
+			if(!$ev->isCancelled()){
+				$this->getWorld()->addSound($center, new EntityAttackSound());
+				if($this->hasFiniteResources()){
+					$spear->applyDamage(1);
+					$this->inventory->setItemInHand($spear);
+				}
+			}
+		}
+	}
 	private int $javaEatSlot = -1;
 
 	/**

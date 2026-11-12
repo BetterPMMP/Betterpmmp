@@ -11,13 +11,14 @@ namespace pocketmine\item;
 
 use pocketmine\entity\Entity;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
+use function max;
 
 /**
  * First-pass native Bedrock spear item. It has tier durability, enchantment
  * support and melee combat behavior. Charged lunge/throw mechanics are handled
  * separately from this item registry implementation.
  */
-final class Spear extends TieredTool{
+final class Spear extends TieredTool implements Releasable{
 	private const KINETIC_DAMAGE_MIN_RELATIVE_SPEED = 4.6;
 	private const KINETIC_KNOCKBACK_MIN_SPEED = 5.1;
 
@@ -37,12 +38,26 @@ final class Spear extends TieredTool{
 	 */
 	public function applyKineticAttack(EntityDamageByEntityEvent $event, float $relativeSpeed, float $speed) : void{
 		if($relativeSpeed >= self::KINETIC_DAMAGE_MIN_RELATIVE_SPEED){
-			$event->setBaseDamage($event->getBaseDamage() * $this->getKineticDamageMultiplier());
+			// kinetic damage grows with the speed: multiplier x relative speed (blocks per second)
+			$event->setBaseDamage(max($event->getBaseDamage(), $this->getKineticDamage($relativeSpeed)));
 		}
 
 		if($speed >= self::KINETIC_KNOCKBACK_MIN_SPEED){
 			$event->setKnockBack(max($event->getKnockBack(), 0.7));
 		}
+	}
+
+	public function getKineticDamage(float $relativeSpeed) : float{
+		return $this->getKineticDamageMultiplier() * $relativeSpeed;
+	}
+
+	/** BetterPMMP: holding "use" charges the spear (see Player::tickSpearCharge) */
+	public function canStartUsingItem(\pocketmine\player\Player $player) : bool{
+		return true;
+	}
+
+	public function getKineticMinSpeed() : float{
+		return self::KINETIC_DAMAGE_MIN_RELATIVE_SPEED;
 	}
 
 	private function getKineticDamageMultiplier() : float{

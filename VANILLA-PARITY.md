@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.50-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.51-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -49,6 +49,14 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel), Lama mit Truhe, Panda-Aussehen je Gen |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.51
+
+| System | Stand |
+|---|---|
+| Speer | ✅ Ansturm-Angriff: Benutzen gedrückt halten und laufen – alles vor dir nimmt Schaden je nach Tempo (Tempo × Material-Faktor, jedes Ziel höchstens alle 0,5 s, bis 5 s lang). Fix: Sprint-Treffer machten vorher *weniger* Schaden statt mehr |
+| Prüfungsspawner | ✅ Fix: die 30-Minuten-Abklingzeit lief über die Ingame-Uhr – bei angehaltener Zeit (Lobby) wurde der Spawner nie wieder bereit. Jetzt echte Zeit, alte hängende Abklingzeiten werden verworfen |
+| Tresor | ✅ Leuchtet (aktiv), wenn ein Spieler in 4 Blöcken ist, der ihn noch öffnen darf, sonst inaktiv |
 
 ## Neu in 5.50
 
