@@ -50,6 +50,22 @@ final class StandardPacketBroadcaster implements PacketBroadcaster{
 			$packets = $ev->getPackets();
 		}
 
+		//BetterPMMP: Java Edition players (Java bridge) get each packet through their packet fixer
+		$bedrock = [];
+		foreach($recipients as $recipient){
+			if($recipient->isJavaBridgeSession()){
+				foreach($packets as $packet){
+					$recipient->sendBroadcastToJava($packet);
+				}
+			}else{
+				$bedrock[] = $recipient;
+			}
+		}
+		$recipients = $bedrock;
+		if($recipients === []){
+			return;
+		}
+
 		$compressors = [];
 
 		$targetsByCompressor = [];

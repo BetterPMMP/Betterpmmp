@@ -590,7 +590,20 @@ class NetworkSession{
 	/**
 	 * @phpstan-param PromiseResolver<true>|null $ackReceiptResolver
 	 */
-	private function sendDataPacketInternal(ClientboundPacket $packet, bool $immediate, ?PromiseResolver $ackReceiptResolver) : bool{
+	/** BetterPMMP: whether this session is a Java Edition player coming through the Java bridge */
+	public function isJavaBridgeSession() : bool{
+		return \pocketmine\network\JavaBridge::isBridgeAddress($this->ip) && !$this->info instanceof XboxLivePlayerInfo;
+	}
+
+	/**
+	 * BetterPMMP: sends an already-broadcast packet to a Java bridge session through the Java packet fixer
+	 * (broadcasts are encoded once for everybody and would skip it).
+	 */
+	public function sendBroadcastToJava(ClientboundPacket $packet) : void{
+		$this->sendDataPacketInternal($packet, false, null, false);
+	}
+
+	private function sendDataPacketInternal(ClientboundPacket $packet, bool $immediate, ?PromiseResolver $ackReceiptResolver, bool $fireEvent = true) : bool{
 		if(!$this->connected){
 			return false;
 		}
@@ -599,7 +612,7 @@ class NetworkSession{
 			throw new \InvalidArgumentException("Attempted to send " . get_class($packet) . " to " . $this->getDisplayName() . " too early");
 		}
 
-		if(\pocketmine\network\JavaBridge::isBridgeAddress($this->ip) && !$this->info instanceof XboxLivePlayerInfo){
+		if($this->isJavaBridgeSession()){
 			//BetterPMMP: fixes for Java Edition players coming through the Java bridge
 			$packet = ($this->javaPacketFixer ??= new JavaPacketFixer())->fix($packet);
 			if($packet === null){
@@ -611,7 +624,7 @@ class NetworkSession{
 		$timings = Timings::getSendDataPacketTimings($packet);
 		$timings->startTiming();
 		try{
-			if(DataPacketSendEvent::hasHandlers()){
+			if($fireEvent && DataPacketSendEvent::hasHandlers()){
 				$ev = new DataPacketSendEvent([$this], [$packet]);
 				$ev->call();
 				if($ev->isCancelled()){
@@ -635,7 +648,7 @@ class NetworkSession{
 			}
 
 			foreach($javaExtraPackets ?? [] as $extraPacket){
-				$this->sendDataPacketInternal($extraPacket, $immediate, null);
+				$this->sendDataPacketInternal($extraPacket, $immediate, null, $fireEvent);
 			}
 
 			return true;
