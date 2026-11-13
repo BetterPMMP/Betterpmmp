@@ -63,8 +63,6 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
     public static final String ENTITY_NAME_MESSAGE = "betterpmmp:entity_name";
     public static final String HIDE_NAMETAG_MESSAGE = "betterpmmp:hide_nametag";
     public static final String CREATIVE_MESSAGE = "betterpmmp:java_creative";
-    private static final String HIDDEN_TEAM = "bpmmp_hidden";
-    private static final java.util.Map<com.viaversion.viaversion.api.connection.UserConnection, Boolean> HIDDEN_TEAM_SENT = java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
 
     @Override
     public void onEnable() {
@@ -129,24 +127,29 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
                 return;
             }
             if (HIDE_NAMETAG_MESSAGE.equals(id)) {
-                // a Bedrock player with a custom name tag (rank, clan): hide the Java profile name, BetterPMMP shows
-                // the full name tag above the player instead
-                final boolean create = HIDDEN_TEAM_SENT.put(wrapper.user(), Boolean.TRUE) == null;
-                final PacketWrapper team = PacketWrapper.create(ClientboundPackets26_3.SET_PLAYER_TEAM, wrapper.user());
-                team.write(Types.STRING, HIDDEN_TEAM); // team name
-                team.write(Types.BYTE, (byte) (create ? 0 : 3)); // create / add entities
-                if (create) {
-                    // team parameters in the 26.2+ layout (see ViaVersion Protocol26_1To26_2)
-                    team.write(Types.TAG, TextUtil.stringToNbt("")); // display name
-                    team.write(Types.TAG, TextUtil.stringToNbt("")); // prefix
-                    team.write(Types.TAG, TextUtil.stringToNbt("")); // suffix
-                    team.write(Types.VAR_INT, 1); // name tag visibility: never
-                    team.write(Types.VAR_INT, 0); // collision: always
-                    team.write(Types.BOOL_OPTIONAL_VAR_INT, null); // color: none
-                    team.write(Types.BYTE, (byte) 0); // friendly flags
+                // a Bedrock player with a custom name tag (rank, clan): ViaBedrock shows players through one team per
+                // player (name in the prefix). Make that team's name tag invisible (the prefix stays for the tab
+                // list); BetterPMMP shows the whole name tag above the player instead.
+                final long runtimeId;
+                try {
+                    runtimeId = Long.parseLong(value);
+                } catch (NumberFormatException e) {
+                    return;
                 }
-                team.write(Types.VAR_INT, 1); // entity count
-                team.write(Types.STRING, value); // player name
+                final Entity entity = wrapper.user().get(EntityTracker.class).getEntityByRid(runtimeId);
+                if (!(entity instanceof PlayerEntity player)) {
+                    return;
+                }
+                final PacketWrapper team = PacketWrapper.create(ClientboundPackets26_3.SET_PLAYER_TEAM, wrapper.user());
+                team.write(Types.STRING, String.valueOf(player.javaId())); // ViaBedrock's team of this player
+                team.write(Types.BYTE, (byte) 2); // change parameters
+                team.write(Types.TAG, TextUtil.stringToNbt(String.valueOf(player.javaId()))); // display name
+                team.write(Types.TAG, TextUtil.stringToNbt(player.name() == null ? "" : player.name())); // prefix (tab list)
+                team.write(Types.TAG, TextUtil.stringToNbt("")); // suffix
+                team.write(Types.VAR_INT, 1); // name tag visibility: never
+                team.write(Types.VAR_INT, 1); // collision: never (as ViaBedrock)
+                team.write(Types.BOOL_OPTIONAL_VAR_INT, null); // color
+                team.write(Types.BYTE, (byte) 3); // friendly flags (as ViaBedrock)
                 team.send(BedrockProtocol.class);
                 return;
             }

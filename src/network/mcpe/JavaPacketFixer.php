@@ -219,8 +219,8 @@ final class JavaPacketFixer{
 			$this->players[$rid] = $packet->username;
 			$this->bases[$rid] = [$packet->position, self::metaFloat($packet->metadata, EntityMetadataProperties::BOUNDING_BOX_HEIGHT, 1.8)];
 			if($tag !== "" && TextFormat::clean($tag) !== $packet->username){
-				$this->extra[] = ScriptMessagePacket::create("betterpmmp:hide_nametag", $packet->username);
 				$this->applyName($rid, $tag, true, true);
+				$this->extra[] = ScriptMessagePacket::create("betterpmmp:hide_nametag", (string) $rid);
 			}
 			return $packet;
 		}
@@ -247,10 +247,9 @@ final class JavaPacketFixer{
 				if(isset($this->players[$rid])){
 					$tag = $name instanceof StringMetadataProperty ? $name->getValue() : $oldName;
 					if($tag !== "" && TextFormat::clean($tag) !== $this->players[$rid]){
-						if($oldName === ""){
-							$this->extra[] = ScriptMessagePacket::create("betterpmmp:hide_nametag", $this->players[$rid]);
-						}
 						$this->applyName($rid, $tag, true, true);
+						// after ViaBedrock's own name update for this packet: hide its name tag again
+						$this->extra[] = ScriptMessagePacket::create("betterpmmp:hide_nametag", (string) $rid);
 					}
 					return $packet;
 				}
@@ -258,6 +257,11 @@ final class JavaPacketFixer{
 					$this->applyName($rid, $name instanceof StringMetadataProperty ? $name->getValue() : $oldName, $isNpc || self::nameVisible($packet->metadata, $oldVisible), $isNpc);
 				}
 			}
+			return $packet;
+		}
+		if($packet instanceof MoveActorAbsolutePacket && isset($this->players[$packet->actorRuntimeId])){
+			// players are moved by their eye position
+			$this->moveCarriers($packet->actorRuntimeId, $packet->position->subtract(0, self::HUMAN_EYE_OFFSET, 0));
 			return $packet;
 		}
 		if($packet instanceof MoveActorAbsolutePacket && isset($this->carrierLines[$packet->actorRuntimeId]) && !isset($this->markers[$packet->actorRuntimeId])){

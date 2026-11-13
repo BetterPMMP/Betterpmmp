@@ -783,6 +783,14 @@ class InGamePacketHandler extends PacketHandler{
 				}
 				if(!$this->player->attackBlock($pos, $face)){
 					$this->syncBlocksNearby($pos, $face);
+				}elseif($this->player->isCreative() && \pocketmine\network\JavaBridge::isJavaPlayer($this->player)){
+					//BetterPMMP: a Java client in creative mode only says "start destroying" - for it the block is gone
+					//right away, it never sends the "destroyed" a Bedrock client sends
+					if(!$this->player->breakBlock($pos)){
+						$this->syncBlocksNearby($pos, $face);
+					}
+					$this->lastBlockAttacked = null;
+					break;
 				}
 				$this->lastBlockAttacked = $blockPosition;
 
