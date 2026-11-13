@@ -1,5 +1,5 @@
 name: BetterPMMP-Bridge
 author: BetterPMMP
-version: 1.6.3
+version: 1.6.4
 main: net.betterpmmp.bridge.BetterPMMPBridgePlugin
 min-version: 3.4.14

@@ -141,9 +141,9 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
                     return;
                 }
                 final PacketWrapper team = PacketWrapper.create(ClientboundPackets26_3.SET_PLAYER_TEAM, wrapper.user());
-                team.write(Types.STRING, String.valueOf(player.javaId())); // ViaBedrock's team of this player
+                team.write(Types.STRING, "vb_" + player.javaId()); // ViaBedrock's team of this player (PlayerEntity.createTeam)
                 team.write(Types.BYTE, (byte) 2); // change parameters
-                team.write(Types.TAG, TextUtil.stringToNbt(String.valueOf(player.javaId()))); // display name
+                team.write(Types.TAG, TextUtil.stringToNbt("vb_" + player.javaId())); // display name
                 team.write(Types.TAG, TextUtil.stringToNbt(player.name() == null ? "" : player.name())); // prefix (tab list)
                 team.write(Types.TAG, TextUtil.stringToNbt("")); // suffix
                 team.write(Types.VAR_INT, 1); // name tag visibility: never
