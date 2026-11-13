@@ -281,20 +281,20 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
             final short slot = wrapper.read(Types.SHORT);
             final com.viaversion.viaversion.api.minecraft.item.Item javaItem = wrapper.read(VersionedTypes.V26_3.lengthPrefixedItem);
             String name = "";
-            int meta = 0;
             int count = 0;
-            if (javaItem != null && javaItem.identifier() != 0 && javaItem.amount() > 0) {
-                final net.raphimc.viabedrock.protocol.rewriter.ItemRewriter rewriter = wrapper.user().get(net.raphimc.viabedrock.protocol.rewriter.ItemRewriter.class);
-                final net.raphimc.viabedrock.protocol.model.BedrockItem bedrockItem = rewriter == null ? null : rewriter.bedrockItem(javaItem);
-                if (bedrockItem != null && !bedrockItem.isEmpty()) {
-                    final String found = rewriter.getItems().inverse().get(bedrockItem.identifier());
+            try {
+                if (javaItem != null && javaItem.identifier() != 0 && javaItem.amount() > 0) {
+                    final String found = BridgeCreativeItems.bedrockName(wrapper.user(), javaItem.identifier());
                     if (found != null) {
                         name = found;
-                        meta = bedrockItem.data();
-                        count = bedrockItem.amount();
+                        count = javaItem.amount();
                     }
                 }
+            } catch (final Throwable t) {
+                ViaBedrock.getPlatform().getLogger().log(Level.WARNING, "[BetterPMMP-Bridge] creative item could not be translated", t);
+                return;
             }
+            final int meta = 0;
             final PacketWrapper message = PacketWrapper.create(ServerboundBedrockPackets.SCRIPT_MESSAGE, wrapper.user());
             message.write(BedrockTypes.STRING, CREATIVE_MESSAGE);
             message.write(BedrockTypes.STRING, slot + ";" + name + ";" + meta + ";" + count);
