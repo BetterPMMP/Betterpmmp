@@ -114,7 +114,7 @@ final class BridgePlacementAcks {
         }
     }
 
-    private static PacketMapping mapping(final BedrockProtocol protocol, final String fieldName, final int packetId) throws ReflectiveOperationException {
+    static PacketMapping mapping(final BedrockProtocol protocol, final String fieldName, final int packetId) throws ReflectiveOperationException {
         final Field field = AbstractProtocol.class.getDeclaredField(fieldName);
         field.setAccessible(true);
         final PacketMappings mappings = (PacketMappings) field.get(protocol);

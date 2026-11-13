@@ -326,6 +326,7 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
         });
 
         BridgePlacementAcks.install(protocol);
+        BridgeEntityGuard.install(protocol);
 
         ViaBedrock.getPlatform().getLogger().log(Level.INFO, "[BetterPMMP-Bridge] chest menus and inventory clicks enabled");
     }
