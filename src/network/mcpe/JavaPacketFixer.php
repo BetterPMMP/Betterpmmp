@@ -15,6 +15,7 @@ use pocketmine\nbt\tag\StringTag;
 use pocketmine\network\JavaNpcModels;
 use pocketmine\network\mcpe\protocol\AddActorPacket;
 use pocketmine\network\mcpe\protocol\AddPlayerPacket;
+use pocketmine\utils\TextFormat;
 use pocketmine\network\mcpe\protocol\AvailableActorIdentifiersPacket;
 use pocketmine\network\mcpe\protocol\BlockActorDataPacket;
 use pocketmine\network\mcpe\protocol\ClientboundPacket;
@@ -123,6 +124,9 @@ final class JavaPacketFixer{
 		return $extra;
 	}
 
+	/** @var array<int, string> runtime id => account name of Bedrock players seen by this Java player */
+	private array $players = [];
+
 	private const NAME_LINE_HEIGHT = 0.27;
 	/** Java renders the name of an (invisible) armor stand this far above its feet */
 	private const ARMOR_STAND_NAME_HEIGHT = 2.2;
@@ -207,6 +211,23 @@ final class JavaPacketFixer{
 				$packet->pitch, $packet->yaw, $packet->headYaw, $packet->yaw, [], $packet->metadata, $packet->syncedProperties, [], null
 			);
 		}
+		if($packet instanceof AddPlayerPacket){
+			// a Bedrock player: Java only shows the account name, not the name tag (rank, clan ...). Hide the
+			// Java name (team, done by the bridge plugin) and show the whole name tag above the player instead.
+			$rid = $packet->actorRuntimeId;
+			$tag = self::metaString($packet->metadata, EntityMetadataProperties::NAMETAG);
+			$this->players[$rid] = $packet->username;
+			$this->bases[$rid] = [$packet->position, self::metaFloat($packet->metadata, EntityMetadataProperties::BOUNDING_BOX_HEIGHT, 1.8)];
+			if($tag !== "" && TextFormat::clean($tag) !== $packet->username){
+				$this->extra[] = ScriptMessagePacket::create("betterpmmp:hide_nametag", $packet->username);
+				$this->applyName($rid, $tag, true, true);
+			}
+			return $packet;
+		}
+		if($packet instanceof MovePlayerPacket && isset($this->players[$packet->actorRuntimeId])){
+			$this->moveCarriers($packet->actorRuntimeId, $packet->position->subtract(0, self::HUMAN_EYE_OFFSET, 0));
+			return $packet;
+		}
 		if($packet instanceof MoveActorAbsolutePacket && isset($this->npcs[$packet->actorRuntimeId])){
 			$fixed = clone $packet;
 			$fixed->position = $packet->position->subtract(0, self::HUMAN_EYE_OFFSET, 0); // players are moved by eye height, custom entities by their feet
@@ -223,6 +244,16 @@ final class JavaPacketFixer{
 			if($name instanceof StringMetadataProperty || isset($packet->metadata[EntityMetadataProperties::FLAGS]) || isset($packet->metadata[EntityMetadataProperties::ALWAYS_SHOW_NAMETAG])){
 				[$oldName, $oldVisible] = $this->names[$rid] ?? ["", false];
 				$isNpc = isset($this->npcs[$rid]);
+				if(isset($this->players[$rid])){
+					$tag = $name instanceof StringMetadataProperty ? $name->getValue() : $oldName;
+					if($tag !== "" && TextFormat::clean($tag) !== $this->players[$rid]){
+						if($oldName === ""){
+							$this->extra[] = ScriptMessagePacket::create("betterpmmp:hide_nametag", $this->players[$rid]);
+						}
+						$this->applyName($rid, $tag, true, true);
+					}
+					return $packet;
+				}
 				if(isset($this->bases[$rid]) || $isNpc){
 					$this->applyName($rid, $name instanceof StringMetadataProperty ? $name->getValue() : $oldName, $isNpc || self::nameVisible($packet->metadata, $oldVisible), $isNpc);
 				}
@@ -284,6 +315,7 @@ final class JavaPacketFixer{
 			if(isset($this->carrierLines[$packet->actorUniqueId]) && !isset($this->npcs[$packet->actorUniqueId])){
 				$this->showCarriers($packet->actorUniqueId, "");
 			}
+			unset($this->players[$packet->actorUniqueId]);
 			unset($this->markers[$packet->actorUniqueId], $this->npcs[$packet->actorUniqueId], $this->bases[$packet->actorUniqueId], $this->carrierLines[$packet->actorUniqueId], $this->names[$packet->actorUniqueId]);
 		}
 		return $packet;

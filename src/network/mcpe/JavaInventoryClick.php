@@ -584,4 +584,47 @@ final class JavaInventoryClick{
 		));
 		$session->sendDataPacket(ScriptMessagePacket::create("betterpmmp:craft_result", (string) $windowId));
 	}
+
+	/**
+	 * Java creative inventory: the Java client sets slots directly ("slot;bedrock item name;meta;count",
+	 * translated by the bridge). Java slot numbers of the player screen: 5-8 armor, 9-35 inventory,
+	 * 36-44 hotbar, 45 offhand, -1 = throw the item out of the creative menu.
+	 */
+	public static function handleCreative(Player $player, string $value) : void{
+		if(!$player->isCreative()){
+			return;
+		}
+		$parts = explode(";", $value, 4);
+		if(count($parts) !== 4){
+			return;
+		}
+		$slot = (int) $parts[0];
+		$item = \pocketmine\item\VanillaItems::AIR();
+		if($parts[1] !== "" && (int) $parts[3] > 0){
+			try{
+				$item = \pocketmine\item\Item::nbtDeserialize(\pocketmine\nbt\tag\CompoundTag::create()
+					->setString("Name", $parts[1])
+					->setShort("Damage", (int) $parts[2])
+					->setByte("Count", min(255, (int) $parts[3])));
+			}catch(\Throwable){
+				return; // unknown item
+			}
+			$item->setCount(min($item->getMaxStackSize(), max(1, (int) $parts[3])));
+		}
+		if($slot === -1){
+			if(!$item->isNull()){
+				$player->dropItem($item);
+			}
+			return;
+		}
+		if($slot >= 36 && $slot <= 44){
+			$player->getInventory()->setItem($slot - 36, $item);
+		}elseif($slot >= 9 && $slot <= 35){
+			$player->getInventory()->setItem($slot, $item);
+		}elseif($slot >= 5 && $slot <= 8){
+			$player->getArmorInventory()->setItem($slot - 5, $item);
+		}elseif($slot === 45){
+			$player->getOffHandInventory()->setItem(0, $item);
+		}
+	}
 }

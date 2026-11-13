@@ -61,6 +61,10 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
     public static final String TITLE_MESSAGE = "betterpmmp:window_title";
     public static final String CRAFT_RESULT_MESSAGE = "betterpmmp:craft_result";
     public static final String ENTITY_NAME_MESSAGE = "betterpmmp:entity_name";
+    public static final String HIDE_NAMETAG_MESSAGE = "betterpmmp:hide_nametag";
+    public static final String CREATIVE_MESSAGE = "betterpmmp:java_creative";
+    private static final String HIDDEN_TEAM = "bpmmp_hidden";
+    private static final java.util.Map<com.viaversion.viaversion.api.connection.UserConnection, Boolean> HIDDEN_TEAM_SENT = java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
 
     @Override
     public void onEnable() {
@@ -122,6 +126,27 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
                 setEntityData.write(Types.VAR_INT, entity.javaId()); // entity id
                 setEntityData.write(VersionedTypes.V26_3.entityDataList, data); // entity data
                 setEntityData.send(BedrockProtocol.class);
+                return;
+            }
+            if (HIDE_NAMETAG_MESSAGE.equals(id)) {
+                // a Bedrock player with a custom name tag (rank, clan): hide the Java profile name, BetterPMMP shows
+                // the full name tag above the player instead
+                final boolean create = HIDDEN_TEAM_SENT.put(wrapper.user(), Boolean.TRUE) == null;
+                final PacketWrapper team = PacketWrapper.create(ClientboundPackets26_3.SET_PLAYER_TEAM, wrapper.user());
+                team.write(Types.STRING, HIDDEN_TEAM); // team name
+                team.write(Types.BYTE, (byte) (create ? 0 : 3)); // create / add entities
+                if (create) {
+                    team.write(Types.TAG, TextUtil.stringToNbt("")); // display name
+                    team.write(Types.BYTE, (byte) 0); // friendly flags
+                    team.write(Types.VAR_INT, 1); // name tag visibility: never
+                    team.write(Types.VAR_INT, 0); // collision: always
+                    team.write(Types.VAR_INT, 21); // color: reset
+                    team.write(Types.TAG, TextUtil.stringToNbt("")); // prefix
+                    team.write(Types.TAG, TextUtil.stringToNbt("")); // suffix
+                }
+                team.write(Types.VAR_INT, 1); // entity count
+                team.write(Types.STRING, value); // player name
+                team.send(BedrockProtocol.class);
                 return;
             }
             if (CRAFT_RESULT_MESSAGE.equals(id)) {
@@ -247,6 +272,32 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
             wrapper.write(Types.VAR_INT, (int) containerId); // container id
             wrapper.write(Types.VAR_INT, rows - 1); // type: generic_9x1 ... generic_9x6
             wrapper.write(Types.TAG, TextUtil.textComponentToNbt(title)); // title
+        });
+
+        protocol.replaceServerbound(ServerboundPackets26_3.SET_CREATIVE_MODE_SLOT, wrapper -> {
+            // ViaBedrock drops creative inventory actions; BetterPMMP sets the slot itself
+            wrapper.cancel();
+            final short slot = wrapper.read(Types.SHORT);
+            final com.viaversion.viaversion.api.minecraft.item.Item javaItem = wrapper.read(VersionedTypes.V26_3.lengthPrefixedItem);
+            String name = "";
+            int meta = 0;
+            int count = 0;
+            if (javaItem != null && javaItem.identifier() != 0 && javaItem.amount() > 0) {
+                final net.raphimc.viabedrock.protocol.rewriter.ItemRewriter rewriter = wrapper.user().get(net.raphimc.viabedrock.protocol.rewriter.ItemRewriter.class);
+                final net.raphimc.viabedrock.protocol.model.BedrockItem bedrockItem = rewriter == null ? null : rewriter.bedrockItem(javaItem);
+                if (bedrockItem != null && !bedrockItem.isEmpty()) {
+                    final String found = rewriter.getItems().inverse().get(bedrockItem.identifier());
+                    if (found != null) {
+                        name = found;
+                        meta = bedrockItem.data();
+                        count = bedrockItem.amount();
+                    }
+                }
+            }
+            final PacketWrapper message = PacketWrapper.create(ServerboundBedrockPackets.SCRIPT_MESSAGE, wrapper.user());
+            message.write(BedrockTypes.STRING, CREATIVE_MESSAGE);
+            message.write(BedrockTypes.STRING, slot + ";" + name + ";" + meta + ";" + count);
+            message.sendToServer(BedrockProtocol.class);
         });
 
         protocol.replaceServerbound(ServerboundPackets26_3.CONTAINER_CLICK, wrapper -> {

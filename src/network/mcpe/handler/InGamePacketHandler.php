@@ -673,6 +673,8 @@ class InGamePacketHandler extends PacketHandler{
 		//BetterPMMP: inventory clicks of Java Edition players, forwarded by the BetterPMMP-Bridge ViaProxy plugin
 		if($packet->getMessageId() === "betterpmmp:java_click" && \pocketmine\network\JavaBridge::isJavaPlayer($this->player)){
 			\pocketmine\network\mcpe\JavaInventoryClick::handle($this->player, $this->inventoryManager, $packet->getValue());
+		}elseif($packet->getMessageId() === "betterpmmp:java_creative" && \pocketmine\network\JavaBridge::isJavaPlayer($this->player)){
+			\pocketmine\network\mcpe\JavaInventoryClick::handleCreative($this->player, $packet->getValue());
 		}
 		return true;
 	}
