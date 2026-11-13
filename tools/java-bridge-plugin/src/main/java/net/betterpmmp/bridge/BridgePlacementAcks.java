@@ -95,14 +95,18 @@ final class BridgePlacementAcks {
             updateBlock.setHandler(wrapper -> {
                 final BlockPosition position = wrapper.passthrough(BedrockTypes.BLOCK_POSITION);
                 wrapper.resetReader();
+                originalUpdate.handle(wrapper);
                 final int sequence = due(wrapper.user(), position);
                 if (sequence >= 0) {
-                    // acknowledge right before the server's first block update for the clicked or placed block:
-                    // the client drops its prediction and applies the server's block in the same moment, so there is
-                    // no gap and the client never resets the player's position
+                    // like a Java server: first the block updates, then the acknowledgement. The server re-sends the
+                    // clicked block last (after the placed block and the other neighbours), so everything the client
+                    // predicted is already confirmed when the prediction ends - no gap, the block never vanishes
+                    if (!wrapper.isCancelled()) {
+                        wrapper.send(BedrockProtocol.class);
+                        wrapper.cancel();
+                    }
                     PacketFactory.sendJavaBlockChangedAck(wrapper.user(), sequence);
                 }
-                originalUpdate.handle(wrapper);
             });
             ViaBedrock.getPlatform().getLogger().log(Level.INFO, "[BetterPMMP-Bridge] fast building fix enabled");
         } catch (final Throwable t) {
@@ -142,7 +146,7 @@ final class BridgePlacementAcks {
         synchronized (PENDING) {
             final Deque<Pending> queue = PENDING.get(user);
             final Pending head = queue == null ? null : queue.peekFirst();
-            if (head == null || !(head.clicked().equals(position) || head.placed().equals(position))) {
+            if (head == null || !head.clicked().equals(position)) {
                 return -1;
             }
             queue.pollFirst();
