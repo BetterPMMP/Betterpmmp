@@ -114,6 +114,7 @@ return array(
     'pocketmine\\entity\\projectile\\MobTrident' => $baseDir . '/src/entity/projectile/MobTrident.php',
     'pocketmine\\world\\PhantomSpawner' => $baseDir . '/src/world/PhantomSpawner.php',
     'pocketmine\\block\\ExtraVanillaBlocks' => $baseDir . '/src/block/ExtraVanillaBlocks.php',
+    'pocketmine\\network\\mcpe\\JavaLight' => $baseDir . '/src/network/mcpe/JavaLight.php',
     'pocketmine\\block\\VanillaShelf' => $baseDir . '/src/block/VanillaUtilityBlocks.php',
     'pocketmine\\block\\CommandBlockSender' => $baseDir . '/src/block/VanillaUtilityBlocks.php',
     'pocketmine\\block\\VanillaCommandBlock' => $baseDir . '/src/block/VanillaUtilityBlocks.php',

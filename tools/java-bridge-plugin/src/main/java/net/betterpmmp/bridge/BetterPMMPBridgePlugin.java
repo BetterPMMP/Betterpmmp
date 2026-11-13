@@ -63,6 +63,7 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
     public static final String ENTITY_NAME_MESSAGE = "betterpmmp:entity_name";
     public static final String HIDE_NAMETAG_MESSAGE = "betterpmmp:hide_nametag";
     public static final String CREATIVE_MESSAGE = "betterpmmp:java_creative";
+    public static final String LIGHT_MESSAGE = "betterpmmp:light";
 
     @Override
     public void onEnable() {
@@ -124,6 +125,14 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
                 setEntityData.write(Types.VAR_INT, entity.javaId()); // entity id
                 setEntityData.write(VersionedTypes.V26_3.entityDataList, data); // entity data
                 setEntityData.send(BedrockProtocol.class);
+                return;
+            }
+            if (LIGHT_MESSAGE.equals(id)) {
+                try {
+                    BridgeLight.handle(wrapper.user(), value);
+                } catch (final Exception e) {
+                    ViaBedrock.getPlatform().getLogger().log(Level.WARNING, "[BetterPMMP-Bridge] bad light data", e);
+                }
                 return;
             }
             if (HIDE_NAMETAG_MESSAGE.equals(id)) {

@@ -1350,6 +1350,14 @@ class NetworkSession{
 	 */
 	public function startUsingChunk(int $chunkX, int $chunkZ, \Closure $onCompletion) : void{
 		$world = $this->player->getLocation()->getWorld();
+		if($this->isJavaBridgeSession()){
+			//BetterPMMP: Java players get the real light of the chunk afterwards (see JavaLight)
+			$inner = $onCompletion;
+			$onCompletion = function() use ($inner, $world, $chunkX, $chunkZ) : void{
+				$inner();
+				JavaLight::chunkSent($this, $world, $chunkX, $chunkZ);
+			};
+		}
 		$promiseOrPacket = ChunkCache::getInstance($world, $this->compressor)->request($chunkX, $chunkZ);
 		if(is_string($promiseOrPacket)){
 			$this->sendChunkPacket($promiseOrPacket, $onCompletion, $world);
@@ -1490,8 +1498,12 @@ class NetworkSession{
 
 	public function tick() : void{
 		if(!$this->isConnected()){
+			JavaLight::forget($this);
 			$this->dispose();
 			return;
+		}
+		if($this->player !== null && $this->isJavaBridgeSession()){
+			JavaLight::tick($this);
 		}
 
 		if($this->info === null){

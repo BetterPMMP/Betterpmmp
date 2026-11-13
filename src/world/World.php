@@ -2262,6 +2262,7 @@ class World implements ChunkManager{
 
 		if($update){
 			$this->updateAllLight($x, $y, $z);
+			\pocketmine\network\mcpe\JavaLight::blockChanged($this, $x, $z);
 			$this->internalNotifyNeighbourBlockUpdate($x, $y, $z);
 			if($redstoneChanged){
 				$this->notifyRedstoneChange($pos);
