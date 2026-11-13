@@ -136,13 +136,14 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
                 team.write(Types.STRING, HIDDEN_TEAM); // team name
                 team.write(Types.BYTE, (byte) (create ? 0 : 3)); // create / add entities
                 if (create) {
+                    // team parameters in the 26.2+ layout (see ViaVersion Protocol26_1To26_2)
                     team.write(Types.TAG, TextUtil.stringToNbt("")); // display name
-                    team.write(Types.BYTE, (byte) 0); // friendly flags
-                    team.write(Types.VAR_INT, 1); // name tag visibility: never
-                    team.write(Types.VAR_INT, 0); // collision: always
-                    team.write(Types.VAR_INT, 21); // color: reset
                     team.write(Types.TAG, TextUtil.stringToNbt("")); // prefix
                     team.write(Types.TAG, TextUtil.stringToNbt("")); // suffix
+                    team.write(Types.VAR_INT, 1); // name tag visibility: never
+                    team.write(Types.VAR_INT, 0); // collision: always
+                    team.write(Types.BOOL_OPTIONAL_VAR_INT, null); // color: none
+                    team.write(Types.BYTE, (byte) 0); // friendly flags
                 }
                 team.write(Types.VAR_INT, 1); // entity count
                 team.write(Types.STRING, value); // player name
