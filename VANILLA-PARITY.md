@@ -55,6 +55,7 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | System | Stand |
 |---|---|
 | Java: Rang-/Clan-Namen | ✅ ViaBedrock zeigt bei Bedrock-Spielern nur den Account-Namen. Jetzt wird bei Spielern mit eigenem Namensschild (Rang, Clan, mehrere Zeilen) der Java-Name per unsichtbarem Team ausgeblendet und das komplette Namensschild über dem Kopf angezeigt, es folgt dem Spieler und ändert sich mit |
+| Diagnose | Prüfungsspawner (gefunden, startet, warum nicht), Tresor-Benutzung und von Plugins blockierte Block-Benutzung stehen jetzt im normalen Log (ohne Debug-Stufe) |
 | Java: Kreativinventar | ✅ ViaBedrock verwarf alle Aktionen im Java-Kreativmenü. Die Bridge (1.6.0) übersetzt das Item jetzt in ein Bedrock-Item und der Server legt es in den Slot (Inventar, Hotbar, Rüstung, Zweithand) oder wirft es aus dem Menü raus |
 
 ## Neu in 5.58
