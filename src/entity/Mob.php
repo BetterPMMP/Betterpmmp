@@ -140,9 +140,12 @@ abstract class Mob extends Living{
 		}
 	}
 
+	/** BetterPMMP: mobs that must never despawn naturally (for example an enderman that carries a block). */
+	protected function isPersistentMob() : bool{ return false; }
+
 	private function shouldDespawnNaturally(int $tickDiff) : bool{
 		// vanilla: animals are persistent, only monsters, bats and fish despawn
-		if($this->getNameTag() !== "" || $this instanceof BreedableAnimal){
+		if($this->getNameTag() !== "" || $this instanceof BreedableAnimal || $this->isPersistentMob()){
 			return false;
 		}
 

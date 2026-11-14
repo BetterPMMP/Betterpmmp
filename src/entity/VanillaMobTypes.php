@@ -1394,6 +1394,138 @@ class EndermanMob extends GenericHostileMob{
 	protected const WIDTH = 0.6;
 	private int $waterTicks = 0;
 	private int $chaseTeleportTicks = 0;
+	/** BetterPMMP: the block an enderman carries (vanilla: picked up nearby, put down somewhere else) */
+	private ?\pocketmine\block\Block $carriedBlock = null;
+
+	private const HOLDABLE = [
+		\pocketmine\block\BlockTypeIds::GRASS, \pocketmine\block\BlockTypeIds::DIRT, \pocketmine\block\BlockTypeIds::PODZOL,
+		\pocketmine\block\BlockTypeIds::MYCELIUM, \pocketmine\block\BlockTypeIds::MUD, \pocketmine\block\BlockTypeIds::MUDDY_MANGROVE_ROOTS,
+		\pocketmine\block\BlockTypeIds::SAND, \pocketmine\block\BlockTypeIds::RED_SAND, \pocketmine\block\BlockTypeIds::GRAVEL,
+		\pocketmine\block\BlockTypeIds::BROWN_MUSHROOM, \pocketmine\block\BlockTypeIds::RED_MUSHROOM, \pocketmine\block\BlockTypeIds::TNT,
+		\pocketmine\block\BlockTypeIds::CACTUS, \pocketmine\block\BlockTypeIds::CLAY, \pocketmine\block\BlockTypeIds::PUMPKIN,
+		\pocketmine\block\BlockTypeIds::CARVED_PUMPKIN, \pocketmine\block\BlockTypeIds::MELON, \pocketmine\block\BlockTypeIds::CRIMSON_NYLIUM,
+		\pocketmine\block\BlockTypeIds::WARPED_NYLIUM, \pocketmine\block\BlockTypeIds::CRIMSON_ROOTS, \pocketmine\block\BlockTypeIds::WARPED_ROOTS,
+		\pocketmine\block\BlockTypeIds::CRIMSON_FUNGUS, \pocketmine\block\BlockTypeIds::WARPED_FUNGUS, \pocketmine\block\BlockTypeIds::DANDELION,
+		\pocketmine\block\BlockTypeIds::POPPY, \pocketmine\block\BlockTypeIds::BLUE_ORCHID, \pocketmine\block\BlockTypeIds::ALLIUM,
+		\pocketmine\block\BlockTypeIds::AZURE_BLUET, \pocketmine\block\BlockTypeIds::RED_TULIP, \pocketmine\block\BlockTypeIds::ORANGE_TULIP,
+		\pocketmine\block\BlockTypeIds::WHITE_TULIP, \pocketmine\block\BlockTypeIds::PINK_TULIP, \pocketmine\block\BlockTypeIds::OXEYE_DAISY,
+		\pocketmine\block\BlockTypeIds::CORNFLOWER, \pocketmine\block\BlockTypeIds::LILY_OF_THE_VALLEY, \pocketmine\block\BlockTypeIds::WITHER_ROSE,
+		\pocketmine\block\BlockTypeIds::TORCHFLOWER,
+	];
+
+	protected function initEntity(CompoundTag $nbt) : void{
+		parent::initEntity($nbt);
+		$carried = $nbt->getCompoundTag("carriedBlock");
+		if($carried !== null){
+			try{
+				$data = \pocketmine\world\format\io\GlobalBlockStateHandlers::getUpgrader()->upgradeBlockStateNbt($carried);
+				$block = \pocketmine\block\RuntimeBlockStateRegistry::getInstance()->fromStateId(\pocketmine\world\format\io\GlobalBlockStateHandlers::getDeserializer()->deserialize($data));
+				if($block->getTypeId() !== \pocketmine\block\BlockTypeIds::AIR){
+					$this->carriedBlock = $block;
+				}
+			}catch(\Throwable){
+				//unknown block: the enderman simply carries nothing
+			}
+		}
+	}
+
+	public function saveNBT() : CompoundTag{
+		$nbt = parent::saveNBT();
+		if($this->carriedBlock !== null){
+			try{
+				$nbt->setTag("carriedBlock", \pocketmine\world\format\io\GlobalBlockStateHandlers::getSerializer()->serialize($this->carriedBlock->getStateId())->toVanillaNbt());
+			}catch(\Throwable){
+			}
+		}
+		return $nbt;
+	}
+
+	protected function syncNetworkData(EntityMetadataCollection $properties) : void{
+		parent::syncNetworkData($properties);
+		$properties->setInt(EntityMetadataProperties::ENDERMAN_HELD_ITEM_ID, $this->carriedBlock === null ? 0 : \pocketmine\network\mcpe\convert\TypeConverter::getInstance()->getBlockTranslator()->internalIdToNetworkId($this->carriedBlock->getStateId()));
+	}
+
+	/** Vanilla: an enderman that carries a block never despawns. */
+	protected function isPersistentMob() : bool{ return $this->carriedBlock !== null; }
+
+	public function getCarriedBlock() : ?\pocketmine\block\Block{ return $this->carriedBlock; }
+
+	public function getDrops() : array{
+		$drops = parent::getDrops();
+		if($this->carriedBlock !== null){
+			$drops[] = $this->carriedBlock->asItem();
+		}
+		return $drops;
+	}
+
+	/** Vanilla EndermanTakeBlockGoal: 1 in 20 per tick, a random block 2 away, only if the enderman can see it. */
+	private function tryTakeBlock() : void{
+		$world = $this->getWorld();
+		$pos = $this->getPosition();
+		$x = (int) floor($pos->x - 2 + mt_rand() / mt_getrandmax() * 4);
+		$y = (int) floor($pos->y + mt_rand() / mt_getrandmax() * 3);
+		$z = (int) floor($pos->z - 2 + mt_rand() / mt_getrandmax() * 4);
+		if(!$world->isInWorld($x, $y, $z) || !$world->isChunkLoaded($x >> 4, $z >> 4)){
+			return;
+		}
+		$block = $world->getBlockAt($x, $y, $z);
+		if(!in_array($block->getTypeId(), self::HOLDABLE, true)){
+			return;
+		}
+		//the first block on the line from the body to the block centre must be that block
+		$start = new \pocketmine\math\Vector3(floor($pos->x) + 0.5, $y + 0.5, floor($pos->z) + 0.5);
+		$end = new \pocketmine\math\Vector3($x + 0.5, $y + 0.5, $z + 0.5);
+		if($start->distanceSquared($end) > 0.0001){
+			foreach(\pocketmine\math\VoxelRayTrace::betweenPoints($start, $end) as $v){
+				if((int) $v->x === $x && (int) $v->y === $y && (int) $v->z === $z){
+					break;
+				}
+				$between = $world->getBlockAt((int) $v->x, (int) $v->y, (int) $v->z);
+				if($between->getTypeId() !== \pocketmine\block\BlockTypeIds::AIR && $between->calculateIntercept($start, $end) !== null){
+					return;
+				}
+			}
+		}
+		$world->setBlockAt($x, $y, $z, VanillaBlocks::AIR());
+		$this->carriedBlock = clone $block;
+		$this->networkPropertiesDirty = true;
+	}
+
+	/** Vanilla EndermanLeaveBlockGoal: 1 in 2000 per tick, on a solid block next to the enderman. */
+	private function tryPlaceBlock() : void{
+		$carried = $this->carriedBlock;
+		if($carried === null){
+			return;
+		}
+		$world = $this->getWorld();
+		$pos = $this->getPosition();
+		$x = (int) floor($pos->x - 1 + mt_rand() / mt_getrandmax() * 2);
+		$y = (int) floor($pos->y + mt_rand() / mt_getrandmax() * 2);
+		$z = (int) floor($pos->z - 1 + mt_rand() / mt_getrandmax() * 2);
+		if(!$world->isInWorld($x, $y, $z) || !$world->isInWorld($x, $y - 1, $z) || !$world->isChunkLoaded($x >> 4, $z >> 4)){
+			return;
+		}
+		if($world->getBlockAt($x, $y, $z)->getTypeId() !== \pocketmine\block\BlockTypeIds::AIR){
+			return;
+		}
+		$below = $world->getBlockAt($x, $y - 1, $z);
+		if($below->getTypeId() === \pocketmine\block\BlockTypeIds::BEDROCK || !$below->isFullCube()){
+			return;
+		}
+		$box = new \pocketmine\math\AxisAlignedBB($x, $y, $z, $x + 1, $y + 1, $z + 1);
+		foreach($world->getNearbyEntities($box) as $entity){
+			if($entity !== $this){
+				return;
+			}
+		}
+		//plants only where they can stay (flowers on dirt, fungus on nylium ...)
+		$tx = new \pocketmine\world\BlockTransaction($world);
+		if(!$carried->place($tx, $carried->asItem(), $world->getBlockAt($x, $y, $z), $below, \pocketmine\math\Facing::UP, new \pocketmine\math\Vector3(0.5, 1.0, 0.5), null) || !$tx->apply()){
+			return;
+		}
+		$this->carriedBlock = null;
+		$this->networkPropertiesDirty = true;
+	}
 
 	/** Vanilla: projectiles never hit endermen, they teleport away instead; other damage makes them teleport sometimes. */
 	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{
@@ -1427,6 +1559,17 @@ class EndermanMob extends GenericHostileMob{
 		}
 		// chasing: teleport towards a target that is far away or out of reach
 		$target = $this->getCombatTarget();
+		if($target === null){
+			for($i = 0; $i < $tickDiff; ++$i){
+				if($this->carriedBlock === null){
+					if(mt_rand(0, 19) === 0){
+						$this->tryTakeBlock();
+					}
+				}elseif(mt_rand(0, 1999) === 0){
+					$this->tryPlaceBlock();
+				}
+			}
+		}
 		if($target !== null && ($this->chaseTeleportTicks += $tickDiff) >= 30){
 			$this->chaseTeleportTicks = 0;
 			if($target->getPosition()->distanceSquared($this->getPosition()) > 256 && mt_rand(0, 2) === 0){

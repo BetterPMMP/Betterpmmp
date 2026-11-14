@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.67-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.68-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -49,6 +49,13 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel), Lama mit Truhe, Panda-Aussehen je Gen |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.68
+
+| System | Stand |
+|---|---|
+| Geplante Blockticks überleben Entladen und Neustart | 🟡 ungetestet – Bisher gingen geplante Blockticks (Redstone-Verzögerungen, fließendes Wasser/Lava, wachsende Blöcke) verloren, sobald ihr Chunk entladen oder der Server neu gestartet wurde. Sie werden jetzt mit dem Chunk gespeichert – im Format des offiziellen Bedrock-Servers (LevelDB-Schlüssel 0x33: `currentTick` + `tickList` mit `blockState`, `time`, `x`, `y`, `z`) – und laufen beim Laden mit der Restzeit weiter. Nur LevelDB-Welten |
+| Endermen tragen Blöcke | 🟡 ungetestet – Endermen ohne Ziel heben wie in Vanilla Blöcke in der Nähe auf (Erde, Gras, Sand, Kies, Ton, Pilze, Blumen, Kaktus, Kürbis, Melone, TNT, Nezel …, nur bei freier Sicht), zeigen den Block in den Händen, setzen ihn später auf einen festen Block ab, verschwinden mit Block nie und lassen ihn beim Tod fallen. Wird als `carriedBlock` gespeichert |
 
 ## Neu in 5.67
 
@@ -455,7 +462,7 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Übrige Mobs, Wächter-Boss | ❌/🟡 | |
 | Handel, Berufe, Level | ✅/🟡 | **5.3**: Arbeitsblock-Suche bis 32 Blöcke (vorher 8 → Dorfbewohner blieben arbeitslos), Handelsspieler-Metadaten für das Bedrock-Handelsfenster, Dorfbewohner bleiben beim Handeln stehen; **neu in 4.7**: 13 Berufe über Arbeitsblöcke, 5 Level (Novize–Meister) mit Vanilla-EP-Grenzen, Bedrock-Handelsfenster, Nachschub am Arbeitsblock, EP für Spieler |
 | Fahrender Händler | ✅ | **neu in 5.5**: Vanilla-Angebote (5 normale + 1 seltenes), Handelsfenster, spawnt alle 20 Minuten mit 25/50/75 % Chance mit zwei Händler-Lamas, verschwindet nach 40 Minuten |
-| Endermen | ✅/🟡 | **neu in 5.5**: Projektile treffen nicht (Teleport), teleportieren bei Schaden, im Wasser, und zum Ziel; Blickkontakt macht wütend. Fehlt: Blöcke tragen |
+| Endermen | ✅/🟡 | **neu in 5.5**: Projektile treffen nicht (Teleport), teleportieren bei Schaden, im Wasser, und zum Ziel; Blickkontakt macht wütend. **5.68**: Blöcke tragen |
 | Plünderer | ✅/🟡 | **4.7**: Außenposten (max. 6) und Patrouillen ab Tag 5; **5.0**: Außenposten haben von Anfang an 4–6 Wachen, Plünderer tragen Armbrüste. Fehlt: Überfälle (Raids) |
 | Zähmen | ✅ **neu in 5.11**: Wolf (Knochen, 1 : 3), Katze (roher Kabeljau/Lachs, 1 : 3), Papagei (Samen, 1 : 10; Keks vergiftet) – Herzen oder Rauch, sitzt nach dem Zähmen, Besitzer lässt sitzen/aufstehen, folgt ab 10 Blöcken, teleportiert ab 12 Blöcken, heilen mit Futter, Wolf-Halsband färben, gezähmte Wölfe (40 Leben) greifen an, was den Besitzer angreift oder von ihm angegriffen wird (außer Creeper), wilde Wölfe wehren sich, gezähmte Tiere verschwinden nie. Pferde, Esel, Maultiere: zähmen durch Reiten (5.4). Fehlt: Papagei auf der Schulter, Katzen verscheuchen Creeper, Ozelot-Vertrauen |
 | Warden | ✅/🟡 | **neu in 5.0**: Sculk-Kreischer im Tiefen Dunkel und in Antiken Städten warnen (Dunkelheit, Schrei), bei der 4. Warnung erscheint der Warden |
@@ -480,7 +487,7 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 1. ~~Fehlende Blöcke und Gegenstände registrieren~~ (4.7: 219 Blocktypen, 4.9: 152 Gegenstände – damit ist die ganze 1.26.60-Palette vorhanden). Mit Funktion: Elytren, Streitkolben, Schild, Armbrust, Pinsel, Angel, Fisch-Eimer, Boote, Loren, Karten (5.8). Ohne eigene Funktion bisher: Bündel.
 2. Wesen in Strukturen (Wächter, Shulker, Hexen).
 3. ~~Mob-KI und Spawning~~ (4.8). **5.10**: Babyzombies (5 %, halb so groß, 50 % schneller, 12 EP), Zombies schlagen auf Schwer Holztüren ein (12 s, Risse, Klopfen), geladene Creeper (5.9). Offen: Hexentränke, Hühnerjockeys.
-4. Speichern geplanter Blockticks über Neustarts.
+4. ~~Speichern geplanter Blockticks über Neustarts~~ (5.68).
 5. Verhalten der übrigen neuen Blöcke (Sculk-Sensor, Crafter, Tropfstein-Schaden …).
 
 Jeder Punkt ist ein eigenes, großes Paket. „100 % Vanilla“ erreicht man nur Schritt
