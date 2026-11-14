@@ -2152,6 +2152,13 @@ class PandaMob extends GenericAnimalMob{
 	}
 	public function saveNBT() : CompoundTag{ $nbt = parent::saveNBT(); $nbt->setString("MainGene", $this->gene); return $nbt; }
 	public function getGene() : string{ return $this->gene; }
+	private const GENE_VARIANT = ["normal" => 0, "lazy" => 1, "worried" => 2, "playful" => 3, "brown" => 4, "weak" => 5, "aggressive" => 6];
+	protected function syncNetworkData(EntityMetadataCollection $properties) : void{
+		parent::syncNetworkData($properties);
+		// the client renders the panda by its main gene (variant); brown and weak look different
+		$properties->setInt(EntityMetadataProperties::VARIANT, self::GENE_VARIANT[$this->gene] ?? 0);
+		$properties->setInt(EntityMetadataProperties::MARK_VARIANT, self::GENE_VARIANT[$this->gene] ?? 0);
+	}
 	protected function shouldFleeFromAttacker(\pocketmine\event\entity\EntityDamageByEntityEvent $source) : bool{ return $this->gene === "worried" || $this->combatShouldFlee($source); }
 	public function attack(\pocketmine\event\entity\EntityDamageEvent $source) : void{
 		if($this->gene === "worried"){ \pocketmine\entity\Mob::attack($source); return; }
