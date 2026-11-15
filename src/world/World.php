@@ -1045,14 +1045,34 @@ class World implements ChunkManager{
 			if(($this->scheduledBlockUpdateQueueIndex[$hash]["token"] ?? null) !== $token){
 				continue; // superseded or removed: never fire a stale block tick
 			}
+			$tickX = (int) $vec->x;
+			$tickZ = (int) $vec->z;
+			if($this->isInLoadedTerrain($vec) && !(
+				isset($this->chunks[World::chunkHash(($tickX - 1) >> Chunk::COORD_BIT_SIZE, ($tickZ - 1) >> Chunk::COORD_BIT_SIZE)]) &&
+				isset($this->chunks[World::chunkHash(($tickX + 1) >> Chunk::COORD_BIT_SIZE, ($tickZ - 1) >> Chunk::COORD_BIT_SIZE)]) &&
+				isset($this->chunks[World::chunkHash(($tickX - 1) >> Chunk::COORD_BIT_SIZE, ($tickZ + 1) >> Chunk::COORD_BIT_SIZE)]) &&
+				isset($this->chunks[World::chunkHash(($tickX + 1) >> Chunk::COORD_BIT_SIZE, ($tickZ + 1) >> Chunk::COORD_BIT_SIZE)])
+			)){
+				//BetterPMMP: a block at the edge of the loaded area (water that would flow into a chunk that is not
+				//loaded or not generated yet) waits until its neighbours are there, like outside a ticking area in
+				//vanilla. The tick stays pending and is saved with its chunk.
+				$this->scheduledBlockUpdateQueueIndex[$hash]["due"] = $currentTick + 20;
+				$this->scheduledBlockUpdateQueue->insert([$vec, $token, $expectedType], $currentTick + 20);
+				continue;
+			}
 			unset($this->scheduledBlockUpdateQueueIndex[$hash]);
-			unset($this->scheduledBlockUpdatesByChunk[World::chunkHash($vec->x >> Chunk::COORD_BIT_SIZE, $vec->z >> Chunk::COORD_BIT_SIZE)][$hash]);
+			unset($this->scheduledBlockUpdatesByChunk[World::chunkHash($tickX >> Chunk::COORD_BIT_SIZE, $tickZ >> Chunk::COORD_BIT_SIZE)][$hash]);
 			if(!$this->isInLoadedTerrain($vec)){
 				continue;
 			}
 			$block = $this->getBlock($vec);
 			if($block->getTypeId() === $expectedType){
-				$block->onScheduledUpdate();
+				try{
+					$block->onScheduledUpdate();
+				}catch(WorldException $e){
+					//never crash the server because a block tick reached terrain that does not exist
+					$this->logger->debug("Block tick at $tickX, " . (int) $vec->y . ", $tickZ skipped: " . $e->getMessage());
+				}
 			}
 		}
 		$this->timings->scheduledBlockUpdates->stopTiming();

@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.69-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.70-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -49,6 +49,12 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel), Lama mit Truhe, Panda-Aussehen je Gen |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.70
+
+| System | Stand |
+|---|---|
+| Fix Absturz „Cannot set a block in un-generated terrain“ | 🟡 ungetestet – Wasser/Lava am Rand des geladenen Gebiets wollte in einen Chunk fließen, den es noch nicht gibt, und der Server stürzte ab (seit 5.68 häufiger, weil gespeicherte Blockticks beim Laden weiterlaufen). Ein Blocktick läuft jetzt erst, wenn auch die Nachbar-Chunks geladen sind, und wartet sonst (bleibt gespeichert). Zusätzlich bringt ein Blocktick, der trotzdem nicht vorhandenes Gelände erreicht, den Server nicht mehr zum Absturz |
 
 ## Neu in 5.69
 
