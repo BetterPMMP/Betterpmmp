@@ -9,7 +9,13 @@ declare(strict_types=1);
 
 namespace pocketmine\network\mcpe;
 
+use pocketmine\block\inventory\BrewingStandInventory;
 use pocketmine\block\inventory\CraftingTableInventory;
+use pocketmine\block\inventory\FurnaceInventory;
+use pocketmine\block\inventory\SmithingTableInventory;
+use pocketmine\crafting\ShapelessRecipe;
+use pocketmine\crafting\ShapelessRecipeType;
+use pocketmine\item\Durable;
 use pocketmine\crafting\CraftingGrid;
 use pocketmine\crafting\CraftingRecipe;
 use pocketmine\inventory\Inventory;
@@ -53,6 +59,13 @@ final class JavaInventoryClick{
 	private const INV_OFFHAND = 45;
 	private const OUTSIDE = -999;
 	private const CREATED_OUTPUT_SLOT = 50;
+	/** Java smithing screen: 0 template, 1 base item, 2 material, 3 result */
+	private const SMITHING_RESULT = 3;
+	/** Java brewing stand: 0-2 bottles, 3 ingredient, 4 fuel => BetterPMMP slot */
+	private const BREWING_JAVA_TO_SLOT = [
+		BrewingStandInventory::SLOT_BOTTLE_LEFT, BrewingStandInventory::SLOT_BOTTLE_MIDDLE, BrewingStandInventory::SLOT_BOTTLE_RIGHT,
+		BrewingStandInventory::SLOT_INGREDIENT, BrewingStandInventory::SLOT_FUEL
+	];
 
 	/** @var array<int, array{int, list<int>}> player id => [drag type, slots] */
 	private static array $drags = [];
@@ -82,6 +95,13 @@ final class JavaInventoryClick{
 	private function perform(int $slot, int $button, string $action) : void{
 		if($slot === 0 && $this->grid() !== null && ($action === "PICKUP" || $action === "QUICK_MOVE")){
 			$this->craftResult($action === "QUICK_MOVE");
+			$this->commit();
+			return;
+		}
+		if($slot === self::SMITHING_RESULT && $this->container() instanceof SmithingTableInventory){
+			if($action === "PICKUP" || $action === "QUICK_MOVE"){
+				$this->smithResult($action === "QUICK_MOVE");
+			}
 			$this->commit();
 			return;
 		}
@@ -128,7 +148,21 @@ final class JavaInventoryClick{
 				default => null,
 			};
 		}
+		if($container instanceof SmithingTableInventory){
+			// Java smithing screen: 0 template, 1 base, 2 material, 3 result, 4-30 inventory, 31-39 hotbar
+			return match(true){
+				$javaSlot === 0 => [$container, 2],
+				$javaSlot === 1 => [$container, 0],
+				$javaSlot === 2 => [$container, 1],
+				$javaSlot >= 4 && $javaSlot < 31 => [$inventory, $javaSlot - 4 + 9],
+				$javaSlot >= 31 && $javaSlot < 40 => [$inventory, $javaSlot - 31],
+				default => null,
+			};
+		}
 		$size = $container->getSize();
+		if($container instanceof BrewingStandInventory && $javaSlot >= 0 && $javaSlot < $size){
+			return [$container, self::BREWING_JAVA_TO_SLOT[$javaSlot]];
+		}
 		return match(true){
 			$javaSlot >= 0 && $javaSlot < $size => [$container, $javaSlot],
 			$javaSlot >= $size && $javaSlot < $size + 27 => [$inventory, $javaSlot - $size + 9],
@@ -145,12 +179,61 @@ final class JavaInventoryClick{
 	/** @return list<int> Java slot numbers of the current window, in Java's order */
 	private function windowSlots() : array{
 		$container = $this->container();
-		$count = $this->windowId === 0 ? 46 : ($container instanceof CraftingTableInventory ? 46 : (($container?->getSize() ?? 0) + 36));
+		$count = $this->windowId === 0 ? 46 : $this->containerSlotCount($container) + 36;
 		$slots = [];
 		for($i = 0; $i < $count; ++$i){
 			$slots[] = $i;
 		}
 		return $slots;
+	}
+
+	/** Number of Java slots in front of the player inventory in the current window. */
+	private function containerSlotCount(?Inventory $container) : int{
+		return match(true){
+			$container === null => 0,
+			$container instanceof CraftingTableInventory => 10,
+			$container instanceof SmithingTableInventory => 4,
+			default => $container->getSize(),
+		};
+	}
+
+	/** Slots nothing may be put into: the result of a furnace. */
+	private static function isOutputOnly(Inventory $inventory, int $slot) : bool{
+		return $inventory instanceof FurnaceInventory && $slot === FurnaceInventory::SLOT_RESULT;
+	}
+
+	/**
+	 * Where a shift-click from the player inventory goes in a furnace, brewing stand or smithing table, like in
+	 * vanilla; null = this window has no such rules.
+	 * @return list<array{Inventory, int}>|null
+	 */
+	private function stationTargets(Inventory $container, Item $item) : ?array{
+		if($container instanceof FurnaceInventory){
+			if($this->player->getServer()->getCraftingManager()->getFurnaceRecipeManager($container->getFurnaceType())->match($item) !== null){
+				return [[$container, FurnaceInventory::SLOT_INPUT]];
+			}
+			return $item->getFuelTime() > 0 ? [[$container, FurnaceInventory::SLOT_FUEL]] : [];
+		}
+		if($container instanceof BrewingStandInventory){
+			$id = $item->getTypeId();
+			if($id === \pocketmine\item\ItemTypeIds::BLAZE_POWDER){
+				return [[$container, BrewingStandInventory::SLOT_FUEL], [$container, BrewingStandInventory::SLOT_INGREDIENT]];
+			}
+			if($id === \pocketmine\item\ItemTypeIds::POTION || $id === \pocketmine\item\ItemTypeIds::SPLASH_POTION || $id === \pocketmine\item\ItemTypeIds::GLASS_BOTTLE || $item->getMaxStackSize() === 1){
+				return [[$container, BrewingStandInventory::SLOT_BOTTLE_LEFT], [$container, BrewingStandInventory::SLOT_BOTTLE_MIDDLE], [$container, BrewingStandInventory::SLOT_BOTTLE_RIGHT]];
+			}
+			return [[$container, BrewingStandInventory::SLOT_INGREDIENT]];
+		}
+		if($container instanceof SmithingTableInventory){
+			$id = $item->getTypeId();
+			return match(true){
+				$id === \pocketmine\item\ItemTypeIds::NETHERITE_UPGRADE_SMITHING_TEMPLATE => [[$container, 2]],
+				$id === \pocketmine\item\ItemTypeIds::NETHERITE_INGOT => [[$container, 1]],
+				isset(self::netheriteUpgrades()[$id]) => [[$container, 0]],
+				default => [],
+			};
+		}
+		return null;
 	}
 
 	private function get(Inventory $inventory, int $slot) : Item{
@@ -205,6 +288,14 @@ final class JavaInventoryClick{
 			$this->set($inventory, $slot, $item);
 			return;
 		}
+		if(self::isOutputOnly($inventory, $slot)){
+			// vanilla: a result slot only gives - the whole stack, if the cursor can take it
+			if(!$item->isNull() && $item->canStackWith($cursor) && $cursor->getCount() + $item->getCount() <= $cursor->getMaxStackSize()){
+				$this->setCursor($cursor->setCount($cursor->getCount() + $item->getCount()));
+				$this->set($inventory, $slot, VanillaItems::AIR());
+			}
+			return;
+		}
 		if($item->isNull() || $item->canStackWith($cursor)){
 			$space = self::maxStack($cursor, $inventory) - ($item->isNull() ? 0 : $item->getCount());
 			$amount = min($space, $button === 0 ? $cursor->getCount() : 1);
@@ -234,13 +325,13 @@ final class JavaInventoryClick{
 		if($item->isNull()){
 			return;
 		}
-		$targets = $this->quickMoveTargets($javaSlot);
+		$targets = $this->quickMoveTargets($javaSlot, $item);
 		$this->insert($item, $targets);
 		$this->set($inventory, $slot, $item);
 	}
 
 	/** @return list<array{Inventory, int}> */
-	private function quickMoveTargets(int $javaSlot) : array{
+	private function quickMoveTargets(int $javaSlot, Item $item) : array{
 		$inventory = $this->player->getInventory();
 		$playerSlots = [];
 		for($i = 8; $i >= 0; --$i){
@@ -261,8 +352,22 @@ final class JavaInventoryClick{
 		if($container === null){
 			return [];
 		}
-		if($javaSlot < $container->getSize()){
+		$first = $this->containerSlotCount($container);
+		if($javaSlot < $first){
 			return $playerSlots;
+		}
+		$station = $this->stationTargets($container, $item);
+		if($station !== null && $station !== []){
+			return $station;
+		}
+		if($station !== null){
+			// nothing for this block: vanilla moves between the inventory rows and the hotbar
+			$targets = [];
+			$fromHotbar = $javaSlot >= $first + 27;
+			for($i = $fromHotbar ? 9 : 0; $i < ($fromHotbar ? 36 : 9); ++$i){
+				$targets[] = [$inventory, $i];
+			}
+			return $targets;
 		}
 		$targets = [];
 		for($i = 0; $i < $container->getSize(); ++$i){
@@ -281,6 +386,9 @@ final class JavaInventoryClick{
 			foreach($slots as [$inventory, $slot]){
 				if($item->isNull()){
 					return;
+				}
+				if(self::isOutputOnly($inventory, $slot)){
+					continue;
 				}
 				$existing = $this->get($inventory, $slot);
 				if($empty !== $existing->isNull() || (!$empty && !$existing->canStackWith($item))){
@@ -311,6 +419,9 @@ final class JavaInventoryClick{
 		[$otherInventory, $otherSlot] = $other;
 		$a = $this->get($inventory, $slot);
 		$b = $this->get($otherInventory, $otherSlot);
+		if(self::isOutputOnly($inventory, $slot) && !$b->isNull()){
+			return;
+		}
 		$this->set($inventory, $slot, $b);
 		$this->set($otherInventory, $otherSlot, $a);
 	}
@@ -406,6 +517,9 @@ final class JavaInventoryClick{
 				continue;
 			}
 			[$inventory, $index] = $target;
+			if(self::isOutputOnly($inventory, $index)){
+				continue;
+			}
 			$item = $this->get($inventory, $index);
 			if(!$item->isNull() && !$item->canStackWith($cursor)){
 				continue;
@@ -471,6 +585,8 @@ final class JavaInventoryClick{
 		}
 		if($grid !== null){
 			self::sendCraftingResult($this->player, $this->manager, $grid, $this->windowId);
+		}elseif($container instanceof SmithingTableInventory){
+			self::sendSmithingResult($this->player, $container, $this->windowId);
 		}
 	}
 
@@ -500,6 +616,9 @@ final class JavaInventoryClick{
 		foreach([$manager->getShapedRecipes(), $manager->getShapelessRecipes()] as $groups){
 			foreach($groups as $recipes){
 				foreach($recipes as $recipe){
+					if($recipe instanceof ShapelessRecipe && $recipe->getType() !== ShapelessRecipeType::CRAFTING){
+						continue; // stonecutter, cartography table and smithing recipes are not for the crafting grid
+					}
 					if($recipe->matchesCraftingGrid($grid)){
 						$results = $recipe->getResultsFor($grid);
 						if(isset($results[0]) && !$results[0]->isNull()){
@@ -581,6 +700,94 @@ final class JavaInventoryClick{
 			null,
 			null,
 			new ItemStackWrapper(0, $session->getTypeConverter()->coreItemStackToNet($result))
+		));
+		$session->sendDataPacket(ScriptMessagePacket::create("betterpmmp:craft_result", (string) $windowId));
+	}
+
+	// ------------------------------------------------------------- smithing
+
+	/** @return array<int, \Closure() : Item> diamond item type id => netherite item */
+	private static function netheriteUpgrades() : array{
+		static $map = null;
+		return $map ??= [
+			\pocketmine\item\ItemTypeIds::DIAMOND_SWORD => VanillaItems::NETHERITE_SWORD(...),
+			\pocketmine\item\ItemTypeIds::DIAMOND_PICKAXE => VanillaItems::NETHERITE_PICKAXE(...),
+			\pocketmine\item\ItemTypeIds::DIAMOND_AXE => VanillaItems::NETHERITE_AXE(...),
+			\pocketmine\item\ItemTypeIds::DIAMOND_SHOVEL => VanillaItems::NETHERITE_SHOVEL(...),
+			\pocketmine\item\ItemTypeIds::DIAMOND_HOE => VanillaItems::NETHERITE_HOE(...),
+			\pocketmine\item\ItemTypeIds::DIAMOND_HELMET => VanillaItems::NETHERITE_HELMET(...),
+			\pocketmine\item\ItemTypeIds::DIAMOND_CHESTPLATE => VanillaItems::NETHERITE_CHESTPLATE(...),
+			\pocketmine\item\ItemTypeIds::DIAMOND_LEGGINGS => VanillaItems::NETHERITE_LEGGINGS(...),
+			\pocketmine\item\ItemTypeIds::DIAMOND_BOOTS => VanillaItems::NETHERITE_BOOTS(...),
+		];
+	}
+
+	/**
+	 * Netherite upgrade: template + diamond tool or armour + netherite ingot. Enchantments, name and damage stay.
+	 */
+	public static function smithingResult(SmithingTableInventory $table) : ?Item{
+		$base = $table->getItem(0);
+		$material = $table->getItem(1);
+		$template = $table->getItem(2);
+		$make = self::netheriteUpgrades()[$base->getTypeId()] ?? null;
+		if($make === null || $base->isNull() || $material->getTypeId() !== \pocketmine\item\ItemTypeIds::NETHERITE_INGOT || $template->getTypeId() !== \pocketmine\item\ItemTypeIds::NETHERITE_UPGRADE_SMITHING_TEMPLATE){
+			return null;
+		}
+		$result = $make();
+		try{
+			$result->setNamedTag(clone $base->getNamedTag());
+		}catch(\Throwable){
+			// keep the plain netherite item
+		}
+		if($result instanceof Durable && $base instanceof Durable){
+			$result->setDamage(min($base->getDamage(), $result->getMaxDurability() - 1));
+		}
+		return $result->setCount(1);
+	}
+
+	/** Clicking the result takes one upgraded item (shift-click: into the inventory) and uses up one of each input. */
+	private function smithResult(bool $intoInventory) : void{
+		$table = $this->container();
+		if(!$table instanceof SmithingTableInventory){
+			return;
+		}
+		$result = self::smithingResult($table);
+		if($result === null){
+			return;
+		}
+		$inventory = $this->player->getInventory();
+		$cursorInventory = $this->player->getCursorInventory();
+		if($intoInventory){
+			if(!$inventory->canAddItem($result)){
+				return;
+			}
+		}elseif(!$cursorInventory->getItem(0)->isNull()){
+			return;
+		}
+		// the upgrade creates and destroys items, which no ordinary inventory transaction allows
+		for($slot = 0; $slot < 3; ++$slot){
+			$item = $table->getItem($slot);
+			$item->pop();
+			$table->setItem($slot, $item);
+		}
+		if($intoInventory){
+			$inventory->addItem($result);
+		}else{
+			$cursorInventory->setItem(0, $result);
+		}
+		$position = $table->getHolder();
+		$position->getWorld()->addSound($position->add(0.5, 0.5, 0.5), new \pocketmine\world\sound\VanillaSound(\pocketmine\network\mcpe\protocol\types\LevelSoundEvent::SMITHING_TABLE_USE));
+	}
+
+	/** Shows the result of the smithing table (as the "created output" UI slot, like the crafting result). */
+	public static function sendSmithingResult(Player $player, SmithingTableInventory $table, int $windowId) : void{
+		$session = $player->getNetworkSession();
+		$session->sendDataPacket(InventorySlotPacket::create(
+			ContainerIds::UI,
+			self::CREATED_OUTPUT_SLOT,
+			null,
+			null,
+			new ItemStackWrapper(0, $session->getTypeConverter()->coreItemStackToNet(self::smithingResult($table) ?? VanillaItems::AIR()))
 		));
 		$session->sendDataPacket(ScriptMessagePacket::create("betterpmmp:craft_result", (string) $windowId));
 	}

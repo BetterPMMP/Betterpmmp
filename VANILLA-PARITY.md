@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.68-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.69-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -49,6 +49,17 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel), Lama mit Truhe, Panda-Aussehen je Gen |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.69
+
+| System | Stand |
+|---|---|
+| Java: Ofen, Schmelzofen, Räucherofen | 🟡 ungetestet – Java-Spieler konnten nur Truhen und Werkbänke öffnen; alle anderen Blöcke hat die Bridge sofort wieder geschlossen („unimplemented container“). Öfen öffnen jetzt als Java-Ofenfenster mit Flamme und Fortschrittspfeil (Bridge 1.8.0), das Ergebnisfeld nimmt nichts an, Shift-Klick sortiert Schmelzgut und Brennstoff wie in Vanilla |
+| Java: Braustand | 🟡 ungetestet – Java-Braufenster mit der Java-Slotreihenfolge (3 Flaschen, Zutat, Lohenstaub), Braufortschritt und Brennstoffanzeige |
+| Java: Trichter, Spender, Werfer, Truhen-/Trichterlore, Truhenboot | 🟡 ungetestet – öffnen als passende Java-Fenster |
+| Java: Schmiedetisch | 🟡 ungetestet – Netherit-Aufwertung (Vorlage + Diamantwerkzeug/-rüstung + Netheritbarren), Verzauberungen, Name und Abnutzung bleiben. Rüstungsbesätze fehlen |
+| Fix Java-Craften | 🟡 ungetestet – Bei der Rezeptsuche für Java wurden auch Steinsäge- und Kartentisch-Rezepte mit dem Werkbankraster verglichen: ein einzelner Block im Raster konnte ein Steinsägen-Ergebnis liefern statt des richtigen Rezepts (oder keins). Es zählen jetzt nur noch Werkbank-Rezepte |
+| Java: noch offen | ❌ Amboss, Zaubertisch, Schleifstein, Steinsäge, Webstuhl, Kartentisch, Crafter, Leuchtfeuer, Handel; Sonderrezepte ohne feste Zutatenliste (Feuerwerk, Rüstung färben, Karten/Bücher kopieren, Banner) |
 
 ## Neu in 5.68
 
