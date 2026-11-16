@@ -168,6 +168,8 @@ return array(
     'pocketmine\\entity\\BossBarTracker' => $baseDir . '/src/entity/BossBarTracker.php',
     'pocketmine\\world\\generator\\vanilla\\VanillaEnd' => $baseDir . '/src/world/generator/vanilla/VanillaEnd.php',
     'pocketmine\\world\\generator\\vanilla\\structure\\EndCity' => $baseDir . '/src/world/generator/vanilla/structure/EndCity.php',
+    'pocketmine\\world\\generator\\vanilla\\structure\\EndCityLayout' => $baseDir . '/src/world/generator/vanilla/structure/EndCityLayout.php',
+    'pocketmine\\world\\generator\\vanilla\\structure\\JavaTemplate' => $baseDir . '/src/world/generator/vanilla/structure/JavaTemplate.php',
     'pocketmine\\world\\generator\\vanilla\\structure\\Bastion' => $baseDir . '/src/world/generator/vanilla/structure/Bastion.php',
     'pocketmine\\world\\generator\\vanilla\\structure\\NetherFortress' => $baseDir . '/src/world/generator/vanilla/structure/NetherFortress.php',
     'pocketmine\\world\\generator\\vanilla\\structure\\VillageStructure' => $baseDir . '/src/world/generator/vanilla/structure/VillageStructure.php',
