@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.70-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.71-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -49,6 +49,12 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel), Lama mit Truhe, Panda-Aussehen je Gen |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.71
+
+| System | Stand |
+|---|---|
+| Alte Weltformate über Plugins laden | 🟡 ungetestet – Welten im Java-Anvil-, McRegion- oder PMAnvil-Format wurden nur beim Serverstart umgewandelt; lud ein Plugin (z. B. `/mw tp`) so eine Welt, gab es den Fehler „unsupported format and needs to be upgraded“. Sie werden jetzt immer beim ersten Laden nach LevelDB umgewandelt (Sicherung in `backups/worlds/`) |
 
 ## Neu in 5.70
 
