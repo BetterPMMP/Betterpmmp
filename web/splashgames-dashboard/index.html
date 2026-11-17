@@ -1,0 +1,674 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SplashGames Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0c0f; --panel:#0f1216; --panel2:#13171c; --border:#1d2229; --border2:#262c34;
+  --text:#e7eaee; --muted:#8b939e; --dim:#5b636e;
+  --accent:#38bdf8; --accent-bg:rgba(56,189,248,.10); --accent-br:rgba(56,189,248,.35);
+  --green:#4ade80; --green-bg:rgba(74,222,128,.10);
+  --amber:#f5b041; --amber-bg:rgba(245,176,65,.10);
+  --red:#f87171; --red-bg:rgba(248,113,113,.10);
+  --violet:#a78bfa; --violet-bg:rgba(167,139,250,.12);
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:'Inter',system-ui,-apple-system,Segoe UI,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.45 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+button,input,select,textarea{font:inherit;color:inherit}
+.mono{font-family:var(--mono)}
+.muted{color:var(--muted)} .dim{color:var(--dim)}
+
+/* layout */
+.app{display:grid;grid-template-columns:240px 1fr;height:100vh}
+.side{background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0}
+.brand{display:flex;align-items:center;gap:10px;padding:18px 20px;font-weight:700;font-size:15px;letter-spacing:-.01em}
+.brand svg{width:22px;height:22px}
+.nav{flex:1;overflow:auto;padding:4px 10px 16px}
+.nav h6{margin:18px 10px 8px;font-size:11px;font-weight:500;letter-spacing:.06em;color:var(--dim);text-transform:uppercase;display:flex;align-items:center;justify-content:space-between;cursor:default}
+.nav h6.group{cursor:pointer;user-select:none}
+.nav h6.group .chev{transition:transform .15s}
+.nav h6.group.closed .chev{transform:rotate(-90deg)}
+.nav h6.group.closed + .grp{display:none}
+.nav a{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:7px;color:#c9ced5;margin:2px 0;border:1px solid transparent}
+.nav a svg{width:16px;height:16px;color:var(--muted);flex:none}
+.nav a:hover{background:var(--panel2)}
+.nav a.active{background:var(--accent-bg);border-color:var(--accent-br);color:#fff}
+.nav a.active svg{color:var(--accent)}
+.me{border-top:1px solid var(--border);padding:14px 16px;display:flex;gap:10px;align-items:center}
+.avatar{width:30px;height:30px;border-radius:7px;background:var(--panel2);border:1px solid var(--border2);display:grid;place-items:center;font:600 11px var(--mono)}
+.me b{display:block;font-size:13px} .me span{font-size:11px;color:var(--muted)}
+
+.main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.top{height:56px;flex:none;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;padding:0 24px}
+.top .crumb{font-weight:500;flex:1}
+.icon-btn.menu-btn{display:none}
+.search{display:flex;align-items:center;gap:8px;width:220px;height:32px;padding:0 10px;border:1px solid var(--border2);border-radius:8px;background:var(--panel);color:var(--dim);cursor:pointer;font-size:13px}
+.search kbd{margin-left:auto;font:500 11px var(--mono);color:var(--muted)}
+.icon-btn{width:32px;height:32px;border-radius:8px;border:1px solid transparent;background:none;display:grid;place-items:center;color:var(--muted);cursor:pointer}
+.icon-btn:hover{background:var(--panel2);color:var(--text)}
+.icon-btn svg{width:16px;height:16px}
+.live{display:flex;align-items:center;gap:6px;font:500 11px var(--mono);color:var(--green);background:var(--green-bg);padding:4px 9px;border-radius:999px;cursor:pointer;border:none}
+.live i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.live.paused{color:var(--muted);background:var(--panel2)}
+.content{flex:1;overflow:auto;padding:32px 64px 48px}
+.page-h{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px}
+.page-h h1{margin:0 0 4px;font-size:21px;letter-spacing:-.02em}
+.page-h p{margin:0;color:var(--muted)}
+
+/* cards */
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px}
+.card-h{padding:20px 24px 12px}
+.card-h h3{margin:0;font-size:14px}
+.card-h p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat{padding:20px}
+.stat .lbl{font-size:11px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+.stat .val{font:600 24px var(--mono);margin-top:6px}
+.stat .val small{font-size:12px;color:var(--dim);margin-left:2px}
+.stat .sub{font-size:12px;color:var(--muted);margin-top:4px;min-height:17px}
+.row2{display:grid;grid-template-columns:1fr 500px;gap:16px;margin-bottom:24px}
+
+/* badges */
+.badge{display:inline-flex;align-items:center;gap:5px;font:500 11.5px var(--mono);padding:2px 8px;border-radius:6px;white-space:nowrap}
+.badge.dot::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
+.b-green{color:var(--green);background:var(--green-bg)}
+.b-amber{color:var(--amber);background:var(--amber-bg)}
+.b-red{color:var(--red);background:var(--red-bg)}
+.b-blue{color:var(--accent);background:var(--accent-bg)}
+.b-violet{color:var(--violet);background:var(--violet-bg)}
+.b-gray{color:var(--muted);background:var(--panel2)}
+.tag{font:400 12px var(--mono);color:var(--dim);margin-left:6px}
+.pill{font-size:11.5px;padding:2px 8px;border-radius:6px;margin-left:6px}
+
+/* rings */
+.rings{display:flex;gap:40px;align-items:center;padding:8px 24px 0}
+.ring{display:flex;align-items:center;gap:14px}
+.ring svg{transform:rotate(-90deg)}
+.ring .lbl{font-size:11px;color:var(--muted);letter-spacing:.05em}
+.ring .v{font:600 18px var(--mono)}
+.ring .s{font:400 11px var(--mono);color:var(--muted)}
+.chart{padding:8px 24px 20px}
+.chart svg{width:100%;height:150px;display:block}
+
+/* node list */
+.nl a{display:flex;align-items:center;gap:10px;padding:16px 24px;border-top:1px solid var(--border)}
+.nl a:hover{background:var(--panel2)}
+.nl .n{flex:1}
+.nl .n b{font:600 13.5px var(--mono);margin-right:8px}
+.nl .addr{font:400 11px var(--mono);color:var(--dim);margin-top:4px}
+.nl .r{font:400 12px var(--mono);color:var(--muted);text-align:right}
+
+/* tables */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:11px;font-weight:500;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;padding:12px 16px;border-bottom:1px solid var(--border);white-space:nowrap}
+.tbl th.sort{cursor:pointer;user-select:none}
+.tbl th.sort:hover{color:var(--text)}
+.tbl th .ar{opacity:.5;margin-left:4px}
+.tbl td{padding:12px 16px;border-bottom:1px solid var(--border);white-space:nowrap}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tbody tr:hover{background:rgba(255,255,255,.015)}
+.tbl .name{font-weight:600}
+.tbl .m{font-family:var(--mono);font-size:12.5px;color:#bfc5cc}
+.bar{display:inline-block;width:64px;height:4px;border-radius:2px;background:var(--border2);vertical-align:middle;margin-left:12px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:2px}
+.empty{padding:56px;text-align:center;color:var(--muted)}
+.cb{width:16px;height:16px;accent-color:var(--accent)}
+
+/* events */
+.ev{max-height:260px;overflow:auto}
+.ev div{display:flex;gap:16px;align-items:center;padding:11px 24px;border-top:1px solid var(--border);font-size:13px}
+.ev time{font:400 11px var(--mono);color:var(--dim)}
+.ev svg{width:14px;height:14px;flex:none}
+
+/* filters */
+.filters{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.input,.select{height:36px;border:1px solid var(--border2);background:var(--panel);border-radius:8px;padding:0 12px;outline:none}
+.input:focus,.select:focus{border-color:var(--accent-br)}
+.input-wrap{position:relative}
+.input-wrap svg{position:absolute;left:11px;top:10px;width:15px;height:15px;color:var(--dim)}
+.input-wrap .input{padding-left:34px;width:256px}
+.select{min-width:144px;cursor:pointer}
+textarea.input{height:auto;padding:10px 12px;width:100%;resize:vertical}
+.btn{height:34px;padding:0 14px;border-radius:8px;border:1px solid var(--border2);background:var(--panel2);cursor:pointer;font-weight:500}
+.btn:hover{border-color:var(--dim)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#04121b}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--red)}
+
+/* node cards */
+.ncards{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:16px}
+.ncard{padding:20px}
+.ncard .h{display:flex;align-items:center;gap:8px}
+.ncard .h b{font:600 14px var(--mono)}
+.ncard .h .sp{flex:1}
+.ncard .rings{padding:18px 0 16px;justify-content:space-between;padding-right:40px}
+.disk{font:400 11px var(--mono);color:var(--muted);display:flex;justify-content:space-between}
+.disk span:first-child{font-family:var(--sans);font-size:11px}
+.dbar{height:4px;border-radius:2px;background:var(--border2);margin:6px 0 16px;overflow:hidden}
+.dbar i{display:block;height:100%;background:var(--red)}
+.nfoot{display:grid;grid-template-columns:repeat(4,1fr);text-align:center;border-top:1px solid var(--border);padding-top:14px}
+.nfoot span{display:block;font-size:11px;color:var(--muted)}
+.nfoot b{font:600 13px var(--mono)}
+
+/* misc */
+.menu{position:fixed;z-index:50;background:var(--panel2);border:1px solid var(--border2);border-radius:10px;padding:5px;min-width:170px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.menu button{display:block;width:100%;text-align:left;padding:7px 10px;border:none;background:none;border-radius:6px;cursor:pointer}
+.menu button:hover{background:var(--border)}
+.menu button.danger{color:var(--red)}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;justify-content:center;align-items:flex-start;padding-top:14vh;z-index:60}
+.palette{width:560px;max-width:calc(100vw - 32px);background:var(--panel);border:1px solid var(--border2);border-radius:14px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.palette input{width:100%;border:none;border-bottom:1px solid var(--border);background:none;padding:16px 18px;outline:none;font-size:15px}
+.palette .list{max-height:340px;overflow:auto;padding:6px}
+.palette .it{display:flex;justify-content:space-between;padding:9px 12px;border-radius:8px;cursor:pointer}
+.palette .it.sel{background:var(--accent-bg)}
+.palette .it small{color:var(--dim);font-family:var(--mono)}
+.toasts{position:fixed;right:20px;bottom:20px;display:flex;flex-direction:column;gap:8px;z-index:70}
+.toast{background:var(--panel2);border:1px solid var(--border2);border-left:3px solid var(--accent);padding:10px 14px;border-radius:8px;font-size:13px;box-shadow:0 10px 30px rgba(0,0,0,.4);animation:in .2s}
+@keyframes in{from{opacity:0;transform:translateY(6px)}}
+.form{padding:20px 24px;display:grid;gap:14px;max-width:620px}
+.form label{display:grid;gap:6px;font-size:12px;color:var(--muted)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.switch{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-top:1px solid var(--border)}
+.switch small{display:block;color:var(--muted)}
+.tg{width:36px;height:20px;border-radius:999px;background:var(--border2);position:relative;cursor:pointer;border:none;flex:none}
+.tg::after{content:"";position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;top:3px;left:3px;transition:left .15s}
+.tg.on{background:var(--accent)} .tg.on::after{left:19px}
+.plat{padding:20px;display:flex;flex-direction:column;gap:8px}
+.plat h4{margin:0;font-size:15px}
+
+@media (max-width:1100px){
+  .row2{grid-template-columns:1fr}
+  .grid4{grid-template-columns:repeat(2,1fr)}
+  .content{padding:24px}
+}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr}
+  .side{position:fixed;inset:0 auto 0 0;width:260px;z-index:40;transform:translateX(-100%);transition:transform .2s}
+  .side.open{transform:none;box-shadow:0 0 0 100vmax rgba(0,0,0,.5)}
+  .icon-btn.menu-btn{display:grid}
+  .search{width:auto}.search span,.search kbd{display:none}
+  .content{padding:20px 16px}
+  .grid4{grid-template-columns:1fr 1fr;gap:10px}
+  .ncards{grid-template-columns:1fr}
+  .rings{flex-wrap:wrap;gap:20px}
+  .scroll-x{overflow-x:auto}
+  .two{grid-template-columns:1fr}
+  .input-wrap .input{width:100%}
+  .input-wrap{flex:1 1 100%}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side" id="side">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 2.5c3.2 4.3 6.5 8 6.5 11.6A6.5 6.5 0 0 1 5.5 14.1C5.5 10.5 8.8 6.8 12 2.5Z" fill="#38bdf8"/><path d="M9 14.5a3 3 0 0 0 3 3" stroke="#e0f6ff" stroke-width="1.6" stroke-linecap="round"/><circle cx="19.5" cy="5" r="1.6" fill="#7dd3fc"/><circle cx="4.5" cy="7" r="1.1" fill="#7dd3fc"/></svg>
+      SplashGames
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="me"><div class="avatar">AD</div><div><b>admin</b><span>owner</span></div></div>
+  </aside>
+  <div class="main">
+    <header class="top">
+      <button class="icon-btn menu-btn" id="menuBtn" aria-label="Menü"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+      <div class="crumb" id="crumb">Dashboard</div>
+      <div class="search" id="openPal"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Springe zu…</span><kbd>Ctrl K</kbd></div>
+      <button class="icon-btn" id="refresh" title="Aktualisieren"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>
+      <button class="icon-btn" id="eye" title="Adressen anzeigen/verbergen"></button>
+      <button class="live" id="live"><i></i>live</button>
+    </header>
+    <main class="content" id="view"></main>
+  </div>
+</div>
+<div class="toasts" id="toasts"></div>
+
+<script>
+/* ---------- icons ---------- */
+const I = {
+  grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  server:'<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/>',
+  nodes:'<circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M12 7.5v4M12 11.5 6.5 17M12 11.5l5.5 5.5"/>',
+  users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/>',
+  layout:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 9v12"/>',
+  box:'<path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="m3 8 9 5 9-5M12 13v8"/>',
+  cog:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>',
+  hammer:'<path d="m15 12-8.5 8.5a2.1 2.1 0 0 1-3-3L12 9"/><path d="m17.6 15 4.4-4.4-6.6-6.6-4.4 4.4Z"/>',
+  key:'<circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.8-9.8M17 6l3 3M14.5 8.5l2 2"/>',
+  shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>',
+  mega:'<path d="M3 11v3a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1Z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  chev:'<path d="m9 6 6 6-6 6"/>',
+  down:'<path d="m6 9 6 6 6-6"/>',
+  puzzle:'<path d="M19.4 13c.9 0 1.6-.7 1.6-1.6s-.7-1.6-1.6-1.6H18V6a1 1 0 0 0-1-1h-3.8V3.6C13.2 2.7 12.5 2 11.6 2S10 2.7 10 3.6V5H6a1 1 0 0 0-1 1v3.8h1.4c.9 0 1.6.7 1.6 1.6S7.3 13 6.4 13H5v5a1 1 0 0 0 1 1h4v-1.4c0-.9.7-1.6 1.6-1.6s1.6.7 1.6 1.6V19H17a1 1 0 0 0 1-1v-5Z"/>',
+  play:'<path d="m6 4 14 8-14 8Z"/>', stop:'<rect x="5" y="5" width="14" height="14" rx="2"/>',
+  in:'<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>',
+  out:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
+  eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+  eyeOff:'<path d="M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-2.2 3.1M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6M3 3l18 18M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
+  pin:'<path d="M12 17v5M9 3h6l-1 6 4 4H6l4-4Z"/>',
+  dots:'<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>'
+};
+const ic = (n,extra='') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ${extra}>${I[n]}</svg>`;
+const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $ = s => document.querySelector(s);
+
+/* ---------- mock state (replace with your API) ---------- */
+const S = {
+  region:'EU', live:true, hideAddr:true,
+  nodes:[
+    {id:'node-1', status:'draining', self:true, ip:'10.0.0.11:7000', cpu:4, memUsed:61.1, memTotal:62.7, diskUsed:20.4, diskTotal:94.2, net:0, up:105000},
+    {id:'node-3-dl', status:'healthy', ip:'10.0.0.13:7000', cpu:6, memUsed:5.1, memTotal:11.7, diskUsed:15.5, diskTotal:71.6, net:1, up:105300},
+  ],
+  platforms:[
+    {id:'betterpmmp', name:'BetterPMMP', channel:'Nightly', version:'5.67', kind:'bedrock'},
+    {id:'deepstone', name:'Deepstone', channel:'Stable', version:'2.4.1', kind:'proxy'},
+    {id:'tidegate', name:'Tidegate', channel:'Stable', version:'1.9.0', kind:'gateway'},
+  ],
+  templates:[
+    {id:'blacktide', name:'Blacktide', platform:'betterpmmp', type:'blacktide', min:0, max:5},
+    {id:'deepstone', name:'Deepstone', platform:'deepstone', type:'proxy', min:1, max:6},
+    {id:'hub', name:'Hub', platform:'betterpmmp', type:'bedrock', min:1, max:10, fallback:1},
+    {id:'sb', name:'Skyblock', platform:'betterpmmp', type:'bedrock', min:1, max:1, persistent:true},
+    {id:'tidegate', name:'Tidegate', platform:'tidegate', type:'splash_tidegate', min:1, max:1},
+  ],
+  servers:[
+    {id:'Deepstone-8', template:'deepstone', node:'node-3-dl', state:'ready', max:150, ip:'10.0.0.13:19132'},
+    {id:'Sb-1', slot:'slot 1', template:'sb', node:'node-3-dl', state:'ready', max:50, ip:'10.0.0.13:19140'},
+    {id:'Hub-5', template:'hub', node:'node-3-dl', state:'ready', max:20, ip:'10.0.0.13:19135'},
+    {id:'Tidegate-1', template:'tidegate', node:'node-3-dl', state:'ready', max:150, ip:'10.0.0.13:19133'},
+  ],
+  players:[],
+  events:[],
+  history:[],
+  groups:[
+    {name:'owner', prio:100, color:'#f87171', members:1, perms:['*']},
+    {name:'admin', prio:90, color:'#f5b041', members:2, perms:['splash.admin.*','splash.mod.*']},
+    {name:'moderator', prio:50, color:'#38bdf8', members:4, perms:['splash.mod.*','splash.chat.mute']},
+    {name:'vip', prio:20, color:'#a78bfa', members:31, perms:['splash.cosmetics.*','splash.queue.priority']},
+    {name:'default', prio:0, color:'#8b939e', members:1204, perms:['splash.play','splash.chat']},
+  ],
+  perms:[
+    ['splash.admin.*','Voller Zugriff aufs Panel','admin'],
+    ['splash.mod.kick','Spieler kicken','moderator'],
+    ['splash.mod.ban','Spieler bannen','moderator'],
+    ['splash.chat.mute','Spieler muten','moderator'],
+    ['splash.queue.priority','Bevorzugt in Warteschlangen','vip'],
+    ['splash.cosmetics.*','Alle Kosmetik-Items','vip'],
+    ['splash.play','Server betreten','default'],
+  ],
+  punishments:[
+    {player:'xX_Gr1efer_Xx', type:'ban', reason:'Griefing auf Skyblock', by:'admin', ago:'vor 2 Tagen', until:'permanent'},
+    {player:'SpamBot42', type:'mute', reason:'Chat-Spam', by:'mod', ago:'vor 5 Std.', until:'in 19 Std.'},
+    {player:'LagMaster', type:'kick', reason:'Clientmod', by:'mod', ago:'vor 1 Tag', until:'—'},
+  ],
+  clans:[
+    {tag:'WAVE', name:'Tidal Wave', owner:'Kiro', members:12, elo:1840},
+    {tag:'DRIP', name:'Drip Squad', owner:'Lumi', members:8, elo:1620},
+    {tag:'SPLX', name:'Splashers', owner:'Nyx', members:21, elo:1555},
+  ],
+  broadcasts:[
+    {msg:'§bWillkommen auf SplashGames! §7Neue Map auf Tidegate.', target:'Alle Server', at:'gestern 18:00'},
+  ],
+  settings:{name:'SplashGames', motd:'§bSplashGames §7• §fBedrock Network', maintenance:false, whitelist:false, autoscale:true, heartbeat:10},
+};
+const NAMES=['Kiro','Lumi','Nyx','Bubbles','AquaFox','WaveRider','Drizzle','Coral','Splashy','TidePod','Mako','Reef','Ripple','Marlin','Pebble'];
+const DEVICES=['Android','iOS','Windows','Xbox','PlayStation','Switch'];
+const tpl = id => S.templates.find(t=>t.id===id);
+const plat = id => S.platforms.find(p=>p.id===id);
+const playersOn = sid => S.players.filter(p=>p.server===sid).length;
+const fmtUp = s => { const d=Math.floor(s/86400), h=Math.floor(s%86400/3600), m=Math.floor(s%3600/60); return d?`${d}d ${h}h`:h?`${h}h ${m}m`:`${m}m`; };
+const now = () => new Date().toTimeString().slice(0,8);
+const addr = ip => S.hideAddr ? '*.*.*.*:*' : ip;
+function event(type, text){ S.events.unshift({t:now(), type, text}); S.events.length=Math.min(S.events.length,60); }
+function toast(msg){ const t=document.createElement('div'); t.className='toast'; t.textContent=msg; $('#toasts').append(t); setTimeout(()=>t.remove(),3000); }
+
+/* ---------- simulation ---------- */
+function regionCpu(){ return Math.round(S.nodes.reduce((a,n)=>a+n.cpu,0)/S.nodes.length); }
+function regionMem(){ const u=S.nodes.reduce((a,n)=>a+n.memUsed,0), t=S.nodes.reduce((a,n)=>a+n.memTotal,0); return {u,t,p:Math.round(u/t*100)}; }
+function tick(){
+  for(const n of S.nodes){
+    n.cpu = Math.max(1, Math.min(97, Math.round(n.cpu + (Math.random()-.5)*3 + (n.id==='node-3-dl'? S.players.length*.15:0)*.1)));
+    n.memUsed = Math.max(.5, Math.min(n.memTotal*.99, +(n.memUsed + (Math.random()-.5)*.15).toFixed(1)));
+    n.net = Math.max(0, Math.round(S.players.filter(p=>S.servers.find(s=>s.id===p.server)?.node===n.id).length*0.4 + Math.random()*(n.status==='healthy'?2:0)));
+    n.up += 2;
+  }
+  // players join / leave
+  const alive = S.servers.filter(s=>s.state==='ready' && tpl(s.template).type!=='proxy');
+  if(alive.length && Math.random()<.35 && S.players.length<NAMES.length){
+    const free = NAMES.filter(n=>!S.players.some(p=>p.name===n));
+    const s = alive[Math.floor(Math.random()*alive.length)];
+    if(playersOn(s.id) < s.max){
+      const p={name:free[Math.floor(Math.random()*free.length)], server:s.id, device:DEVICES[Math.floor(Math.random()*DEVICES.length)], since:Date.now(), xuid:String(2535400000000000+Math.floor(Math.random()*1e9))};
+      S.players.push(p); event('join', `${p.name} → ${s.id}`);
+    }
+  } else if(S.players.length && Math.random()<.18){
+    const p=S.players.splice(Math.floor(Math.random()*S.players.length),1)[0]; event('leave', `${p.name} hat ${p.server} verlassen`);
+  }
+  if(Math.random()<.12) event('plugin', 'plugin_invalidate');
+  for(const s of S.servers){ if(s.state==='starting' && Math.random()<.5){ s.state='ready'; event('ready', `${s.id} ist bereit`);} }
+  S.history.push({cpu:regionCpu(), mem:regionMem().p}); if(S.history.length>90) S.history.shift();
+}
+for(let i=0;i<60;i++) tick();
+S.events = S.events.slice(0,12);
+
+/* ---------- components ---------- */
+function ringColor(p){ return p>=90?'var(--red)':p>=75?'var(--amber)':'var(--accent)'; }
+function ring(p,size=58,stroke=5){
+  const r=(size-stroke)/2, c=2*Math.PI*r;
+  return `<svg width="${size}" height="${size}"><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--border2)" stroke-width="${stroke}"/><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${ringColor(p)}" stroke-width="${stroke}" stroke-linecap="round" stroke-dasharray="${c*p/100} ${c}"/></svg>`;
+}
+function stateBadge(s){ const m={ready:'b-green',starting:'b-amber',stopping:'b-amber',stopped:'b-gray',crashed:'b-red',healthy:'b-green',draining:'b-amber',offline:'b-red'}; return `<span class="badge dot ${m[s]||'b-gray'}">${s}</span>`; }
+function bar(v,max){ return `<span class="bar"><i style="width:${max?Math.min(100,v/max*100):0}%"></i></span>`; }
+function chart(){
+  const h=S.history, W=1000, H=150, pad=6;
+  const pts = h.map((d,i)=>[i/(h.length-1)*W, H-pad-(d.cpu/100)*(H-pad*2)]);
+  const mpts = h.map((d,i)=>[i/(h.length-1)*W, H-pad-(d.mem/100)*(H-pad*2)]);
+  const line = a => a.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const grid = [.25,.5,.75].map(f=>`<line x1="0" x2="${W}" y1="${H*f}" y2="${H*f}" stroke="var(--border)" stroke-dasharray="3 5"/>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${grid}
+    <path d="${line(pts)} L${W} ${H} L0 ${H}Z" fill="var(--accent)" opacity=".08"/>
+    <path d="${line(pts)}" fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+    <path d="${line(mpts)}" fill="none" stroke="var(--amber)" stroke-width="1.5" stroke-dasharray="4 4" vector-effect="non-scaling-stroke" opacity=".7"/></svg>`;
+}
+const evIcon = {join:['in','var(--green)'], leave:['out','var(--muted)'], plugin:['puzzle','var(--accent)'], ready:['play','var(--green)'], stop:['stop','var(--red)'], info:['mega','var(--violet)'], mod:['hammer','var(--amber)']};
+function sortHead(key,label,st){ const a = st.key===key ? (st.dir>0?'↑':'↓') : '⇅'; return `<th class="sort" data-sort="${key}">${label}<span class="ar">${a}</span></th>`; }
+
+/* ---------- pages ---------- */
+const UI = { servers:{q:'',state:'alive',node:'',tpl:'',sort:{key:'players',dir:-1},sel:new Set()}, players:{q:'',server:'',sort:{key:'name',dir:1}} };
+
+const pages = {
+  dashboard(){
+    const alive=S.servers.filter(s=>s.state==='ready'), mem=regionMem(), cpu=regionCpu();
+    const busiest=[...alive].sort((a,b)=>playersOn(b.id)-playersOn(a.id));
+    return `<div class="page-h"><div><h1>Regionsübersicht</h1><p>Region <b class="mono" style="color:var(--accent)">${S.region}</b> · ${S.nodes.length} Nodes</p></div></div>
+    <div class="grid4">
+      <div class="card stat"><div class="lbl">Spieler online</div><div class="val">${S.players.length}</div><div class="sub"></div></div>
+      <div class="card stat"><div class="lbl">Server</div><div class="val">${S.servers.length}</div><div class="sub">${alive.length} aktiv</div></div>
+      <div class="card stat"><div class="lbl">Ø CPU</div><div class="val">${cpu}<small>%</small></div><div class="sub"></div></div>
+      <div class="card stat"><div class="lbl">Arbeitsspeicher</div><div class="val">${mem.p}<small>%</small></div><div class="sub">${mem.u.toFixed(1)} GB / ${mem.t.toFixed(1)} GB</div></div>
+    </div>
+    <div class="row2">
+      <div class="card"><div class="card-h"><h3>Regionslast</h3><p>Durchschnitt über alle Nodes, alle ${S.settings.heartbeat} Sekunden gemessen.</p></div>
+        <div class="rings">
+          <div class="ring">${ring(cpu)}<div><div class="lbl">CPU</div><div class="v">${cpu}%</div></div></div>
+          <div class="ring">${ring(mem.p)}<div><div class="lbl">RAM</div><div class="v">${mem.p}%</div><div class="s">${mem.u.toFixed(1)} GB / ${mem.t.toFixed(1)} GB</div></div></div>
+        </div>
+        <div class="chart"><div class="muted" style="font-size:11px;margin:14px 0 6px">CPU <span style="color:var(--accent)">━</span> &nbsp; RAM <span style="color:var(--amber)">┅</span></div>${chart()}</div>
+      </div>
+      <div class="card"><div class="card-h" style="padding-bottom:16px"><h3>Nodes</h3><p>${S.nodes.length} registriert</p></div>
+        <div class="nl">${S.nodes.map(n=>{const sv=S.servers.filter(s=>s.node===n.id); const pl=S.players.filter(p=>sv.some(s=>s.id===p.server)).length;
+          return `<a href="#/nodes"><div class="n"><b>${n.id}</b>${stateBadge(n.status)}<div class="addr">${addr(n.ip)}</div></div><div class="r">${pl} Spieler<br>${sv.length} Server</div>${ic('chev','width="14" height="14" style="color:var(--dim)"')}</a>`}).join('')}</div>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="card"><div class="card-h"><h3>Meistbesuchte Server</h3><p>Aktive Server nach Spielerzahl.</p></div>
+        <div class="scroll-x"><table class="tbl"><thead><tr><th>Server</th><th>Template</th><th>Status</th><th>Spieler</th></tr></thead><tbody>
+        ${busiest.map(s=>`<tr><td class="name">${s.id}</td><td class="m">${s.template}</td><td>${stateBadge(s.state)}</td><td class="m">${playersOn(s.id)}/${s.max}${bar(playersOn(s.id),s.max)}</td></tr>`).join('') || '<tr><td colspan="4" class="empty">Keine aktiven Server.</td></tr>'}
+        </tbody></table></div></div>
+      <div class="card"><div class="card-h" style="padding-bottom:16px"><h3>Letzte Ereignisse</h3><p>Regionsweit, in Echtzeit.</p></div>
+        <div class="ev">${S.events.slice(0,20).map(e=>{const [n,c]=evIcon[e.type]||evIcon.info; return `<div><time>${e.t}</time>${ic(n,`style="color:${c}"`)}<span>${esc(e.text)}</span></div>`}).join('')}</div>
+      </div>
+    </div>`;
+  },
+
+  servers(){
+    const st=UI.servers;
+    let rows=S.servers.filter(s=>{
+      if(st.state==='alive' && !['ready','starting'].includes(s.state)) return false;
+      if(st.state && st.state!=='alive' && s.state!==st.state) return false;
+      if(st.node && s.node!==st.node) return false;
+      if(st.tpl && s.template!==st.tpl) return false;
+      const q=st.q.toLowerCase(); return !q || s.id.toLowerCase().includes(q) || s.template.includes(q);
+    });
+    const val={server:s=>s.id, state:s=>s.state, template:s=>s.template, node:s=>s.node, players:s=>playersOn(s.id)};
+    rows.sort((a,b)=>{const x=val[st.sort.key](a), y=val[st.sort.key](b); return (x>y?1:x<y?-1:0)*st.sort.dir;});
+    return `<div class="page-h"><div><h1>Server</h1><p>Alle Server der Region. Aktionen werden auf der jeweiligen Node ausgeführt.</p></div>
+      <div style="display:flex;gap:8px">${st.sel.size?`<button class="btn danger" data-bulk="stop">${st.sel.size} stoppen</button>`:''}<button class="btn primary" id="newServer">+ Server starten</button></div></div>
+    <div class="filters">
+      <div class="input-wrap">${ic('search')}<input class="input" id="sq" placeholder="Name, ID oder Template" value="${esc(st.q)}"></div>
+      <select class="select" id="sstate">${[['alive','Aktiv'],['','Alle'],['ready','ready'],['starting','starting'],['stopped','stopped'],['crashed','crashed']].map(([v,l])=>`<option value="${v}" ${st.state===v?'selected':''}>${l}</option>`).join('')}</select>
+      <select class="select" id="snode"><option value="">Alle Nodes</option>${S.nodes.map(n=>`<option ${st.node===n.id?'selected':''}>${n.id}</option>`).join('')}</select>
+      <select class="select" id="stpl"><option value="">Alle Templates</option>${S.templates.map(t=>`<option value="${t.id}" ${st.tpl===t.id?'selected':''}>${t.name}</option>`).join('')}</select>
+    </div>
+    <div class="card scroll-x"><table class="tbl"><thead><tr><th style="width:40px"><input type="checkbox" class="cb" id="selAll" ${rows.length&&rows.every(r=>st.sel.has(r.id))?'checked':''}></th>
+      ${sortHead('server','Server',st.sort)}${sortHead('state','Status',st.sort)}${sortHead('template','Template',st.sort)}${sortHead('node','Node',st.sort)}${sortHead('players','Spieler',st.sort)}<th>Adresse</th><th></th></tr></thead><tbody>
+      ${rows.map(s=>`<tr><td><input type="checkbox" class="cb" data-sel="${s.id}" ${st.sel.has(s.id)?'checked':''}></td>
+        <td class="name">${s.id}${s.slot?`<span class="pill b-gray">${s.slot}</span>`:''}</td><td>${stateBadge(s.state)}</td><td class="m">${s.template}</td><td class="m">${s.node}</td>
+        <td class="m">${playersOn(s.id)}/${s.max}${bar(playersOn(s.id),s.max)}</td><td class="m dim">${addr(s.ip)}</td>
+        <td style="text-align:right"><button class="icon-btn" data-menu="${s.id}">${ic('dots')}</button></td></tr>`).join('') || '<tr><td colspan="8" class="empty">Keine Server gefunden.</td></tr>'}
+    </tbody></table></div>`;
+  },
+
+  nodes(){
+    return `<div class="page-h"><div><h1>Nodes</h1><p>Alle Nodes der Region, aus ihren Heartbeats. Aktionen führt die Node selbst aus.</p></div></div>
+    <div class="ncards">${S.nodes.map(n=>{const mp=Math.round(n.memUsed/n.memTotal*100); const sv=S.servers.filter(s=>s.node===n.id);
+      const pl=S.players.filter(p=>sv.some(s=>s.id===p.server)).length;
+      return `<div class="card ncard"><div class="h"><b>${n.id}</b>${stateBadge(n.status)}${n.self?'<span class="dim" style="font-size:11px">diese Node</span>':''}<span class="sp"></span>
+        <button class="icon-btn" title="${n.status==='draining'?'Draining beenden':'Node drainen'}" data-drain="${n.id}">${ic('pin')}</button></div>
+        <div class="dim mono" style="font-size:11px;margin-top:4px">${addr(n.ip)}</div>
+        <div class="rings"><div class="ring">${ring(n.cpu,50,4)}<div><div class="lbl">CPU</div><div class="v">${n.cpu}%</div></div></div>
+          <div class="ring">${ring(mp,50,4)}<div><div class="lbl">RAM</div><div class="v">${mp}%</div><div class="s">${n.memUsed.toFixed(1)} GB / ${n.memTotal} GB</div></div></div></div>
+        <div class="disk"><span>Speicher</span><span>${n.diskUsed} GB / ${n.diskTotal} GB</span></div>
+        <div class="dbar"><i style="width:${n.diskUsed/n.diskTotal*100}%"></i></div>
+        <div class="nfoot"><div><span>Server</span><b>${sv.length}</b></div><div><span>Spieler</span><b>${pl}</b></div><div><span>Netz</span><b>${n.net} Mb/s</b></div><div><span>Uptime</span><b>${fmtUp(n.up)}</b></div></div></div>`}).join('')}</div>`;
+  },
+
+  players(){
+    const st=UI.players, q=st.q.toLowerCase();
+    let rows=S.players.filter(p=>(!st.server||p.server===st.server)&&(!q||p.name.toLowerCase().includes(q)||p.xuid.includes(q)));
+    const val={name:p=>p.name.toLowerCase(), server:p=>p.server, since:p=>-p.since};
+    rows.sort((a,b)=>{const x=val[st.sort.key](a), y=val[st.sort.key](b); return (x>y?1:x<y?-1:0)*st.sort.dir;});
+    return `<div class="page-h"><div><h1>Spieler</h1><p>${S.players.length} online in der Region.</p></div><button class="btn" data-broadcast-quick>Nachricht an alle</button></div>
+    <div class="filters"><div class="input-wrap">${ic('search')}<input class="input" id="pq" placeholder="Name oder XUID" value="${esc(st.q)}" style="width:288px"></div>
+      <select class="select" id="pserver" style="min-width:190px"><option value="">Alle Server</option>${S.servers.map(s=>`<option ${st.server===s.id?'selected':''}>${s.id}</option>`).join('')}</select></div>
+    <div class="card scroll-x"><table class="tbl"><thead><tr>${sortHead('name','Spieler',st.sort)}${sortHead('server','Server',st.sort)}<th>Node</th><th>Gerät</th>${sortHead('since','Online seit',st.sort)}<th></th></tr></thead><tbody>
+      ${rows.map(p=>`<tr><td class="name">${esc(p.name)}<div class="dim mono" style="font-size:11px;font-weight:400">${p.xuid}</div></td><td class="m">${p.server}</td><td class="m">${S.servers.find(s=>s.id===p.server)?.node||'—'}</td><td>${p.device}</td><td class="m">${fmtUp(Math.floor((Date.now()-p.since)/1000))}</td>
+        <td style="text-align:right"><button class="btn" data-kick="${esc(p.name)}">Kicken</button></td></tr>`).join('') || '<tr><td colspan="6" class="empty">Niemand ist online.</td></tr>'}
+    </tbody></table></div>`;
+  },
+
+  templates(){
+    return `<div class="page-h"><div><h1>Templates</h1><p>Vorlagen, aus denen Server erstellt werden. Änderungen gelten für danach erstellte Instanzen.</p></div><button class="btn primary" data-todo="Template erstellen">+ Template</button></div>
+    <div class="card scroll-x"><table class="tbl"><thead><tr><th>Template</th><th>Plattform</th><th>Spieltyp</th><th>Instanzen</th><th>Warteschlange</th><th></th></tr></thead><tbody>
+    ${S.templates.map(t=>{const p=plat(t.platform), n=S.servers.filter(s=>s.template===t.id && s.state!=='stopped').length;
+      return `<tr><td><span class="name">${t.name}</span><span class="tag">${t.id}</span>${t.fallback?`<span class="pill b-red">fallback ${t.fallback}</span>`:''}${t.persistent?'<span class="pill b-blue">persistent</span>':''}</td>
+      <td>${p.name}${p.channel!=='Stable'?' · '+p.channel:''}</td><td class="m">${t.type}</td><td class="m"><b style="color:var(--text)">${n}</b> <span class="dim">/ ${t.max}</span></td><td class="dim">—</td>
+      <td style="text-align:right"><button class="btn" data-scale="${t.id}">+ Instanz</button></td></tr>`}).join('')}
+    </tbody></table></div>`;
+  },
+
+  platforms(){
+    return `<div class="page-h"><div><h1>Plattformen</h1><p>Server-Software, auf der Templates laufen.</p></div></div>
+    <div class="ncards">${S.platforms.map(p=>`<div class="card plat"><div style="display:flex;gap:8px;align-items:center"><h4>${p.name}</h4><span class="badge ${p.channel==='Nightly'?'b-violet':'b-green'}">${p.channel}</span></div>
+      <div class="muted mono" style="font-size:12px">v${p.version} · ${p.kind}</div>
+      <div class="muted" style="font-size:13px">Genutzt von: ${S.templates.filter(t=>t.platform===p.id).map(t=>t.name).join(', ')||'—'}</div>
+      <div><button class="btn" data-todo="Update für ${p.name} prüfen">Nach Updates suchen</button></div></div>`).join('')}</div>`;
+  },
+
+  settings(){
+    const s=S.settings, tg=(k,l,d)=>`<div class="switch"><div>${l}<small>${d}</small></div><button class="tg ${s[k]?'on':''}" data-toggle="${k}"></button></div>`;
+    return `<div class="page-h"><div><h1>Einstellungen</h1><p>Netzwerkweite Konfiguration.</p></div></div>
+    <div class="card" style="margin-bottom:16px"><div class="card-h"><h3>Allgemein</h3></div>
+      <div class="form"><div class="two"><label>Netzwerkname<input class="input" id="setName" value="${esc(s.name)}"></label><label>Heartbeat (Sek.)<input class="input" id="setHb" type="number" min="1" value="${s.heartbeat}"></label></div>
+      <label>MOTD<input class="input" id="setMotd" value="${esc(s.motd)}"></label><div><button class="btn primary" id="saveSettings">Speichern</button></div></div></div>
+    <div class="card">${tg('maintenance','Wartungsmodus','Nur Team-Mitglieder können joinen.')}${tg('whitelist','Whitelist','Nur freigegebene Spieler.')}${tg('autoscale','Auto-Scaling','Neue Instanzen starten, wenn Server voll sind.')}</div>`;
+  },
+
+  moderation(){
+    const m={ban:'b-red',mute:'b-amber',kick:'b-gray',warn:'b-violet'};
+    return `<div class="page-h"><div><h1>Moderation</h1><p>Strafen im ganzen Netzwerk.</p></div></div>
+    <div class="card" style="margin-bottom:16px"><div class="card-h"><h3>Neue Strafe</h3></div><div class="form" style="max-width:none">
+      <div class="two" style="grid-template-columns:2fr 1fr 1fr"><label>Spieler<input class="input" id="mPlayer" placeholder="Gamertag"></label><label>Typ<select class="select" id="mType"><option>ban</option><option>mute</option><option>kick</option><option>warn</option></select></label><label>Dauer<select class="select" id="mDur"><option>1 Std.</option><option>1 Tag</option><option>7 Tage</option><option>permanent</option></select></label></div>
+      <label>Grund<input class="input" id="mReason" placeholder="z. B. Hacking"></label><div><button class="btn primary" id="mSubmit">Ausführen</button></div></div></div>
+    <div class="card scroll-x"><table class="tbl"><thead><tr><th>Spieler</th><th>Typ</th><th>Grund</th><th>Von</th><th>Wann</th><th>Bis</th><th></th></tr></thead><tbody>
+    ${S.punishments.map((p,i)=>`<tr><td class="name">${esc(p.player)}</td><td><span class="badge ${m[p.type]}">${p.type}</span></td><td>${esc(p.reason)}</td><td class="m">${p.by}</td><td class="muted">${p.ago}</td><td class="m">${p.until}</td><td style="text-align:right">${p.type!=='kick'?`<button class="btn" data-revoke="${i}">Aufheben</button>`:''}</td></tr>`).join('')||'<tr><td colspan="7" class="empty">Keine Strafen.</td></tr>'}
+    </tbody></table></div>`;
+  },
+
+  permissions(){
+    return `<div class="page-h"><div><h1>Berechtigungen</h1><p>Registrierte Permission-Nodes und welche Gruppe sie standardmäßig hat.</p></div></div>
+    <div class="card scroll-x"><table class="tbl"><thead><tr><th>Node</th><th>Beschreibung</th><th>Standard-Gruppe</th></tr></thead><tbody>
+    ${S.perms.map(([n,d,g])=>`<tr><td class="m">${n}</td><td>${d}</td><td><span class="badge" style="color:${S.groups.find(x=>x.name===g).color};background:var(--panel2)">${g}</span></td></tr>`).join('')}</tbody></table></div>`;
+  },
+
+  groups(){
+    return `<div class="page-h"><div><h1>Gruppen</h1><p>Ränge und ihre Rechte, nach Priorität.</p></div><button class="btn primary" data-todo="Gruppe erstellen">+ Gruppe</button></div>
+    <div class="card scroll-x"><table class="tbl"><thead><tr><th>Gruppe</th><th>Priorität</th><th>Mitglieder</th><th>Rechte</th></tr></thead><tbody>
+    ${S.groups.map(g=>`<tr><td class="name"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${g.color};margin-right:8px"></span>${g.name}</td><td class="m">${g.prio}</td><td class="m">${g.members}</td><td>${g.perms.map(p=>`<span class="badge b-gray" style="margin-right:4px">${p}</span>`).join('')}</td></tr>`).join('')}</tbody></table></div>`;
+  },
+
+  clans(){
+    return `<div class="page-h"><div><h1>Clans</h1><p>${S.clans.length} Clans, sortiert nach Elo.</p></div></div>
+    <div class="card scroll-x"><table class="tbl"><thead><tr><th>#</th><th>Clan</th><th>Besitzer</th><th>Mitglieder</th><th>Elo</th><th></th></tr></thead><tbody>
+    ${[...S.clans].sort((a,b)=>b.elo-a.elo).map((c,i)=>`<tr><td class="m dim">${i+1}</td><td><span class="badge b-blue">${c.tag}</span> <span class="name" style="margin-left:6px">${c.name}</span></td><td>${c.owner}</td><td class="m">${c.members}</td><td class="m">${c.elo}</td><td style="text-align:right"><button class="btn danger" data-disband="${c.tag}">Auflösen</button></td></tr>`).join('')}</tbody></table></div>`;
+  },
+
+  broadcasts(){
+    return `<div class="page-h"><div><h1>Broadcasts</h1><p>Nachrichten an Spieler auf allen oder einzelnen Servern.</p></div></div>
+    <div class="card" style="margin-bottom:16px"><div class="card-h"><h3>Neue Nachricht</h3></div><div class="form" style="max-width:none">
+      <label>Nachricht (Minecraft-Farbcodes erlaubt)<textarea class="input" id="bMsg" rows="3" placeholder="§bHallo SplashGames!"></textarea></label>
+      <div class="two"><label>Ziel<select class="select" id="bTarget"><option>Alle Server</option>${S.servers.map(s=>`<option>${s.id}</option>`).join('')}</select></label><label>Art<select class="select"><option>Chat</option><option>Titel</option><option>Actionbar</option></select></label></div>
+      <div><button class="btn primary" id="bSend">Senden</button></div></div></div>
+    <div class="card"><div class="card-h" style="padding-bottom:16px"><h3>Verlauf</h3></div><div class="ev" style="max-height:none">
+      ${S.broadcasts.map(b=>`<div><time>${b.at}</time>${ic('mega','style="color:var(--violet)"')}<span>${esc(b.msg.replace(/§./g,''))}</span><span class="dim" style="margin-left:auto;font-size:12px">${esc(b.target)}</span></div>`).join('')}</div></div>`;
+  },
+};
+
+/* ---------- nav ---------- */
+const NAV = [
+  ['Region',[['dashboard','Dashboard','grid'],['servers','Server','server'],['nodes','Nodes','nodes'],['players','Spieler','users']]],
+  ['Build',[['templates','Templates','layout'],['platforms','Plattformen','box']]],
+  ['System',[['settings','Einstellungen','cog']]],
+  ['Splash · Moderation',[['moderation','Moderation','hammer']],true],
+  ['Splash · Rechte',[['permissions','Berechtigungen','key'],['groups','Gruppen','users']],true],
+  ['Splash · Community',[['clans','Clans','shield'],['broadcasts','Broadcasts','mega']],true],
+];
+const TITLES = Object.fromEntries(NAV.flatMap(g=>g[1]).map(([k,l])=>[k,l]));
+function renderNav(){
+  const cur=route();
+  $('#nav').innerHTML = NAV.map(([h,items,grp])=>`<h6 class="${grp?'group':''}">${h}${grp?ic('down','class="chev" width="12" height="12"'):''}</h6><div class="grp">${items.map(([k,l,i])=>`<a href="#/${k}" class="${cur===k?'active':''}">${ic(i)}${l}</a>`).join('')}</div>`).join('');
+}
+const route = () => (location.hash.replace('#/','')||'dashboard').split('?')[0];
+
+/* ---------- render ---------- */
+function render(keepFocus=true){
+  const r = pages[route()] ? route() : 'dashboard';
+  const active=document.activeElement, id=active?.id, pos=active?.selectionStart;
+  const sc=$('#view').scrollTop;
+  $('#view').innerHTML = pages[r]();
+  $('#view').scrollTop=sc;
+  $('#crumb').textContent = TITLES[r];
+  document.title = 'SplashGames · '+TITLES[r];
+  $('#eye').innerHTML = ic(S.hideAddr?'eyeOff':'eye');
+  if(keepFocus && id){ const el=document.getElementById(id); if(el){ el.focus(); try{el.setSelectionRange(pos,pos)}catch(e){} } }
+}
+const isTyping = () => { const a=document.activeElement; return a && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && !['sq','pq'].includes(a.id); };
+window.addEventListener('hashchange',()=>{renderNav(); $('#view').scrollTop=0; render(false); $('#side').classList.remove('open');});
+setInterval(()=>{ if(!S.live) return; tick(); if(!isTyping() && !document.querySelector('.menu')) render(); }, 2000);
+
+/* ---------- interactions ---------- */
+document.addEventListener('click', e=>{
+  const t=e.target.closest('[data-sort],[data-menu],[data-drain],[data-kick],[data-scale],[data-toggle],[data-revoke],[data-disband],[data-todo],[data-bulk],[data-broadcast-quick],h6.group,#saveSettings,#mSubmit,#bSend,#newServer');
+  document.querySelectorAll('.menu').forEach(m=>{ if(!m.contains(e.target)) m.remove(); });
+  if(!t) return;
+  const d=t.dataset;
+  if(t.matches('h6.group')){ t.classList.toggle('closed'); return; }
+  if(d.sort){ const st=(route()==='players'?UI.players:UI.servers).sort; st.dir = st.key===d.sort ? -st.dir : 1; st.key=d.sort; render(); }
+  else if(d.menu){ e.stopPropagation(); openMenu(t, d.menu); }
+  else if(d.drain){ const n=S.nodes.find(x=>x.id===d.drain); n.status = n.status==='draining'?'healthy':'draining'; event('info',`${n.id} ist jetzt ${n.status}`); toast(`${n.id}: ${n.status}`); render(); }
+  else if(d.kick){ S.players=S.players.filter(p=>p.name!==d.kick); event('mod',`${d.kick} wurde gekickt`); toast(`${d.kick} gekickt`); render(); }
+  else if(d.scale){ startServer(d.scale); }
+  else if(d.toggle){ S.settings[d.toggle]=!S.settings[d.toggle]; toast(`${d.toggle}: ${S.settings[d.toggle]?'an':'aus'}`); render(); }
+  else if(d.revoke){ const p=S.punishments.splice(+d.revoke,1)[0]; toast(`${p.type} für ${p.player} aufgehoben`); render(); }
+  else if(d.disband){ S.clans=S.clans.filter(c=>c.tag!==d.disband); toast(`Clan ${d.disband} aufgelöst`); render(); }
+  else if(d.todo){ toast(`${d.todo}: hier an deine API anbinden`); }
+  else if(d.bulk){ UI.servers.sel.forEach(id=>serverAction(id,'stop')); UI.servers.sel.clear(); render(); }
+  else if(t.hasAttribute('data-broadcast-quick')){ location.hash='#/broadcasts'; }
+  else if(t.id==='newServer'){ startServer(UI.servers.tpl || 'hub'); }
+  else if(t.id==='saveSettings'){ S.settings.name=$('#setName').value; S.settings.motd=$('#setMotd').value; S.settings.heartbeat=Math.max(1,+$('#setHb').value||10); toast('Einstellungen gespeichert'); render(false); }
+  else if(t.id==='mSubmit'){ const p=$('#mPlayer').value.trim(); if(!p) return toast('Spielername fehlt');
+    const type=$('#mType').value; S.punishments.unshift({player:p,type,reason:$('#mReason').value||'—',by:'admin',ago:'gerade eben',until:type==='kick'?'—':$('#mDur').value});
+    S.players=S.players.filter(x=>x.name!==p); event('mod',`${p}: ${type}`); toast(`${type} gegen ${p} ausgeführt`); render(false); }
+  else if(t.id==='bSend'){ const m=$('#bMsg').value.trim(); if(!m) return toast('Nachricht ist leer');
+    S.broadcasts.unshift({msg:m,target:$('#bTarget').value,at:now()}); event('info','Broadcast: '+m.replace(/§./g,'')); toast('Broadcast gesendet'); render(false); }
+});
+document.addEventListener('input', e=>{
+  const id=e.target.id, v=e.target.value;
+  if(id==='sq'){UI.servers.q=v; render();} else if(id==='pq'){UI.players.q=v; render();}
+});
+document.addEventListener('change', e=>{
+  const id=e.target.id, v=e.target.value, st=UI.servers;
+  if(id==='sstate'){st.state=v;render(false);} else if(id==='snode'){st.node=v;render(false);} else if(id==='stpl'){st.tpl=v;render(false);}
+  else if(id==='pserver'){UI.players.server=v;render(false);}
+  else if(e.target.dataset.sel){ e.target.checked?st.sel.add(e.target.dataset.sel):st.sel.delete(e.target.dataset.sel); render(false); }
+  else if(id==='selAll'){ document.querySelectorAll('[data-sel]').forEach(c=>e.target.checked?st.sel.add(c.dataset.sel):st.sel.delete(c.dataset.sel)); render(false); }
+});
+function startServer(tid){
+  const t=tpl(tid), n=S.servers.filter(s=>s.template===tid && s.state!=='stopped').length;
+  if(n>=t.max) return toast(`${t.name}: Maximum von ${t.max} Instanzen erreicht`);
+  const num = 1+Math.max(0,...S.servers.filter(s=>s.template===tid).map(s=>+s.id.split('-').pop()||0));
+  const node = S.nodes.find(x=>x.status==='healthy')||S.nodes[0];
+  const id = `${t.name}-${num}`;
+  S.servers.push({id, template:tid, node:node.id, state:'starting', max:tid==='hub'?20:50, ip:node.ip.split(':')[0]+':'+(19150+S.servers.length)});
+  event('info',`${id} wird auf ${node.id} gestartet`); toast(`${id} wird gestartet`); render(false);
+}
+function serverAction(id,a){
+  const s=S.servers.find(x=>x.id===id); if(!s) return;
+  if(a==='stop'){ s.state='stopped'; S.players=S.players.filter(p=>p.server!==id); event('stop',`${id} gestoppt`); }
+  if(a==='start'||a==='restart'){ s.state='starting'; if(a==='restart') S.players=S.players.filter(p=>p.server!==id); event('info',`${id}: ${a}`); }
+  if(a==='delete'){ S.servers=S.servers.filter(x=>x.id!==id); event('stop',`${id} gelöscht`); }
+  toast(`${id}: ${a}`);
+}
+function openMenu(btn,id){
+  document.querySelectorAll('.menu').forEach(m=>m.remove());
+  const s=S.servers.find(x=>x.id===id), r=btn.getBoundingClientRect(), m=document.createElement('div');
+  m.className='menu';
+  m.innerHTML = (s.state==='stopped'?`<button data-a="start">Starten</button>`:`<button data-a="restart">Neustarten</button><button data-a="stop">Stoppen</button>`)+
+    `<button data-a="copy">Adresse kopieren</button><button data-a="delete" class="danger">Löschen</button>`;
+  m.style.top=(r.bottom+4)+'px'; m.style.left=Math.max(8,r.right-170)+'px';
+  m.onclick=ev=>{ const a=ev.target.dataset.a; if(!a) return; m.remove();
+    if(a==='copy'){ navigator.clipboard?.writeText(s.ip).then(()=>toast('Adresse kopiert'),()=>toast(s.ip)); return; }
+    serverAction(id,a); render(false); };
+  document.body.append(m);
+}
+
+/* top bar */
+$('#live').onclick=()=>{ S.live=!S.live; $('#live').classList.toggle('paused',!S.live); $('#live').lastChild.textContent=S.live?'live':'pausiert'; };
+$('#refresh').onclick=()=>{ tick(); render(false); toast('Aktualisiert'); };
+$('#eye').onclick=()=>{ S.hideAddr=!S.hideAddr; render(false); };
+$('#menuBtn').onclick=()=>$('#side').classList.toggle('open');
+
+/* command palette */
+function palette(){
+  if($('.overlay')) return;
+  const items=[...Object.entries(TITLES).map(([k,l])=>({l,sub:'Seite',go:'#/'+k})),
+    ...S.servers.map(s=>({l:s.id,sub:'Server',go:'#/servers',f:()=>{UI.servers.q=s.id;UI.servers.state='';}})),
+    ...S.nodes.map(n=>({l:n.id,sub:'Node',go:'#/nodes'})),
+    ...S.players.map(p=>({l:p.name,sub:'Spieler',go:'#/players',f:()=>{UI.players.q=p.name;}}))];
+  const o=document.createElement('div'); o.className='overlay';
+  o.innerHTML='<div class="palette"><input placeholder="Seite, Server, Node oder Spieler suchen…"><div class="list"></div></div>';
+  document.body.append(o);
+  const inp=o.querySelector('input'), list=o.querySelector('.list'); let sel=0, cur=[];
+  const draw=()=>{ const q=inp.value.toLowerCase(); cur=items.filter(i=>i.l.toLowerCase().includes(q)).slice(0,12); sel=Math.min(sel,Math.max(0,cur.length-1));
+    list.innerHTML=cur.map((i,k)=>`<div class="it ${k===sel?'sel':''}" data-k="${k}"><span>${esc(i.l)}</span><small>${i.sub}</small></div>`).join('')||'<div class="empty">Nichts gefunden.</div>'; };
+  const go=i=>{ if(!i) return; o.remove(); i.f&&i.f(); if(location.hash===i.go) render(false); else location.hash=i.go; };
+  inp.oninput=()=>{sel=0;draw();};
+  inp.onkeydown=e=>{ if(e.key==='ArrowDown'){sel=Math.min(sel+1,cur.length-1);draw();e.preventDefault();} else if(e.key==='ArrowUp'){sel=Math.max(sel-1,0);draw();e.preventDefault();} else if(e.key==='Enter') go(cur[sel]); else if(e.key==='Escape') o.remove(); };
+  list.onclick=e=>{ const it=e.target.closest('.it'); if(it) go(cur[+it.dataset.k]); };
+  o.onclick=e=>{ if(e.target===o) o.remove(); };
+  draw(); inp.focus();
+}
+$('#openPal').onclick=palette;
+document.addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); palette(); } });
+
+renderNav(); render(false);
+</script>
+</body>
+</html>
