@@ -4,6 +4,7 @@
   "description": "BetterChats – Ende-zu-Ende-verschlüsselter Direktchat, der nichts speichert",
   "main": "server.js",
   "scripts": {
+    "build": "node build.js",
     "start": "node server.js"
   },
   "license": "UNLICENSED",
@@ -13,5 +14,10 @@
   "private": true,
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "@noble/post-quantum": "^0.7.1",
+    "esbuild": "^0.28.2",
+    "javascript-obfuscator": "^5.9.1"
   }
 }
