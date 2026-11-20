@@ -35,7 +35,7 @@ test('full user journey + nothing readable in DOM or network', { skip, timeout: 
 
   // offline person: message, no chat
   await a.fill('#newName', 'carl'); await a.click('#newChat button'); await a.waitForTimeout(500);
-  assert.equal(await a.textContent('#newErr'), 'carl ist offline.');
+  assert.equal(await a.getAttribute('#newErr', 'data-code'), 'offline');
   assert.equal(await a.isVisible('#conv'), false);
 
   await a.fill('#newName', 'bob'); await a.click('#newChat button'); await a.waitForSelector('#conv:not([hidden])');
@@ -45,9 +45,14 @@ test('full user journey + nothing readable in DOM or network', { skip, timeout: 
   await b.fill('#text', 'Antwort'); await b.press('#text', 'Enter');
   await a.waitForSelector('.msgs li.theirs canvas');
 
-  // DevTools "Elements": no message text in the DOM
-  const dom = await b.content();
-  assert.ok(!dom.includes('streng geheim') && !dom.includes('Zweite'));
+  // DevTools "Elements": no message text, no names, no safety number anywhere in the DOM
+  await a.click('#safetyBtn');
+  for (const pg of [a, b]) {
+    const dom = await pg.evaluate(() => document.documentElement.outerHTML + [...document.querySelectorAll('input,textarea')].map((e) => e.value).join('|'));
+    for (const secret of ['streng geheim', 'Zweite', 'Antwort', 'alice', 'bob', 'carl', '482913', '739204']) assert.ok(!dom.includes(secret), `DOM leaks "${secret}"`);
+    assert.ok(!/\d{5} \d{5} \d{5}/.test(dom), 'DOM leaks safety number');
+  }
+  await a.click('#safetyBtn');
   // DevTools "Network": no plaintext, no names, no password
   const w = wire.map((p) => (typeof p === 'string' ? p : p.toString('latin1'))).join('');
   for (const secret of ['streng geheim', 'Antwort', '482913', '739204', 'alice', '"bob"']) assert.ok(!w.includes(secret), secret);
@@ -55,7 +60,7 @@ test('full user journey + nothing readable in DOM or network', { skip, timeout: 
   assert.ok(!/\d\d:\d\d/.test(await a.$$eval('.msgs li', (l) => l.map((x) => x.textContent).join(' '))));
   // safety numbers match on both sides
   await a.click('#safetyBtn'); await b.click('#safetyBtn');
-  assert.equal(await a.textContent('#safetyNum'), await b.textContent('#safetyNum'));
+  assert.equal(await a.getAttribute('#safetyNum', 'data-code'), 'n'); // painted, compared visually by users
 
   // draft gets sealed when leaving and restored when coming back
   await a.fill('#text', 'Entwurf');
@@ -67,24 +72,24 @@ test('full user journey + nothing readable in DOM or network', { skip, timeout: 
   // bob leaves -> alice's chat is gone
   await b.close(); await a.waitForTimeout(800);
   assert.equal(await a.$$eval('#chatList li', (l) => l.length), 0);
-  assert.match(await a.textContent('#newErr'), /offline gegangen/);
+  assert.equal(await a.getAttribute('#newErr', 'data-code'), 'gone');
   assert.deepEqual(errs, []);
 });
 
 test('login: weak PIN refused, wrong password, unknown user, delete account', { skip, timeout: 60_000 }, async () => {
   const p = await page();
   await p.click('#tabReg'); await p.fill('#name', 'dora'); await p.fill('#pin', '123456'); await p.click('#authBtn'); await p.waitForTimeout(300);
-  assert.match(await p.textContent('#authErr'), /zu leicht/);
+  assert.equal(await p.getAttribute('#authErr', 'data-code'), 'weakpin');
   await p.fill('#pin', '739204'); await p.click('#authBtn'); await p.waitForSelector('#app:not([hidden])');
   await p.reload();
-  await p.fill('#name', 'dora'); await p.fill('#pin', '000001'); await p.click('#authBtn'); await p.waitForFunction(() => document.querySelector('#authErr').textContent);
-  assert.equal(await p.textContent('#authErr'), 'Name oder Passwort falsch.');
+  await p.fill('#name', 'dora'); await p.fill('#pin', '000001'); await p.click('#authBtn'); await p.waitForFunction(() => document.querySelector('#authErr').dataset.code);
+  assert.equal(await p.getAttribute('#authErr', 'data-code'), 'autherr');
   await p.fill('#name', 'gibtsnicht'); await p.click('#authBtn'); await p.waitForTimeout(1500);
-  assert.equal(await p.textContent('#authErr'), 'Name oder Passwort falsch.');
+  assert.equal(await p.getAttribute('#authErr', 'data-code'), 'autherr');
   await p.fill('#name', 'dora'); await p.fill('#pin', '739204'); await p.click('#authBtn'); await p.waitForSelector('#app:not([hidden])');
   await p.click('#delToggle'); await p.fill('#delPin', '111111'); await p.click('#delForm button');
-  await p.waitForFunction(() => document.querySelector('#delErr').textContent);
-  assert.equal(await p.textContent('#delErr'), 'Passwort falsch.');
+  await p.waitForFunction(() => document.querySelector('#delErr').dataset.code);
+  assert.equal(await p.getAttribute('#delErr', 'data-code'), 'delerr');
   await p.fill('#delPin', '739204'); await p.click('#delForm button'); await p.waitForSelector('#auth:not([hidden])');
   assert.deepEqual(errs, []);
 });

@@ -1,0 +1,21 @@
+{
+  "name": "betterchats-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "description": "BetterChats für Android und iOS (Capacitor)",
+  "scripts": {
+    "sync": "cap sync",
+    "android:apk": "cap sync android && cd android && ./gradlew assembleRelease",
+    "android:debug": "cap sync android && cd android && ./gradlew assembleDebug",
+    "ios:open": "cap sync ios && cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.6.10",
+    "@capacitor/core": "^7.6.10",
+    "@capacitor/ios": "^7.6.10"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.6.10"
+  }
+}

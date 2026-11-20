@@ -38,6 +38,10 @@ const SECRET_FILE = path.join(DATA_DIR, 'server.key');
 // Anything else (scans by IP, wrong SNI) gets no answer at all.
 const DOMAINS = (env.DOMAIN || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
 const COVER = env.COVER_TRAFFIC !== '0';
+// Origins of the official apps (Electron: app://betterchats, Capacitor Android: https://localhost,
+// Capacitor iOS: capacitor://localhost). Their code ships inside the signed app, not from this server.
+const APP_ORIGINS = (env.APP_ORIGINS ?? 'app://betterchats,https://localhost,capacitor://localhost')
+  .split(',').map((s) => s.trim()).filter(Boolean);
 
 const NAME_RE = /^[a-z0-9_]{3,20}$/;
 const MAX_CT = 16 * 1024;
@@ -220,6 +224,7 @@ server.on('upgrade', (req, socket, head) => {
   if (!hostOk(req) || req.url !== '/') { strike(ip, 2); return drop(socket); }
   let okOrigin = false;
   try { okOrigin = new URL(req.headers.origin).host === req.headers.host; } catch {}
+  if (!okOrigin && APP_ORIGINS.includes(String(req.headers.origin))) okOrigin = true;
   if (!okOrigin) { strike(ip, 3); return drop(socket); }
   if ((connsByIp.get(ip) || 0) >= MAX_CONN_PER_IP || wss.clients.size >= MAX_CONN_TOTAL) return drop(socket);
   socket.setTimeout(0);

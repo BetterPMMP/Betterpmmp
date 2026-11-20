@@ -1,2 +1,15 @@
 node_modules/
 data/
+# app builds contain a baked-in server address -> never commit them
+apps/www/
+apps/BUILD-HASHES.txt
+apps/icon-1024.png
+apps/desktop/www/
+apps/desktop/server.txt
+apps/desktop/dist/
+apps/mobile/www/
+apps/mobile/android/app/src/main/assets/public/
+apps/mobile/android/app/build/
+apps/mobile/android/.gradle/
+apps/mobile/ios/App/App/public/
+apps/mobile/ios/App/Pods/

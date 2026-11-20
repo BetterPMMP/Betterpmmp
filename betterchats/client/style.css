@@ -108,3 +108,6 @@ body.shield .msgs li:not(.sys):hover, body.shield .msgs li.reveal { filter: none
 .convhead { flex-wrap: wrap; }
 .msgs li canvas { display: block; }
 .msgs li { user-select: none; -webkit-user-select: none; }
+
+.me canvas, .state canvas, .err canvas, .hint canvas { vertical-align: middle; }
+.me strong { display: inline-block; vertical-align: middle; }

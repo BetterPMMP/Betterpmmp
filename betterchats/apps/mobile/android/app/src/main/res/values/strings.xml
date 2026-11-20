@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">BetterChats</string>
+    <string name="title_activity_main">BetterChats</string>
+    <string name="package_name">chat.betterchats.app</string>
+    <string name="custom_url_scheme">chat.betterchats.app</string>
+</resources>

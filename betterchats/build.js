@@ -14,7 +14,13 @@ const esbuild = require('esbuild');
 const Obfuscator = require('javascript-obfuscator');
 
 const SRC = path.join(__dirname, 'client');
-const OUT = path.join(__dirname, 'public');
+// APP_BUILD=1 -> build for the apps into apps/www (server baked in, CSP as meta tag)
+const APP = process.env.APP_BUILD === '1';
+const OUT = APP ? path.join(__dirname, 'apps', 'www') : path.join(__dirname, 'public');
+if (APP && !process.env.BETTERCHATS_SERVER) {
+  console.error('App-Build braucht BETTERCHATS_SERVER, z. B. BETTERCHATS_SERVER=wss://chat.example.com:30/');
+  process.exit(1);
+}
 fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(OUT);
 
@@ -69,10 +75,19 @@ const html = fs.readFileSync(path.join(SRC, 'index.html'), 'utf8')
   .replace(/>\s+</g, '><')
   .replace(/\s{2,}/g, ' ')
   .trim();
-fs.writeFileSync(path.join(OUT, 'index.html'), html);
+let finalHtml = html;
+if (APP) {
+  const srv = new URL(process.env.BETTERCHATS_SERVER);
+  const csp = ["default-src 'none'", "script-src 'self' 'wasm-unsafe-eval'", "style-src 'self'", "img-src 'self'",
+    `connect-src ${srv.protocol}//${srv.host}`, "base-uri 'none'", "form-action 'none'",
+    "require-trusted-types-for 'script'", "trusted-types 'none'"].join('; ');
+  finalHtml = finalHtml.replace('<head>', `<head><meta http-equiv="Content-Security-Policy" content="${csp}">`);
+  fs.writeFileSync(path.join(OUT, 'csp.txt'), csp);
+}
+fs.writeFileSync(path.join(OUT, 'index.html'), finalHtml);
 fs.copyFileSync(path.join(SRC, 'icon.svg'), path.join(OUT, 'icon.svg'));
 
 const hashes = fs.readdirSync(OUT).sort().map((f) =>
   `${crypto.createHash('sha256').update(fs.readFileSync(path.join(OUT, f))).digest('hex')}  ${f}`);
-fs.writeFileSync(path.join(__dirname, 'BUILD-HASHES.txt'), hashes.join('\n') + '\n');
+fs.writeFileSync(path.join(__dirname, APP ? 'apps/BUILD-HASHES.txt' : 'BUILD-HASHES.txt'), hashes.join('\n') + '\n');
 console.log('Build fertig:\n' + hashes.join('\n'));

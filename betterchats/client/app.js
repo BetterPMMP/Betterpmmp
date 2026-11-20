@@ -14,7 +14,8 @@ import { createE2E, safetyNumber, b64, unb64 } from './e2e.js';
  *   reveal when or how much you write.
  * - Chat history in RAM is only kept encrypted; contacts and chats vanish on reload.
  *   No cookies, no localStorage, no IndexedDB.
- * - All content is inserted with textContent (never innerHTML) + Trusted Types CSP.
+ * - ALL personal text (names, messages, notices, safety numbers) is painted onto <canvas> – the DOM
+ *   ("Inspect element") never contains it. Static labels use textContent, never innerHTML + Trusted Types.
  * - Login uses OPAQUE (RFC 9807): the password never leaves this device, not even hashed.
  *   Optionally the server's OPAQUE key is pinned (apps), so a fake server is detected.
  */
@@ -31,7 +32,7 @@ import { createE2E, safetyNumber, b64, unb64 } from './e2e.js';
   const CFG = window.BC_CONFIG || {};           // apps: { server: 'wss://…', serverKey: '…' }
   const PW_MIN = 6, PW_MAX = 128;
   if (!window.isSecureContext || !window.crypto?.subtle || !window.BCPQ || !window.BCOPAQUE_READY) {
-    $('authErr').textContent = 'Unsichere Verbindung: BetterChats funktioniert nur über HTTPS (oder als .onion).';
+    $('authErr').textContent = 'Unsichere Verbindung: BetterChats funktioniert nur über HTTPS (oder als .onion).'; // static, no user data
     $('authBtn').disabled = true;
     return;
   }
@@ -222,7 +223,7 @@ import { createE2E, safetyNumber, b64, unb64 } from './e2e.js';
     $('tabLogin').classList.toggle('active', m === 'login');
     $('tabReg').classList.toggle('active', m === 'register');
     $('authBtn').textContent = m === 'login' ? 'Anmelden' : 'Konto erstellen';
-    $('authErr').textContent = '';
+    ink($('authErr'), '');
   }
   $('tabLogin').onclick = () => setMode('login');
   $('tabReg').onclick = () => setMode('register');
@@ -235,11 +236,11 @@ import { createE2E, safetyNumber, b64, unb64 } from './e2e.js';
     const name = $('name').value.trim();
     const pw = $('pin').value;
     const err = $('authErr');
-    if (!NAME_RE.test(name)) { err.textContent = 'Name: 3–20 Zeichen, nur a–z, 0–9 und _'; return; }
-    if (pw.length < PW_MIN || pw.length > PW_MAX) { err.textContent = `Passwort: mindestens ${PW_MIN} Zeichen (z. B. 6-stellige PIN).`; return; }
-    if (mode === 'register' && /^(\d)\1{5,}$|^(012345|123456|234567|345678|456789|987654|654321|111111|000000)$/.test(pw)) { err.textContent = 'Diese PIN ist zu leicht zu erraten.'; return; }
+    if (!NAME_RE.test(name)) { ink(err, 'Name: 3–20 Zeichen, nur a–z, 0–9 und _', { code: 'badname' }); return; }
+    if (pw.length < PW_MIN || pw.length > PW_MAX) { ink(err, `Passwort: mindestens ${PW_MIN} Zeichen (z. B. 6-stellige PIN).`, { code: 'shortpw' }); return; }
+    if (mode === 'register' && /^(\d)\1{5,}$|^(012345|123456|234567|345678|456789|987654|654321|111111|000000)$/.test(pw)) { ink(err, 'Diese PIN ist zu leicht zu erraten.', { code: 'weakpin' }); return; }
     $('authBtn').disabled = true;
-    err.textContent = '';
+    ink(err, '');
     $('authBtn').textContent = 'Prüfe…';
     try {
       await window.BCOPAQUE_READY;
@@ -251,17 +252,18 @@ import { createE2E, safetyNumber, b64, unb64 } from './e2e.js';
         const p = await opaqueProve('log1', pw, { name });
         res = p.err ? { t: 'err', msg: p.err } : await request({ t: 'log2', fin: p.fin, pub, kpub }, ['ok', 'err']);
       }
-      if (res.t === 'err') { err.textContent = res.msg; return; }
+      if (res.t === 'err') { ink(err, res.msg, { code: 'autherr' }); return; }
       me = res.name;
       e2e = createE2E({ me, myPub, ecdhPrivateKey: keyPair.privateKey, kemSecretKey: kem.secretKey, pq: BCPQ });
       $('pin').value = '';
       $('name').value = '';
-      $('meName').textContent = me;
+      $('auth').hidden = true; $('app').hidden = false;
+      ink($('meName'), me, { wrap: false });
       $('auth').hidden = true;
       $('app').hidden = false;
       $('newName').focus();
     } catch (ex) {
-      err.textContent = ex.message || 'Fehler.';
+      ink(err, ex.message || 'Fehler.', { code: 'error' });
     } finally {
       $('authBtn').disabled = false;
       $('authBtn').textContent = mode === 'login' ? 'Anmelden' : 'Konto erstellen';
@@ -292,11 +294,11 @@ import { createE2E, safetyNumber, b64, unb64 } from './e2e.js';
   document.addEventListener('visibilitychange', () => document.body.classList.toggle('veil', document.hidden));
 
   // account deletion
-  $('delToggle').onclick = () => { $('delForm').hidden = !$('delForm').hidden; $('delErr').textContent = ''; };
+  $('delToggle').onclick = () => { $('delForm').hidden = !$('delForm').hidden; ink($('delErr'), ''); };
   $('delForm').onsubmit = async (e) => {
     e.preventDefault();
     const pw = $('delPin').value;
-    if (pw.length < PW_MIN) { $('delErr').textContent = 'Passwort eingeben.'; return; }
+    if (pw.length < PW_MIN) { ink($('delErr'), 'Passwort eingeben.', { code: 'shortpw' }); return; }
     if (!confirm('Konto endgültig löschen? Dein Name wird wieder frei.')) return;
     $('delPin').value = '';
     let r;
@@ -304,7 +306,7 @@ import { createE2E, safetyNumber, b64, unb64 } from './e2e.js';
       const p = await opaqueProve('del1', pw);
       r = p.err ? { ok: false, msg: p.err === 'Name oder Passwort falsch.' ? 'Passwort falsch.' : p.err } : await request({ t: 'del2', fin: p.fin }, ['delete']);
     } catch (ex) { r = { ok: false, msg: ex.message }; }
-    if (!r.ok) { $('delErr').textContent = r.msg || 'Fehler.'; return; }
+    if (!r.ok) { ink($('delErr'), r.msg || 'Fehler.', { code: 'delerr' }); return; }
     wipe('Dein Konto wurde gelöscht.');
   };
 
@@ -332,13 +334,13 @@ import { createE2E, safetyNumber, b64, unb64 } from './e2e.js';
   $('newChat').onsubmit = async (e) => {
     e.preventDefault();
     const name = $('newName').value.trim().toLowerCase();
-    $('newErr').textContent = '';
-    if (!NAME_RE.test(name)) { $('newErr').textContent = 'Ungültiger Name.'; return; }
-    if (name === me) { $('newErr').textContent = 'Das bist du selbst.'; return; }
+    ink($('newErr'), '');
+    if (!NAME_RE.test(name)) { ink($('newErr'), 'Ungültiger Name.', { code: 'badname' }); return; }
+    if (name === me) { ink($('newErr'), 'Das bist du selbst.', { code: 'self' }); return; }
     const r = await lookup(name);
-    if (r.limited) { $('newErr').textContent = 'Zu viele Anfragen – kurz warten.'; return; }
-    if (!r.exists) { $('newErr').textContent = 'Diesen Nutzer gibt es nicht.'; return; }
-    if (!r.online) { $('newErr').textContent = `${name} ist offline.`; return; }
+    if (r.limited) { ink($('newErr'), 'Zu viele Anfragen – kurz warten.', { code: 'limited' }); return; }
+    if (!r.exists) { ink($('newErr'), 'Diesen Nutzer gibt es nicht.', { code: 'notfound' }); return; }
+    if (!r.online) { ink($('newErr'), `${name} ist offline.`, { code: 'offline' }); return; }
     ensureChat(name);
     await setPeer(name, peerKeyOf(r), r.online);
     $('newName').value = '';
@@ -353,16 +355,18 @@ import { createE2E, safetyNumber, b64, unb64 } from './e2e.js';
       const li = document.createElement('li');
       if (name === active) li.className = 'active';
       const av = document.createElement('span');
-      av.className = 'avatar'; av.style.background = colorFor(name); av.textContent = name[0];
+      av.className = 'avatar'; av.style.background = colorFor(name);
       const info = document.createElement('div'); info.className = 'info';
-      const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = name;
+      const nm = document.createElement('div'); nm.className = 'nm';
       const pv = document.createElement('div'); pv.className = 'pv';
-      pv.textContent = c.unread ? `${c.unread} neue Nachricht${c.unread > 1 ? 'en' : ''}` : (c.online ? 'online' : 'offline');
       info.append(nm, pv);
       li.append(av, info);
-      if (c.unread) { const b = document.createElement('span'); b.className = 'badge'; b.textContent = c.unread; li.append(b); }
-      li.onclick = () => openChat(name);
       ul.append(li);
+      ink(av, name[0].toUpperCase(), { wrap: false });
+      ink(nm, name, { wrap: false });
+      ink(pv, c.unread ? `${c.unread} neue Nachricht${c.unread > 1 ? 'en' : ''}` : (c.online ? 'online' : 'offline'), { wrap: false });
+      if (c.unread) { const b = document.createElement('span'); b.className = 'badge'; li.append(b); ink(b, String(c.unread), { wrap: false }); }
+      li.onclick = () => openChat(name);
     }
   }
 
@@ -434,7 +438,7 @@ import { createE2E, safetyNumber, b64, unb64 } from './e2e.js';
     chats.delete(name);
     if (active === name) { $('text').value = ''; $('msgs').replaceChildren(); active = null; closeConv(); }
     renderList();
-    if (notice) $('newErr').textContent = notice;
+    if (notice) ink($('newErr'), notice, { code: 'gone' });
   }
   $('clearChat').onclick = () => {
     if (active && confirm(`Chat mit ${active} schließen und Verlauf löschen?`)) dropChat(active);
@@ -442,11 +446,11 @@ import { createE2E, safetyNumber, b64, unb64 } from './e2e.js';
 
   function renderHead() {
     const c = chats.get(active);
-    $('peerName').textContent = active;
+    ink($('peerName'), active, { wrap: false });
     const st = $('peerState');
-    st.textContent = c.online ? 'online · Ende-zu-Ende-verschlüsselt' : 'offline – Nachrichten können nicht zugestellt werden';
     st.className = 'state' + (c.online ? ' on' : '');
-    $('safetyNum').textContent = c.safety || '— (Person ist offline)';
+    ink(st, c.online ? 'online · Ende-zu-Ende-verschlüsselt' : 'offline – Nachrichten können nicht zugestellt werden', { wrap: false });
+    ink($('safetyNum'), c.safety || '— (Person ist offline)', { code: c.safety ? 'n' : '' });
     $('unverified').hidden = c.verified || !c.safety;
     $('verifyBtn').hidden = c.verified || !c.safety;
     $('verifiedNote').hidden = !c.verified;
@@ -468,51 +472,74 @@ import { createE2E, safetyNumber, b64, unb64 } from './e2e.js';
   function decorate(m) {
     if (!m.el) return;
     m.el.className = m.who + (m.state ? ' ' + m.state : '');
-    if (m.meta) m.meta.textContent = m.state === 'pending' ? '…' : m.state === 'failed' ? (m.note || 'Nicht zugestellt') : '✓';
+    if (m.meta) { m.meta.textContent = m.state === 'pending' ? '…' : m.state === 'failed' ? '!' : '✓'; m.meta.title = ''; } // status symbol only
   }
-  // Message text is painted onto a <canvas> instead of being put into the DOM:
-  // "Inspect element" shows no text at all, and extensions can't simply read it.
-  function paint(text, who) {
-    const ol = $('msgs');
-    const css = getComputedStyle(document.body);
-    const font = `15px ${css.fontFamily}`;
-    const color = who === 'mine' ? (css.getPropertyValue('--mine-text').trim() || '#fff') : css.color;
-    const maxW = Math.max(120, Math.min(ol.clientWidth * (innerWidth <= 720 ? 0.85 : 0.75), 560) - 24);
-    const ctx0 = document.createElement('canvas').getContext('2d');
-    ctx0.font = font;
+  // ---------- ink: ALL personal text is painted onto <canvas>, never put into the DOM ----------
+  // "Inspect element" shows no names, no messages, no numbers – only pixels.
+  const measureCtx = document.createElement('canvas').getContext('2d');
+  function wrapLines(text, font, maxW) {
+    measureCtx.font = font;
     const lines = [];
-    for (const para of text.split('\n')) {
+    for (const para of String(text).split('\n')) {
       let line = '';
       for (const word of para.split(/(\s+)/)) {
         const tryLine = line + word;
-        if (ctx0.measureText(tryLine).width <= maxW) { line = tryLine; continue; }
+        if (measureCtx.measureText(tryLine).width <= maxW) { line = tryLine; continue; }
         if (line.trim()) lines.push(line.trimEnd());
         line = word.trimStart();
-        while (ctx0.measureText(line).width > maxW) { // very long word: hard break
-          let i = line.length;
-          while (i > 1 && ctx0.measureText(line.slice(0, i)).width > maxW) i--;
-          lines.push(line.slice(0, i)); line = line.slice(i);
+        while (measureCtx.measureText(line).width > maxW) { // very long word: hard break
+          let k = line.length;
+          while (k > 1 && measureCtx.measureText(line.slice(0, k)).width > maxW) k--;
+          lines.push(line.slice(0, k)); line = line.slice(k);
         }
       }
       lines.push(line.trimEnd());
     }
-    const lh = 22, dpr = window.devicePixelRatio || 1;
-    const w = Math.ceil(Math.max(1, ...lines.map((l) => ctx0.measureText(l).width)));
-    const h = lines.length * lh;
+    return lines;
+  }
+  function drawText(text, { font, color, maxW = 10_000, lh, wrap = true }) {
+    let lines = wrap ? wrapLines(text, font, maxW) : [String(text)];
+    measureCtx.font = font;
+    if (!wrap) { // single line, ellipsis
+      let l = lines[0];
+      if (measureCtx.measureText(l).width > maxW) { while (l && measureCtx.measureText(l + '…').width > maxW) l = l.slice(0, -1); l += '…'; }
+      lines = [l];
+    }
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.ceil(Math.max(1, ...lines.map((l) => measureCtx.measureText(l).width)));
+    const h = Math.ceil(lines.length * lh);
     const cv = document.createElement('canvas');
     cv.width = Math.ceil(w * dpr); cv.height = Math.ceil(h * dpr);
     cv.style.width = w + 'px'; cv.style.height = h + 'px';
     const ctx = cv.getContext('2d');
     ctx.scale(dpr, dpr);
     ctx.font = font; ctx.fillStyle = color; ctx.textBaseline = 'middle';
-    lines.forEach((l, i) => ctx.fillText(l, 0, i * lh + lh / 2));
+    lines.forEach((l, k) => ctx.fillText(l, 0, k * lh + lh / 2));
     return cv;
+  }
+  // paint `text` into element `el` with the element's own font and colour. `code` = neutral tag for tests.
+  function ink(el, text, { wrap = true, code = '' } = {}) {
+    el.dataset.code = code;
+    if (!text) { el.replaceChildren(); return; }
+    const css = getComputedStyle(el);
+    const size = parseFloat(css.fontSize) || 15;
+    const font = `${css.fontStyle} ${css.fontWeight} ${size}px ${css.fontFamily}`;
+    const avail = el.clientWidth || (el.parentElement && el.parentElement.clientWidth) || 300;
+    el.replaceChildren(drawText(text, { font, color: css.color, maxW: Math.max(40, avail), lh: Math.round(size * 1.4), wrap }));
+  }
+  function paint(text, who) {
+    const ol = $('msgs');
+    const css = getComputedStyle(document.body);
+    const font = `15px ${css.fontFamily}`;
+    const color = who === 'mine' ? (css.getPropertyValue('--mine-text').trim() || '#fff') : css.color;
+    const maxW = Math.max(120, Math.min(ol.clientWidth * (innerWidth <= 720 ? 0.85 : 0.75), 560) - 24);
+    return drawText(text, { font, color, maxW, lh: 22 });
   }
   let resizeT;
   addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (active) renderMsgs(); }, 200); });
   function msgEl(m, text) {
     const li = document.createElement('li');
-    li.append(m.who === 'sys' ? document.createTextNode(text) : paint(text, m.who));
+    if (m.who === 'sys') { m.el = li; queueMicrotask(() => ink(li, text)); } else li.append(paint(text, m.who));
     m.el = li; m.meta = null;
     if (m.who === 'mine') { m.meta = document.createElement('span'); m.meta.className = 'meta'; li.append(m.meta); }
     decorate(m);
