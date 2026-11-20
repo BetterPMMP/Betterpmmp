@@ -1,0 +1,17 @@
+{
+  "name": "betterchats",
+  "version": "1.0.0",
+  "description": "BetterChats – Ende-zu-Ende-verschlüsselter Direktchat, der nichts speichert",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  }
+}
