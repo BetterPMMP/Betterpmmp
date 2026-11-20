@@ -1,0 +1,218 @@
+#!/usr/bin/env bash
+# BetterChats installer for Debian/Ubuntu servers. Run as root from the betterchats folder:
+#   sudo bash deploy/install.sh public chat.example.com   # public on port 30 (HTTPS via Let's Encrypt cert)
+#   sudo bash deploy/install.sh onion                     # stealth: only reachable via Tor, port 30 closed to the world
+# SSH access for YOU (the admin), choose with SSH_MODE=…:
+#   onion  (default) port 22 closed to the internet, nmap sees nothing; you log in via Tor + SSH key only
+#   closed           no SSH at all – you need your hosting provider's web/VNC console for maintenance
+#   open             port 22 open, rate-limited, keys only (for initial setup)
+set -euo pipefail
+MODE="${1:-}"; DOMAIN="${2:-}"
+SSH_MODE="${SSH_MODE:-onion}"
+EXTRA_PORTS="${EXTRA_PORTS-auto}"   # other public TCP ports to keep open, e.g. "80,443"; auto = ask if a web server runs
+CHAT_PORT="${CHAT_PORT:-30}"
+SSH_PORT="${SSH_PORT:-$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}')}"; SSH_PORT="${SSH_PORT:-22}"
+[ "$(id -u)" = 0 ] || { echo "Bitte als root ausführen."; exit 1; }
+[ "$MODE" = public ] || [ "$MODE" = onion ] || { echo "Nutzung: install.sh public <domain> | install.sh onion"; exit 1; }
+[ "$MODE" = onion ] || [ -n "$DOMAIN" ] || { echo "Für 'public' wird eine Domain gebraucht."; exit 1; }
+case "$SSH_MODE" in onion|closed|open) ;; *) echo "SSH_MODE muss onion, closed oder open sein."; exit 1;; esac
+
+# never lock the admin out by accident: key-only SSH needs a key
+HAVE_KEY=0
+for f in /root/.ssh/authorized_keys /home/*/.ssh/authorized_keys; do [ -s "$f" ] && HAVE_KEY=1; done
+if [ "$SSH_MODE" != closed ] && [ "$HAVE_KEY" = 0 ]; then
+  echo "ABBRUCH: Kein SSH-Schlüssel hinterlegt (authorized_keys leer). Erst 'ssh-copy-id' ausführen,"
+  echo "sonst sperrst du dich aus. Oder SSH_MODE=closed, wenn du nur die Anbieter-Konsole nutzen willst."
+  exit 1
+fi
+if [ "$SSH_MODE" = closed ]; then
+  echo "WARNUNG: SSH wird KOMPLETT geschlossen. Danach kommst du nur noch über die Web-/VNC-Konsole deines"
+  echo "Server-Anbieters auf den Server. Bestehende Verbindungen bleiben bis zum Trennen bestehen."
+  read -r -p "Zum Bestätigen 'SSH ZU' eintippen: " ok; [ "$ok" = "SSH ZU" ] || { echo "Abgebrochen."; exit 1; }
+fi
+SRC="$(cd "$(dirname "$0")/.." && pwd)"
+
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -qq
+apt-get install -y -qq nftables acl ca-certificates curl gnupg unattended-upgrades >/dev/null
+
+# ---- Node.js 22 LTS (distribution Node 18 is end-of-life = no security fixes) ----
+NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)"
+if [ "$NODE_MAJOR" -lt 20 ]; then
+  install -d -m 755 /etc/apt/keyrings
+  curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor --yes -o /etc/apt/keyrings/nodesource.gpg
+  echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" > /etc/apt/sources.list.d/nodesource.list
+  apt-get update -qq && apt-get install -y -qq nodejs >/dev/null
+fi
+NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)"
+[ "$NODE_MAJOR" -ge 20 ] || { echo "Node.js >= 20 konnte nicht installiert werden."; exit 1; }
+
+# ---- other services: NEVER removed silently. Listed, and only removed if you type "ja". ----
+# (BetterChats doesn't need them; on a server used for other things too, just answer "nein".)
+for pkg in apache2 nginx lighttpd exim4 postfix sendmail rpcbind nfs-kernel-server avahi-daemon cups-daemon \
+           samba vsftpd proftpd-basic telnetd inetutils-telnetd rsh-server xinetd snapd bind9 dnsmasq mariadb-server mysql-server postgresql; do
+  if dpkg -s "$pkg" >/dev/null 2>&1; then
+    ans=nein
+    [ -t 0 ] && read -r -p "Dienst '$pkg' gefunden – wird für BetterChats NICHT gebraucht. Entfernen? (ja/nein) [nein]: " ans
+    if [ "$ans" = ja ]; then apt-get purge -y -qq "$pkg" >/dev/null || true; echo "  -> $pkg entfernt"; else echo "  -> $pkg bleibt"; fi
+  fi
+done
+# automatic security updates (reboots are left to you)
+cat > /etc/apt/apt.conf.d/20auto-upgrades <<UPG
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+UPG
+systemctl enable --now unattended-upgrades >/dev/null 2>&1 || true
+{ [ "$MODE" = onion ] || [ "$SSH_MODE" = onion ]; } && apt-get install -y -qq tor >/dev/null
+
+id betterchats >/dev/null 2>&1 || useradd --system --home /nonexistent --shell /usr/sbin/nologin betterchats
+install -d -m 755 /opt/betterchats
+cp -r "$SRC/server.js" "$SRC/package.json" "$SRC/package-lock.json" "$SRC/public" /opt/betterchats/
+(cd /opt/betterchats && npm ci --omit=dev --no-audit --no-fund >/dev/null)
+install -d -m 700 -o betterchats -g betterchats /var/lib/betterchats
+install -d -m 700 /etc/betterchats
+
+if [ ! -f /etc/betterchats/env ]; then
+  umask 077
+  {
+    echo "PORT=$CHAT_PORT"
+    echo "BETTERCHATS_PEPPER=$(head -c 48 /dev/urandom | base64 -w0)"
+    if [ "$MODE" = onion ]; then
+      echo "HOST=127.0.0.1"
+    else
+      echo "DOMAIN=$DOMAIN"
+      echo "TLS_CERT=/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
+      echo "TLS_KEY=/etc/letsencrypt/live/$DOMAIN/privkey.pem"
+    fi
+  } > /etc/betterchats/env
+fi
+
+if [ "$MODE" = public ]; then
+  CHAT_RULES="tcp dport \$CHAT_PORT ct state new meter chat4 { ip saddr limit rate over 15/second burst 30 packets } add @ban4 { ip saddr } drop
+    tcp dport \$CHAT_PORT ct state new meter chat6 { ip6 saddr limit rate over 15/second burst 30 packets } add @ban6 { ip6 saddr } drop
+    tcp dport \$CHAT_PORT ct state new meter chatc4 { ip saddr ct count over 20 } drop
+    tcp dport \$CHAT_PORT ct state new accept"
+  # ---- HTTPS certificate (Let's Encrypt). Port 80 is opened ONLY for the seconds of a renewal. ----
+  apt-get install -y -qq certbot >/dev/null
+  if [ ! -d "/etc/letsencrypt/live/$DOMAIN" ]; then
+    nft list table inet betterchats >/dev/null 2>&1 && nft insert rule inet betterchats input tcp dport 80 accept comment \"certbot\"
+    if ss -ltn '( sport = :80 )' | grep -q LISTEN && [ -d /var/www/html ]; then
+      # a web server (e.g. Apache) already owns port 80 -> let it serve the challenge
+      CB="--webroot -w /var/www/html"
+    else
+      CB="--standalone"
+    fi
+    certbot certonly $CB --non-interactive --agree-tos --register-unsafely-without-email --key-type ecdsa -d "$DOMAIN" \
+      || { echo "Zertifikat fehlgeschlagen: Zeigt die Domain $DOMAIN (A-Eintrag) wirklich auf diesen Server?"; exit 1; }
+  fi
+  install -d /etc/letsencrypt/renewal-hooks/pre /etc/letsencrypt/renewal-hooks/post /etc/letsencrypt/renewal-hooks/deploy
+  cat > /etc/letsencrypt/renewal-hooks/pre/betterchats.sh <<'HOOK'
+#!/bin/sh
+nft insert rule inet betterchats input tcp dport 80 accept comment \"certbot\"
+HOOK
+  cat > /etc/letsencrypt/renewal-hooks/post/betterchats.sh <<'HOOK'
+#!/bin/sh
+for h in $(nft -a list chain inet betterchats input | awk '/certbot/ {print $NF}'); do nft delete rule inet betterchats input handle "$h"; done
+HOOK
+  cat > /etc/letsencrypt/renewal-hooks/deploy/betterchats.sh <<'HOOK'
+#!/bin/sh
+setfacl -R -m u:betterchats:rX /etc/letsencrypt/live /etc/letsencrypt/archive
+systemctl restart betterchats
+HOOK
+  chmod 755 /etc/letsencrypt/renewal-hooks/*/betterchats.sh
+  setfacl -R -m u:betterchats:rX /etc/letsencrypt/live /etc/letsencrypt/archive
+  setfacl -m u:betterchats:x /etc/letsencrypt
+else
+  CHAT_RULES="# stealth mode: chat port closed to the outside, Tor connects via localhost"
+  grep -q betterchats /etc/tor/torrc || printf '\nHiddenServiceDir /var/lib/tor/betterchats/\nHiddenServicePort 80 127.0.0.1:%s\n' "$CHAT_PORT" >> /etc/tor/torrc
+  systemctl restart tor
+fi
+
+# ---- SSH ----
+case "$SSH_MODE" in
+  open)
+    SSH_RULES="tcp dport \$SSH_PORT ct state new meter ssh4 { ip saddr limit rate 4/minute burst 6 packets } accept
+    tcp dport \$SSH_PORT ct state new meter ssh6 { ip6 saddr limit rate 4/minute burst 6 packets } accept" ;;
+  onion)
+    SSH_RULES="# SSH closed to the internet - reachable only through Tor (localhost)"
+    grep -q betterchats-ssh /etc/tor/torrc || printf '\nHiddenServiceDir /var/lib/tor/betterchats-ssh/\nHiddenServicePort 22 127.0.0.1:%s\n' "$SSH_PORT" >> /etc/tor/torrc
+    systemctl restart tor ;;
+  closed)
+    SSH_RULES="# SSH completely closed - maintenance via the hosting provider's console" ;;
+esac
+if [ "$SSH_MODE" != closed ]; then
+  # keys only, no passwords, no root password login, short grace time
+  install -d -m 755 /etc/ssh/sshd_config.d
+  cat > /etc/ssh/sshd_config.d/90-betterchats.conf <<SSHD
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin prohibit-password
+PermitEmptyPasswords no
+MaxAuthTries 3
+LoginGraceTime 20
+X11Forwarding no
+AllowAgentForwarding no
+SSHD
+  sshd -t && systemctl reload ssh 2>/dev/null || systemctl reload sshd 2>/dev/null || true
+else
+  systemctl disable --now ssh.socket ssh sshd 2>/dev/null || true
+fi
+
+# ---- keep other services reachable (never cut off your existing websites) ----
+if [ "$EXTRA_PORTS" = auto ]; then
+  EXTRA_PORTS=""
+  if systemctl is-active --quiet apache2 || systemctl is-active --quiet nginx; then
+    ans=ja
+    [ -t 0 ] && read -r -p "Ein Webserver (Apache/nginx) läuft. Ports 80 und 443 für deine anderen Seiten offen lassen? (ja/nein) [ja]: " ans
+    [ "${ans:-ja}" = ja ] && EXTRA_PORTS="80,443"
+  fi
+fi
+EXTRA_RULES="# no extra ports"
+[ -n "$EXTRA_PORTS" ] && EXTRA_RULES="tcp dport { $EXTRA_PORTS } ct state new accept"
+echo "Zusätzlich offene Ports: ${EXTRA_PORTS:-keine}"
+
+sed -e "s/__SSH_PORT__/$SSH_PORT/" -e "s/__CHAT_PORT__/$CHAT_PORT/" "$SRC/deploy/nftables.conf" \
+  | awk -v r="$CHAT_RULES" -v s="$SSH_RULES" -v x="$EXTRA_RULES" '{ if ($0 ~ /__CHAT_RULES__/) print "    " r; else if ($0 ~ /__SSH_RULES__/) print "    " s; else if ($0 ~ /__EXTRA_RULES__/) print "    " x; else print }' > /etc/betterchats/nftables.conf
+nft -c -f /etc/betterchats/nftables.conf
+nft -f /etc/betterchats/nftables.conf
+grep -q betterchats /etc/nftables.conf 2>/dev/null || echo 'include "/etc/betterchats/nftables.conf"' >> /etc/nftables.conf
+systemctl enable --now nftables >/dev/null
+
+# don't answer pings, ignore bogus packets, no source routing
+cat > /etc/sysctl.d/90-betterchats.conf <<SYS
+net.ipv4.icmp_echo_ignore_all=1
+net.ipv4.tcp_syncookies=1
+net.ipv4.conf.all.rp_filter=1
+net.ipv4.conf.all.accept_source_route=0
+net.ipv6.conf.all.accept_source_route=0
+net.ipv4.conf.all.accept_redirects=0
+net.ipv6.conf.all.accept_redirects=0
+net.ipv4.conf.all.log_martians=0
+kernel.core_pattern=|/bin/false
+SYS
+sysctl -q --system
+
+cp "$SRC/deploy/betterchats.service" /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now betterchats
+sleep 2
+systemctl is-active betterchats >/dev/null && echo "BetterChats läuft auf Port $CHAT_PORT."
+if [ "$MODE" = onion ]; then
+  echo "Deine geheime Adresse (nur im Tor Browser): http://$(cat /var/lib/tor/betterchats/hostname)"
+  echo "Danach DOMAIN=<diese .onion-Adresse> in /etc/betterchats/env eintragen und 'systemctl restart betterchats'."
+else
+  echo "Erreichbar unter: https://$DOMAIN:$CHAT_PORT"
+fi
+case "$SSH_MODE" in
+  open)   echo "SSH: Port $SSH_PORT offen (gedrosselt, nur Schlüssel). Später mit SSH_MODE=onion schließen." ;;
+  onion)  echo "SSH: Port $SSH_PORT ist von außen ZU. Admin-Zugang nur über Tor:"
+          echo "      torsocks ssh root@$(cat /var/lib/tor/betterchats-ssh/hostname 2>/dev/null || echo '<wird erzeugt – /var/lib/tor/betterchats-ssh/hostname>')"
+          echo "      Diese Adresse GUT AUFBEWAHREN und nicht weitergeben." ;;
+  closed) echo "SSH: komplett geschlossen. Wartung nur über die Konsole deines Server-Anbieters." ;;
+esac
+echo "Alles andere ist dicht. Ping wird ignoriert, Scanner werden gesperrt."
+# remove the temporary certbot rule if it is still there
+/etc/letsencrypt/renewal-hooks/post/betterchats.sh 2>/dev/null || true
+echo
+echo "=== Diese Dienste lauschen jetzt auf dem Server (nur BetterChats, Tor und ggf. SSH sollten hier stehen) ==="
+ss -tulpn | awk 'NR==1 || /LISTEN|UNCONN/' 

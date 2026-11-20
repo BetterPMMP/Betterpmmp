@@ -1,0 +1,23 @@
+{
+  "appId": "chat.betterchats.app",
+  "appName": "BetterChats",
+  "webDir": "www",
+  "loggingBehavior": "none",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "ios": {
+    "contentInset": "always",
+    "webContentsDebuggingEnabled": false
+  },
+  "server": {
+    "url": "https://147-189-169-3.sslip.io:30",
+    "cleartext": false,
+    "allowNavigation": [
+      "147-189-169-3.sslip.io"
+    ],
+    "errorPath": "offline.html"
+  }
+}

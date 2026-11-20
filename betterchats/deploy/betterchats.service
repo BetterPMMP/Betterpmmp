@@ -1,0 +1,62 @@
+# Hardened systemd service for BetterChats on port 30.
+# Runs as an unprivileged user, may ONLY bind low ports, no swap (RAM never hits the disk),
+# no core dumps, read-only system, no access to other users' files or devices.
+[Unit]
+Description=BetterChats
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=betterchats
+Group=betterchats
+WorkingDirectory=/opt/betterchats
+EnvironmentFile=/etc/betterchats/env
+Environment=DATA_DIR=/var/lib/betterchats
+ExecStart=/usr/bin/node /opt/betterchats/server.js
+Restart=on-failure
+RestartSec=2
+
+# only allowed to open port 30 (<1024), nothing else
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=yes
+
+# memory must never be written to disk
+MemorySwapMax=0
+LimitCORE=0
+MemoryMax=1G
+TasksMax=256
+
+# sandbox
+ProtectSystem=strict
+ReadWritePaths=/var/lib/betterchats
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+PrivateUsers=no
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RemoveIPC=yes
+UMask=0077
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @mount @debug @cpu-emulation @obsolete @raw-io @reboot @swap
+# no logs of what happens inside (the server doesn't log anything anyway)
+StandardOutput=null
+StandardError=journal
+LogLevelMax=warning
+
+[Install]
+WantedBy=multi-user.target

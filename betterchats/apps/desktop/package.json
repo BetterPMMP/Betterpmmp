@@ -1,0 +1,71 @@
+{
+  "name": "betterchats-desktop",
+  "productName": "BetterChats",
+  "version": "1.0.0",
+  "description": "BetterChats – Ende-zu-Ende-verschlüsselter Direktchat, der nichts speichert",
+  "main": "main.js",
+  "private": true,
+  "license": "UNLICENSED",
+  "author": "BetterChats",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win nsis --x64 --publish never",
+    "dist:mac": "electron-builder --mac --publish never",
+    "dist:linux": "electron-builder --linux --publish never"
+  },
+  "build": {
+    "appId": "chat.betterchats.desktop",
+    "productName": "BetterChats",
+    "files": [
+      "main.js",
+      "site.txt",
+      "icon.png"
+    ],
+    "asar": true,
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true,
+      "grantFileProtocolExtraPrivileges": false
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "BetterChats",
+      "artifactName": "BetterChats-Setup-${version}.exe"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "icon.png",
+      "hardenedRuntime": true
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "icon.png"
+    },
+    "directories": {
+      "output": "dist"
+    }
+  },
+  "devDependencies": {
+    "electron": "^45.2.3",
+    "electron-builder": "^26.18.1"
+  }
+}

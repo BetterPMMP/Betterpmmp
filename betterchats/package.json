@@ -1,0 +1,26 @@
+{
+  "name": "betterchats",
+  "version": "1.0.0",
+  "description": "BetterChats – Ende-zu-Ende-verschlüsselter Direktchat, der nichts speichert",
+  "main": "server.js",
+  "scripts": {
+    "build": "node build.js",
+    "start": "node server.js",
+    "test": "node --test --test-concurrency=1 test/*.test.mjs",
+    "test:fuzz": "FUZZ_ROUNDS=1000 node --test test/fuzz.test.mjs"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@serenity-kit/opaque": "^1.1.0",
+    "ws": "^8.18.0"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@noble/post-quantum": "^0.7.1",
+    "esbuild": "^0.28.2",
+    "javascript-obfuscator": "^5.9.1"
+  }
+}
