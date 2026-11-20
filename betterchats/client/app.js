@@ -1,4 +1,5 @@
 'use strict';
+import { createE2E, safetyNumber, b64, unb64 } from './e2e.js';
 /*
  * BetterChats client.
  *
@@ -23,12 +24,9 @@
   const dec = new TextDecoder();
   const NAME_RE = /^[a-z0-9_]{3,20}$/;
   const IDLE_WIPE_MS = 30 * 60_000;
-  const MAX_SKIP = 500;
   const BUCKETS = [4096, 8192, 16384, 32768];
   const TTL_LABEL = { 0: 'aus', 30: '30 s', 300: '5 min', 3600: '1 h' };
 
-  const b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
-  const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
   const CFG = window.BC_CONFIG || {};           // apps: { server: 'wss://…', serverKey: '…' }
   const PW_MIN = 6, PW_MAX = 128;
@@ -47,9 +45,7 @@
   let mode = 'login';
   let active = null;
   const chats = new Map();     // name -> { pub, online, msgs, unread, safety }
-  const sendChains = new Map(); // name|peerKey -> Promise<chain>
-  const recvChains = new Map(); // name|peerKey|kemCt -> Promise<chain>
-  const ecdhCache = new Map();  // peer ECDH pub -> Promise<bits>
+  let e2e = null;               // end-to-end engine (client/e2e.js), created after login
   const lookups = new Map();   // name -> [resolve]
   let vaultKey = null;         // per-tab AES key: chat history in RAM is only kept encrypted
 
@@ -69,116 +65,6 @@
     kem = BCPQ.keygen();
     myPub = b64(await crypto.subtle.exportKey('raw', keyPair.publicKey)) + '.' + b64(kem.publicKey);
     vaultKey = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
-  }
-  const ecPart = (pk) => pk.split('.')[0];
-  const kemPart = (pk) => pk.split('.')[1];
-  async function hmac(keyBytes, byte) {
-    const k = await crypto.subtle.importKey('raw', keyBytes, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    return new Uint8Array(await crypto.subtle.sign('HMAC', k, new Uint8Array([byte])));
-  }
-  // one step of the hash ratchet: message key + next chain key; the old chain key is wiped
-  async function step(ck) {
-    const mk = await hmac(ck, 1);
-    const next = await hmac(ck, 2);
-    ck.fill(0);
-    return [mk, next];
-  }
-  function ecdh(peerKey) {
-    const ec = ecPart(peerKey);
-    if (!ecdhCache.has(ec)) {
-      ecdhCache.set(ec, (async () => {
-        const pk = await crypto.subtle.importKey('raw', unb64(ec), { name: 'ECDH', namedCurve: 'P-256' }, false, []);
-        return new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: pk }, keyPair.privateKey, 256));
-      })());
-    }
-    return ecdhCache.get(ec);
-  }
-  // hybrid: HKDF(ECDH secret || ML-KEM secret), bound to both parties and all their keys
-  async function hybridChain(ecSecret, pqSecret, from, fromKey, to, toKey) {
-    const ikm = new Uint8Array(64);
-    ikm.set(ecSecret, 0); ikm.set(pqSecret, 32);
-    const hk = await crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveBits']);
-    ikm.fill(0); pqSecret.fill(0);
-    return new Uint8Array(await crypto.subtle.deriveBits(
-      { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(32), info: enc.encode(`BetterChats v3|${from}|${fromKey}|${to}|${toKey}`) }, hk, 256));
-  }
-  function sendChain(peer, peerKey) {
-    const id = peer + '|' + peerKey;
-    if (!sendChains.has(id)) {
-      sendChains.set(id, (async () => {
-        const { cipherText, sharedSecret } = BCPQ.encapsulate(unb64(kemPart(peerKey)));
-        const ck = await hybridChain(await ecdh(peerKey), sharedSecret, me, myPub, peer, peerKey);
-        return { ck, n: 0, k: b64(cipherText), q: Promise.resolve() };
-      })());
-    }
-    return sendChains.get(id);
-  }
-  function recvChain(peer, peerKey, k) {
-    const id = peer + '|' + peerKey + '|' + k;
-    if (!recvChains.has(id)) {
-      if (recvChains.size > 200) { // bounded, a malicious server can't make us grow forever
-        for (const key of [...recvChains.keys()].slice(0, 50)) recvChains.delete(key);
-      }
-      recvChains.set(id, (async () => {
-        const ss = BCPQ.decapsulate(unb64(k), kem.secretKey);
-        const ck = await hybridChain(await ecdh(peerKey), ss, peer, peerKey, me, myPub);
-        return { ck, n: 0, skipped: new Map(), q: Promise.resolve() };
-      })());
-    }
-    return recvChains.get(id);
-  }
-  function forgetPeer(peer, peerKey) {
-    for (const m of [sendChains, recvChains]) for (const k of [...m.keys()]) if (k.startsWith(peer + '|' + peerKey)) m.delete(k);
-  }
-  const serial = (ch, fn) => { const r = ch.q.then(fn); ch.q = r.catch(() => {}); return r; };
-  const aad = (from, fromKey, to, toKey, n, k) => enc.encode(`${from}|${fromKey}|${to}|${toKey}|${n}|${k}`);
-  const aesKey = (mk, use) => crypto.subtle.importKey('raw', mk, 'AES-GCM', false, [use]);
-
-  async function encryptFor(peer, peerKey, payload) {
-    const s = await sendChain(peer, peerKey);
-    return serial(s, async () => {
-      const n = s.n;
-      const [mk, next] = await step(s.ck);
-      s.ck = next; s.n++;
-      let pt = JSON.stringify(payload);
-      pt += ' '.repeat(256 - (enc.encode(pt).length % 256)); // hide length
-      const iv = crypto.getRandomValues(new Uint8Array(12));
-      const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: aad(me, myPub, peer, peerKey, n, s.k) }, await aesKey(mk, 'encrypt'), enc.encode(pt));
-      mk.fill(0);
-      return { n, k: s.k, iv: b64(iv), ct: b64(ct) };
-    });
-  }
-  async function decryptFrom(peer, peerKey, k, n, iv, ct) {
-    if (!Number.isSafeInteger(n) || n < 0) throw new Error('bad');
-    const r = await recvChain(peer, peerKey, k);
-    return serial(r, async () => {
-      // work on copies; only commit if the message really decrypts (forged counters can't break the chain)
-      let ck = r.ck.slice(), cn = r.n, mk;
-      const newSkipped = [];
-      if (n < cn) {
-        mk = r.skipped.get(n);
-        if (!mk) throw new Error('replay');
-      } else {
-        if (n - cn > MAX_SKIP) throw new Error('gap');
-        while (cn < n) { const [x, nx] = await step(ck); newSkipped.push([cn, x]); ck = nx; cn++; }
-        const [x, nx] = await step(ck); mk = x; ck = nx; cn++;
-      }
-      const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(iv), additionalData: aad(peer, peerKey, me, myPub, n, k) }, await aesKey(mk, 'decrypt'), unb64(ct));
-      if (n < r.n) r.skipped.delete(n);
-      else { r.ck.fill(0); r.ck = ck; r.n = cn; for (const [i, x] of newSkipped) r.skipped.set(i, x); }
-      while (r.skipped.size > MAX_SKIP) { const [i, x] = r.skipped.entries().next().value; x.fill(0); r.skipped.delete(i); }
-      mk.fill(0);
-      const o = JSON.parse(dec.decode(pt));
-      if (typeof o.m !== 'string') throw new Error('bad');
-      return { text: o.m, ttl: TTL_LABEL[o.ttl] ? o.ttl : 0 };
-    });
-  }
-  async function safetyNumber(pubA, pubB) {
-    const [x, y] = [pubA, pubB].sort();
-    const h = new Uint8Array(await crypto.subtle.digest('SHA-256', enc.encode(x + '|' + y)));
-    let out = '';
-    for (let i = 0; i < 12; i++) out += String(((h[i * 2] << 8) | h[i * 2 + 1]) % 100000).padStart(5, '0') + ' ';
-    return out.trim();
   }
 
   // ---------- socket ----------
@@ -302,7 +188,8 @@
         const pk = peerKeyOf(m);
         if (typeof m.from !== 'string' || !NAME_RE.test(m.from) || !pk || typeof m.k !== 'string') return;
         try {
-          const { text, ttl } = await decryptFrom(m.from, pk, m.k, m.n, m.iv, m.ct);
+          const o = await e2e.decryptFrom(m.from, pk, m.k, m.n, m.iv, m.ct);
+          const text = o.m, ttl = TTL_LABEL[o.ttl] ? o.ttl : 0;
           const c = ensureChat(m.from);
           await setPeer(m.from, pk, true);
           await addMsg(m.from, { who: 'theirs', ttl }, text);
@@ -366,6 +253,7 @@
       }
       if (res.t === 'err') { err.textContent = res.msg; return; }
       me = res.name;
+      e2e = createE2E({ me, myPub, ecdhPrivateKey: keyPair.privateKey, kemSecretKey: kem.secretKey, pq: BCPQ });
       $('pin').value = '';
       $('name').value = '';
       $('meName').textContent = me;
@@ -384,7 +272,7 @@
   function wipe(reason) {
     me = '';
     for (const c of chats.values()) c.msgs.length = 0;
-    chats.clear(); sendChains.clear(); recvChains.clear(); ecdhCache.clear();
+    chats.clear(); if (e2e) e2e.wipe(); e2e = null;
     if (kem) { kem.secretKey.fill(0); kem = null; }
     keyPair = null; vaultKey = null; tunnel = null;
     $('msgs').replaceChildren(); $('chatList').replaceChildren();
@@ -431,7 +319,7 @@
   async function setPeer(name, pub, isOnline) {
     const c = ensureChat(name);
     if (pub && c.pub && pub !== c.pub) {
-      forgetPeer(name, c.pub);
+      e2e.forgetPeer(name, c.pub);
       c.verified = false;
       addMsg(name, { who: 'sys' }, `${name} hat eine neue Sitzung gestartet – die Sicherheitsnummer hat sich geändert. Bitte neu vergleichen.`);
     }
@@ -542,7 +430,7 @@
     if (!c) return;
     for (const m of c.msgs) { clearTimeout(m.timer); m.iv = m.ct = m.el = m.meta = null; }
     c.msgs.length = 0; c.draft = null;
-    if (c.pub) forgetPeer(name, c.pub);
+    if (c.pub) e2e.forgetPeer(name, c.pub);
     chats.delete(name);
     if (active === name) { $('text').value = ''; $('msgs').replaceChildren(); active = null; closeConv(); }
     renderList();
@@ -674,7 +562,7 @@
     }
     const peerKey = c.pub;
     if (!msg.ct) return; // self-destructed in the meantime
-    const { n, k, iv, ct } = await encryptFor(name, peerKey, { m: await unseal(msg), ttl: msg.ttl || 0 });
+    const { n, k, iv, ct } = await e2e.encryptFor(name, peerKey, { m: await unseal(msg), ttl: msg.ttl || 0 });
     const [pub, kpub] = peerKey.split('.');
     sendWs({ t: 'msg', to: name, pub, kpub, k, n, iv, ct, id: msg.id });
   }

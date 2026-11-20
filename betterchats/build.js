@@ -23,7 +23,10 @@ const pq = esbuild.buildSync({
   target: 'es2020', write: false, legalComments: 'none',
 }).outputFiles[0].text;
 
-const appSrc = esbuild.transformSync(fs.readFileSync(path.join(SRC, 'app.js'), 'utf8'), { minify: false, target: 'es2020' }).code;
+const appSrc = esbuild.buildSync({
+  entryPoints: [path.join(SRC, 'app.js')], bundle: true, minify: false, format: 'iife',
+  target: 'es2020', write: false, legalComments: 'none',
+}).outputFiles[0].text;
 const app = Obfuscator.obfuscate(appSrc, {
   compact: true,
   target: 'browser-no-eval',
