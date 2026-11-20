@@ -9,17 +9,16 @@
   "author": "BetterChats",
   "scripts": {
     "start": "electron .",
-    "dist:win": "electron-builder --win --x64",
-    "dist:mac": "electron-builder --mac",
-    "dist:linux": "electron-builder --linux"
+    "dist:win": "electron-builder --win nsis --x64 --publish never",
+    "dist:mac": "electron-builder --mac --publish never",
+    "dist:linux": "electron-builder --linux --publish never"
   },
   "build": {
     "appId": "chat.betterchats.desktop",
     "productName": "BetterChats",
     "files": [
       "main.js",
-      "www/**",
-      "server.txt",
+      "site.txt",
       "icon.png"
     ],
     "asar": true,
@@ -39,25 +38,19 @@
           "arch": [
             "x64"
           ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
         }
       ],
       "icon": "icon.png",
-      "signAndEditExecutable": false
+      "publisherName": "BetterChats"
     },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "BetterChats",
       "artifactName": "BetterChats-Setup-${version}.exe"
-    },
-    "portable": {
-      "artifactName": "BetterChats-${version}-portable.exe"
     },
     "mac": {
       "target": "dmg",

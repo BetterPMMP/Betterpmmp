@@ -1,20 +1,16 @@
 'use strict';
 /*
- * BetterChats desktop app (Electron), hardened:
- *  - the chat code ships INSIDE the signed app (served from app://betterchats), the server only relays
- *  - sandboxed renderer, context isolation, no Node.js in the page, no DevTools in release builds
+ * BetterChats desktop app (Electron): shows the BetterChats website in its own hardened window.
+ *  - only the BetterChats site may be loaded – every other address and request is blocked
+ *  - sandboxed page, context isolation, no Node.js in the page, no DevTools in release builds
  *  - screenshots / screen recording of the window are blocked (setContentProtection)
- *  - every network request except the own files and the configured chat server is blocked
- *  - no permissions (camera, mic, notifications…), no navigation, no popups, no cache, nothing on disk
+ *  - no permissions (camera, mic, notifications…), no popups, no cache, nothing kept on disk
  */
-const { app, BrowserWindow, protocol, session, Menu, net } = require('electron');
+const { app, BrowserWindow, session, Menu, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
-const WWW = path.join(__dirname, 'www');
-const CSP = fs.readFileSync(path.join(WWW, 'csp.txt'), 'utf8');
-const SERVER = new URL(fs.readFileSync(path.join(__dirname, 'server.txt'), 'utf8').trim());
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
+const SITE = new URL(fs.readFileSync(path.join(__dirname, 'site.txt'), 'utf8').trim());
 
 app.commandLine.appendSwitch('disable-http-cache');
 app.commandLine.appendSwitch('disk-cache-size', '0');
@@ -23,7 +19,11 @@ app.commandLine.appendSwitch('disable-features', 'SpellCheck,AutofillServerCommu
 if (!(process.env.BC_DEV_NO_SANDBOX === '1' && !app.isPackaged)) app.enableSandbox();
 if (!app.requestSingleInstanceLock()) app.quit();
 
-protocol.registerSchemesAsPrivileged([{ scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
+const sameSite = (u) => { try { const x = new URL(u); return x.host === SITE.host && (x.protocol === 'https:' || x.protocol === 'wss:'); } catch { return false; } };
+
+const OFFLINE = `data:text/html;charset=utf-8,${encodeURIComponent(`<!doctype html><meta charset="utf-8"><title>BetterChats</title>
+<body style="font:16px system-ui;background:#0f1115;color:#e8eaf0;display:grid;place-items:center;height:100vh;margin:0;text-align:center">
+<div><h2>Keine Verbindung zu BetterChats</h2><p>Prüfe deine Internetverbindung.</p><p style="opacity:.6">Die App versucht es in 5 Sekunden erneut.</p></div></body>`)}`;
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -38,9 +38,15 @@ function createWindow() {
   });
   win.setContentProtection(true); // no screenshots / screen recording of this window
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-  win.webContents.on('will-navigate', (e, url) => { if (!url.startsWith('app://betterchats/')) e.preventDefault(); });
+  win.webContents.on('will-navigate', (e, url) => { if (!sameSite(url)) e.preventDefault(); });
+  win.webContents.on('will-redirect', (e, url) => { if (!sameSite(url)) e.preventDefault(); });
   win.webContents.on('will-attach-webview', (e) => e.preventDefault());
-  win.loadURL('app://betterchats/index.html');
+  win.webContents.on('did-fail-load', (e, code, desc, url, isMain) => {
+    if (!isMain || code === -3) return; // -3 = aborted
+    win.loadURL(OFFLINE);
+    setTimeout(() => win.loadURL(SITE.href), 5000);
+  });
+  win.loadURL(SITE.href);
 }
 
 app.whenReady().then(() => {
@@ -50,24 +56,10 @@ app.whenReady().then(() => {
   ses.setPermissionCheckHandler(() => false);
   ses.setDevicePermissionHandler(() => false);
   ses.setSpellCheckerEnabled(false);
-  // network firewall inside the app: only our own files + the chat server
+  // network firewall inside the app: only the BetterChats site (https + its WebSocket)
   ses.webRequest.onBeforeRequest((d, cb) => {
-    const u = new URL(d.url);
-    const ok = u.protocol === 'app:' || ((u.protocol === 'wss:' || u.protocol === 'ws:') && u.host === SERVER.host) || u.protocol === 'devtools:';
+    const ok = sameSite(d.url) || d.url.startsWith('data:text/html') || d.url.startsWith('devtools:');
     cb({ cancel: !ok });
-  });
-  protocol.handle('app', (req) => {
-    const u = new URL(req.url);
-    const file = path.normalize(path.join(WWW, decodeURIComponent(u.pathname)));
-    if (u.host !== 'betterchats' || !file.startsWith(WWW + path.sep) || !TYPES[path.extname(file)] || !fs.existsSync(file)) {
-      return new Response('', { status: 404 });
-    }
-    return new Response(fs.readFileSync(file), {
-      headers: {
-        'Content-Type': TYPES[path.extname(file)], 'Content-Security-Policy': CSP + "; frame-ancestors 'none'",
-        'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store', 'Cross-Origin-Opener-Policy': 'same-origin',
-      },
-    });
   });
   createWindow();
 });
@@ -75,7 +67,4 @@ app.whenReady().then(() => {
 // leave nothing behind
 app.on('before-quit', () => { session.defaultSession.clearStorageData(); session.defaultSession.clearCache(); });
 app.on('window-all-closed', () => app.quit());
-app.on('web-contents-created', (e, wc) => {
-  wc.on('will-redirect', (ev) => ev.preventDefault());
-});
-void net;
+void shell;

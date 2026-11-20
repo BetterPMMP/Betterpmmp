@@ -5,9 +5,7 @@ apps/www/
 apps/BUILD-HASHES.txt
 apps/icon-1024.png
 apps/desktop/www/
-apps/desktop/server.txt
 apps/desktop/dist/
-apps/mobile/www/
 apps/mobile/android/app/src/main/assets/public/
 apps/mobile/android/app/build/
 apps/mobile/android/.gradle/

@@ -1,25 +1,28 @@
 'use strict';
-// Builds the chat client for the apps and copies it into the desktop + mobile projects.
-//   BETTERCHATS_SERVER=wss://chat.example.com:30/ [BETTERCHATS_SERVER_KEY=<OPAQUE server key>] node apps/prepare.js
-const { execFileSync } = require('child_process');
+// Points the apps at your BetterChats website. The apps simply show that site in a hardened window.
+//   BETTERCHATS_URL=https://147-189-169-3.sslip.io:30 node apps/prepare.js
 const fs = require('fs');
 const path = require('path');
 
-const server = process.env.BETTERCHATS_SERVER;
-if (!server) { console.error('BETTERCHATS_SERVER fehlt, z. B. wss://chat.example.com:30/'); process.exit(1); }
-const u = new URL(server);
-if (u.protocol !== 'wss:' && !(u.protocol === 'ws:' && ['127.0.0.1', 'localhost'].includes(u.hostname))) {
-  console.error('Apps verbinden sich nur über wss:// (TLS). ws:// ist nur für localhost-Tests erlaubt.'); process.exit(1);
-}
-if (!process.env.BETTERCHATS_SERVER_KEY) console.warn('HINWEIS: BETTERCHATS_SERVER_KEY nicht gesetzt – Server-Identität wird nicht fest geprüft (Pinning aus).');
+const url = new URL(process.env.BETTERCHATS_URL || 'https://147-189-169-3.sslip.io:30');
+if (url.protocol !== 'https:') { console.error('Die Apps laden BetterChats nur über https://'); process.exit(1); }
+const site = url.origin;
 
-execFileSync(process.execPath, [path.join(__dirname, '..', 'build.js')], { stdio: 'inherit', env: { ...process.env, APP_BUILD: '1' } });
-const www = path.join(__dirname, 'www');
-for (const target of ['desktop/www', 'mobile/www']) {
-  const dst = path.join(__dirname, target);
-  if (!fs.existsSync(path.dirname(dst))) continue;
-  fs.rmSync(dst, { recursive: true, force: true });
-  fs.cpSync(www, dst, { recursive: true });
-}
-fs.writeFileSync(path.join(__dirname, 'desktop', 'server.txt'), server + '\n');
-console.log('App-Client gebaut für', server);
+// desktop
+fs.writeFileSync(path.join(__dirname, 'desktop', 'site.txt'), site + '\n');
+
+// mobile: Capacitor loads the site directly; www/ only holds the offline page
+const cfgPath = path.join(__dirname, 'mobile', 'capacitor.config.json');
+const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+cfg.server = { ...cfg.server, url: site, cleartext: false, allowNavigation: [url.hostname], errorPath: 'offline.html' };
+fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2) + '\n');
+const www = path.join(__dirname, 'mobile', 'www');
+fs.rmSync(www, { recursive: true, force: true });
+fs.mkdirSync(www);
+const page = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BetterChats</title></head><body style="font:16px system-ui;background:#0f1115;color:#e8eaf0;display:grid;place-items:center;height:100vh;margin:0;text-align:center">
+<div><h2>Keine Verbindung zu BetterChats</h2><p>Prüfe deine Internetverbindung.</p>
+<p><a style="color:#5b78ff" href="${site}/">Erneut versuchen</a></p></div></body></html>`;
+fs.writeFileSync(path.join(www, 'index.html'), page);
+fs.writeFileSync(path.join(www, 'offline.html'), page);
+console.log('Apps zeigen jetzt:', site);
