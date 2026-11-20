@@ -14,6 +14,8 @@
  * - Chat history in RAM is only kept encrypted; contacts and chats vanish on reload.
  *   No cookies, no localStorage, no IndexedDB.
  * - All content is inserted with textContent (never innerHTML) + Trusted Types CSP.
+ * - Login uses OPAQUE (RFC 9807): the password never leaves this device, not even hashed.
+ *   Optionally the server's OPAQUE key is pinned (apps), so a fake server is detected.
  */
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -28,7 +30,9 @@
   const b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
   const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
-  if (!window.isSecureContext || !window.crypto?.subtle || !window.BCPQ) {
+  const CFG = window.BC_CONFIG || {};           // apps: { server: 'wss://…', serverKey: '…' }
+  const PW_MIN = 6, PW_MAX = 128;
+  if (!window.isSecureContext || !window.crypto?.subtle || !window.BCPQ || !window.BCOPAQUE_READY) {
     $('authErr').textContent = 'Unsichere Verbindung: BetterChats funktioniert nur über HTTPS (oder als .onion).';
     $('authBtn').disabled = true;
     return;
@@ -186,7 +190,7 @@
   let recvQ = Promise.resolve();
   function connect() {
     return new Promise((resolve, reject) => {
-      ws = new WebSocket(`${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/`);
+      ws = new WebSocket(CFG.server || `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/`);
       ws.binaryType = 'arraybuffer';
       ws.onerror = () => reject(new Error('Keine Verbindung zum Server.'));
       ws.onclose = () => { tunnel = null; if (me) wipe('Verbindung getrennt. Aus Sicherheitsgründen wurde alles gelöscht.'); else reject(new Error('Verbindung abgelehnt.')); };
@@ -242,18 +246,50 @@
     });
   }
 
-  let authResolve = null;
-  let deleteResolve = null;
+  // request/response helper for the multi-step OPAQUE flows
+  let pending = null;
+  function request(obj, types) {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => { pending = null; reject(new Error('Server antwortet nicht.')); }, 20_000);
+      pending = { types, resolve: (m) => { clearTimeout(timer); pending = null; resolve(m); } };
+      sendWs(obj);
+    });
+  }
+  const nextFrame = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+  function checkServerKey(key) {
+    if (CFG.serverKey && key !== CFG.serverKey) {
+      try { ws.close(); } catch {}
+      throw new Error('⚠ Server-Identität stimmt nicht! Möglicher Angriff – Verbindung abgebrochen.');
+    }
+  }
+  async function opaqueRegister(name, password, pub, kpub) {
+    const O = BCOPAQUE;
+    const { clientRegistrationState, registrationRequest } = O.client.startRegistration({ password });
+    const r1 = await request({ t: 'reg1', name, req: registrationRequest }, ['reg1', 'err']);
+    if (r1.t === 'err') return r1;
+    await nextFrame();
+    const { registrationRecord, serverStaticPublicKey } = O.client.finishRegistration({ clientRegistrationState, registrationResponse: r1.res, password });
+    checkServerKey(serverStaticPublicKey);
+    return request({ t: 'reg2', rec: registrationRecord, pub, kpub }, ['ok', 'err']);
+  }
+  // proves the password without ever sending it; returns finishLoginRequest or null (wrong password)
+  async function opaqueProve(step1, password, extra = {}) {
+    const O = BCOPAQUE;
+    const { clientLoginState, startLoginRequest } = O.client.startLogin({ password });
+    const r1 = await request({ ...extra, t: step1, req: startLoginRequest }, [step1, 'err', 'delete']);
+    if (r1.t !== step1) return { err: r1.msg || 'Fehler.' };
+    await nextFrame();
+    const res = O.client.finishLogin({ clientLoginState, loginResponse: r1.res, password });
+    if (!res) return { err: 'Name oder Passwort falsch.' };
+    checkServerKey(res.serverStaticPublicKey);
+    return { fin: res.finishLoginRequest };
+  }
+
   async function onServer(m) {
+    if (pending && pending.types.includes(m.t)) return pending.resolve(m);
     switch (m.t) {
-      case 'ok': case 'err':
-        if (authResolve) { authResolve(m); authResolve = null; }
-        break;
       case 'kicked':
         wipe('Du hast dich woanders angemeldet. Diese Sitzung wurde beendet und alles gelöscht.');
-        break;
-      case 'delete':
-        if (deleteResolve) { deleteResolve(m); deleteResolve = null; }
         break;
       case 'lookup': {
         if (typeof m.name !== 'string') return;
@@ -303,26 +339,31 @@
   }
   $('tabLogin').onclick = () => setMode('login');
   $('tabReg').onclick = () => setMode('register');
-  const digitsOnly = (e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6); };
   const nameOnly = (e) => { e.target.value = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''); };
-  $('pin').addEventListener('input', digitsOnly);
-  $('delPin').addEventListener('input', digitsOnly);
   $('name').addEventListener('input', nameOnly);
   $('newName').addEventListener('input', nameOnly);
 
   $('authForm').onsubmit = async (e) => {
     e.preventDefault();
     const name = $('name').value.trim();
-    const pin = $('pin').value;
+    const pw = $('pin').value;
     const err = $('authErr');
     if (!NAME_RE.test(name)) { err.textContent = 'Name: 3–20 Zeichen, nur a–z, 0–9 und _'; return; }
-    if (!/^\d{6}$/.test(pin)) { err.textContent = 'Passwort muss genau 6 Ziffern haben.'; return; }
+    if (pw.length < PW_MIN || pw.length > PW_MAX) { err.textContent = `Passwort: mindestens ${PW_MIN} Zeichen (z. B. 6-stellige PIN).`; return; }
+    if (mode === 'register' && /^(\d)\1{5,}$|^(012345|123456|234567|345678|456789|987654|654321|111111|000000)$/.test(pw)) { err.textContent = 'Diese PIN ist zu leicht zu erraten.'; return; }
     $('authBtn').disabled = true;
     err.textContent = '';
+    $('authBtn').textContent = 'Prüfe…';
     try {
+      await window.BCOPAQUE_READY;
       if (!ws || ws.readyState !== 1) { await makeKeys(); await connect(); }
       const [pub, kpub] = myPub.split('.');
-      const res = await new Promise((r) => { authResolve = r; sendWs({ t: mode, name, pin, pub, kpub }); });
+      let res;
+      if (mode === 'register') res = await opaqueRegister(name, pw, pub, kpub);
+      else {
+        const p = await opaqueProve('log1', pw, { name });
+        res = p.err ? { t: 'err', msg: p.err } : await request({ t: 'log2', fin: p.fin, pub, kpub }, ['ok', 'err']);
+      }
       if (res.t === 'err') { err.textContent = res.msg; return; }
       me = res.name;
       $('pin').value = '';
@@ -335,6 +376,7 @@
       err.textContent = ex.message || 'Fehler.';
     } finally {
       $('authBtn').disabled = false;
+      $('authBtn').textContent = mode === 'login' ? 'Anmelden' : 'Konto erstellen';
     }
   };
 
@@ -365,11 +407,15 @@
   $('delToggle').onclick = () => { $('delForm').hidden = !$('delForm').hidden; $('delErr').textContent = ''; };
   $('delForm').onsubmit = async (e) => {
     e.preventDefault();
-    const pin = $('delPin').value;
-    if (!/^\d{6}$/.test(pin)) { $('delErr').textContent = '6 Ziffern eingeben.'; return; }
+    const pw = $('delPin').value;
+    if (pw.length < PW_MIN) { $('delErr').textContent = 'Passwort eingeben.'; return; }
     if (!confirm('Konto endgültig löschen? Dein Name wird wieder frei.')) return;
-    const r = await new Promise((res) => { deleteResolve = res; sendWs({ t: 'delete', pin }); });
     $('delPin').value = '';
+    let r;
+    try {
+      const p = await opaqueProve('del1', pw);
+      r = p.err ? { ok: false, msg: p.err === 'Name oder Passwort falsch.' ? 'Passwort falsch.' : p.err } : await request({ t: 'del2', fin: p.fin }, ['delete']);
+    } catch (ex) { r = { ok: false, msg: ex.message }; }
     if (!r.ok) { $('delErr').textContent = r.msg || 'Fehler.'; return; }
     wipe('Dein Konto wurde gelöscht.');
   };

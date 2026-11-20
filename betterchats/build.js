@@ -19,7 +19,7 @@ fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(OUT);
 
 const pq = esbuild.buildSync({
-  entryPoints: [path.join(SRC, 'pq-entry.js')], bundle: true, minify: true, format: 'iife',
+  entryPoints: [path.join(SRC, 'lib-entry.js')], bundle: true, minify: true, format: 'iife',
   target: 'es2020', write: false, legalComments: 'none',
 }).outputFiles[0].text;
 
@@ -53,7 +53,12 @@ const app = Obfuscator.obfuscate(appSrc, {
   seed: crypto.randomInt(1, 2 ** 31),
 }).getObfuscatedCode();
 
-fs.writeFileSync(path.join(OUT, 'app.js'), pq + '\n' + app);
+// Apps get their server baked in (and its OPAQUE key pinned): BETTERCHATS_SERVER=wss://host:30/ BETTERCHATS_SERVER_KEY=…
+const cfg = {};
+if (process.env.BETTERCHATS_SERVER) cfg.server = process.env.BETTERCHATS_SERVER;
+if (process.env.BETTERCHATS_SERVER_KEY) cfg.serverKey = process.env.BETTERCHATS_SERVER_KEY;
+const cfgJs = `window.BC_CONFIG=Object.freeze(${JSON.stringify(cfg)});`;
+fs.writeFileSync(path.join(OUT, 'app.js'), cfgJs + '\n' + pq + '\n' + app);
 fs.writeFileSync(path.join(OUT, 'style.css'), esbuild.transformSync(fs.readFileSync(path.join(SRC, 'style.css'), 'utf8'), { loader: 'css', minify: true }).code);
 const html = fs.readFileSync(path.join(SRC, 'index.html'), 'utf8')
   .replace(/<!--[\s\S]*?-->/g, '')

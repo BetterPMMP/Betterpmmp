@@ -9,6 +9,7 @@
   },
   "license": "UNLICENSED",
   "dependencies": {
+    "@serenity-kit/opaque": "^1.1.0",
     "ws": "^8.18.0"
   },
   "private": true,

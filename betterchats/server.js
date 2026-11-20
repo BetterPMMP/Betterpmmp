@@ -4,7 +4,9 @@
  *
  * Stores on disk ONLY:
  *   - HMAC-SHA256(username)          (the name itself is never written in plain text)
- *   - scrypt(PIN) + random salt      (the PIN is never written in plain text)
+ *   - an OPAQUE registration record  (RFC 9807: the server NEVER sees the password, not even
+ *                                     at login; the record is useless without the server's
+ *                                     OPRF key, which is itself encrypted with the pepper)
  *
  * Messages are end-to-end encrypted in the browser (hybrid post-quantum:
  * ECDH P-256 + ML-KEM-768, per-message keys, AES-256-GCM). The server only relays
@@ -23,6 +25,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
+const opaque = require('@serenity-kit/opaque');
 
 const env = process.env;
 const PORT = Number(env.PORT || 30);
@@ -37,23 +40,43 @@ const DOMAINS = (env.DOMAIN || '').split(',').map((s) => s.trim().toLowerCase())
 const COVER = env.COVER_TRAFFIC !== '0';
 
 const NAME_RE = /^[a-z0-9_]{3,20}$/;
-const PIN_RE = /^\d{6}$/;
 const MAX_CT = 16 * 1024;
 const MAX_USERS = Number(env.MAX_USERS || 100_000);
 const MAX_CONN_PER_IP = 10;
 const MAX_CONN_TOTAL = 5000;
 const BUCKETS = [4096, 8192, 16384, 32768];
 
-// ---------- persistent store (names + PINs, both hashed) ----------
+// ---------- persistent store (hashed names + OPAQUE records) ----------
 fs.mkdirSync(DATA_DIR, { recursive: true, mode: 0o700 });
 if (!fs.existsSync(SECRET_FILE)) fs.writeFileSync(SECRET_FILE, crypto.randomBytes(32), { mode: 0o600 });
+// Optional pepper from the environment: then the data folder alone is worthless to a thief.
 const SERVER_KEY = crypto.createHash('sha256')
   .update(fs.readFileSync(SECRET_FILE)).update(env.BETTERCHATS_PEPPER || '').digest();
+const nameId = (name) => crypto.createHmac('sha256', SERVER_KEY).update('name:' + name).digest('hex');
 
-const users = new Map();
+// OPAQUE server setup (contains the OPRF key + server key pair), stored AES-256-GCM encrypted
+const SETUP_FILE = path.join(DATA_DIR, 'opaque.setup');
+const setupKey = crypto.createHmac('sha256', SERVER_KEY).update('opaque-setup').digest();
+function loadSetup() {
+  if (fs.existsSync(SETUP_FILE)) {
+    const b = fs.readFileSync(SETUP_FILE);
+    const d = crypto.createDecipheriv('aes-256-gcm', setupKey, b.subarray(0, 12));
+    d.setAuthTag(b.subarray(b.length - 16));
+    return Buffer.concat([d.update(b.subarray(12, b.length - 16)), d.final()]).toString('utf8');
+  }
+  const setup = opaque.server.createSetup();
+  const iv = crypto.randomBytes(12);
+  const c = crypto.createCipheriv('aes-256-gcm', setupKey, iv);
+  fs.writeFileSync(SETUP_FILE, Buffer.concat([iv, c.update(setup, 'utf8'), c.final(), c.getAuthTag()]), { mode: 0o600 });
+  return setup;
+}
+let serverSetup = null;
+
+const users = new Map(); // nameId -> { r: OPAQUE registration record }
+const B64URL = /^[A-Za-z0-9_-]+$/;
 try {
   for (const [k, v] of Object.entries(JSON.parse(fs.readFileSync(USERS_FILE, 'utf8')))) {
-    if (/^[0-9a-f]{64}$/.test(k) && v && typeof v.s === 'string' && typeof v.h === 'string') users.set(k, { s: v.s, h: v.h });
+    if (/^[0-9a-f]{64}$/.test(k) && v && typeof v.r === 'string' && B64URL.test(v.r)) users.set(k, { r: v.r });
   }
 } catch { /* fresh start */ }
 function saveUsers() {
@@ -61,23 +84,7 @@ function saveUsers() {
   fs.writeFileSync(tmp, JSON.stringify(Object.fromEntries(users)), { mode: 0o600 });
   fs.renameSync(tmp, USERS_FILE);
 }
-const nameId = (name) => crypto.createHmac('sha256', SERVER_KEY).update('name:' + name).digest('hex');
-
-const SCRYPT = { N: 1 << 15, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
-function hashPin(pin, salt) {
-  return new Promise((res, rej) =>
-    crypto.scrypt(pin, Buffer.concat([salt, SERVER_KEY]), 32, SCRYPT, (e, k) => (e ? rej(e) : res(k))));
-}
-let authRunning = 0;
-const authQueue = [];
-async function authSlot(fn) {
-  if (authRunning >= 4) {
-    if (authQueue.length >= 200) throw new Error('busy');
-    await new Promise((r) => authQueue.push(r));
-  }
-  authRunning++;
-  try { return await fn(); } finally { authRunning--; const next = authQueue.shift(); if (next) next(); }
-}
+const opq = (s, max) => typeof s === 'string' && s.length > 0 && s.length <= max && B64URL.test(s);
 
 // ---------- firewall: IPs only as keyed hash in RAM, key rotates daily ----------
 let ipKey = crypto.randomBytes(32);
@@ -111,13 +118,13 @@ function nameLocked(id) {
   const f = failsByName.get(id);
   return f && f.until > Date.now() ? Math.ceil((f.until - Date.now()) / 1000) : 0;
 }
-function registerFail(id, ip) {
+function registerFail(id, ip, suspicious = true) {
   const f = failsByName.get(id) || { count: 0, until: 0 };
   f.count++;
   if (f.count >= 5) f.until = Date.now() + Math.min(2 ** (f.count - 5), 1440) * 60_000;
   failsByName.set(id, f);
   ipc(ip).fails++;
-  strike(ip, 0.5);
+  if (suspicious) strike(ip, 0.5);
 }
 setInterval(() => {
   const now = Date.now();
@@ -131,7 +138,7 @@ setInterval(() => {
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
 const SEC_HEADERS = {
   'Content-Security-Policy': [
-    "default-src 'none'", "script-src 'self'", "style-src 'self'", "img-src 'self'", "connect-src 'self'",
+    "default-src 'none'", "script-src 'self' 'wasm-unsafe-eval'", "style-src 'self'", "img-src 'self'", "connect-src 'self'",
     "base-uri 'none'", "form-action 'none'", "frame-ancestors 'none'",
     "require-trusted-types-for 'script'", "trusted-types 'none'", 'upgrade-insecure-requests',
   ].join('; '),
@@ -263,7 +270,6 @@ wss.on('connection', (ws, ip) => {
   ws.send(JSON.stringify({ t: 'hello', spub: serverEcdh.generateKeys().toString('base64') }));
   const handshakeTimer = setTimeout(() => { if (!ws.tunnel) ws.terminate(); }, 10_000);
   let me = null;
-  let busy = false;
   let tokens = 30;
   let lookupTokens = 20;
   let tick = 0;
@@ -283,11 +289,15 @@ wss.on('connection', (ws, ip) => {
   ws.on('error', () => {});
   const bad = () => { if (++junk > 5) { strike(ip, 3); ws.terminate(); } };
 
-  async function checkPin(id, pin) {
-    const u = users.get(id);
-    const salt = u ? Buffer.from(u.s, 'base64') : crypto.randomBytes(16);
-    const hash = await authSlot(() => hashPin(pin, salt));
-    return !!u && crypto.timingSafeEqual(hash, Buffer.from(u.h, 'base64'));
+  // OPAQUE state of this connection (only one auth flow at a time)
+  let flow = null; // { kind: 'reg'|'login'|'del', id, name, state?, at }
+  const flowAlive = () => flow && Date.now() - flow.at < 30_000;
+  function becomeOnline(name, pub, kpub) {
+    const prev = online.get(name);
+    if (prev) { announceGone(name, prev); send(prev.ws, { t: 'kicked' }); prev.ws.close(); }
+    me = name;
+    online.set(name, { ws, pub, kpub, watchers: new Set() });
+    send(ws, { t: 'ok', name });
   }
 
   ws.on('message', async (raw, isBinary) => {
@@ -306,43 +316,59 @@ wss.on('connection', (ws, ip) => {
     if (!m || typeof m !== 'object' || Array.isArray(m)) return bad();
     if (m.t === 'c') return; // client cover traffic
 
-    if ((m.t === 'register' || m.t === 'login') && !me && !busy) {
+    // ---- registration (OPAQUE): reg1 -> reg1, reg2 -> ok ----
+    if (m.t === 'reg1' && !me) {
       const name = typeof m.name === 'string' ? m.name.toLowerCase() : '';
-      const pin = typeof m.pin === 'string' ? m.pin : '';
       if (!NAME_RE.test(name)) return send(ws, { t: 'err', msg: 'Name: 3–20 Zeichen, nur a–z, 0–9 und _' });
-      if (!PIN_RE.test(pin)) return send(ws, { t: 'err', msg: 'Passwort muss genau 6 Ziffern haben.' });
-      if (!validPub(m.pub) || !validKpub(m.kpub)) return bad();
+      if (!opq(m.req, 200)) return bad();
       const c = ipc(ip);
-      if (c.fails >= 30) return send(ws, { t: 'err', msg: 'Zu viele Fehlversuche. Bitte später erneut.' });
+      if (c.regs >= 5) return send(ws, { t: 'err', msg: 'Zu viele neue Konten. Bitte später erneut.' });
+      if (users.size >= MAX_USERS) return send(ws, { t: 'err', msg: 'Registrierung gerade nicht möglich.' });
       const id = nameId(name);
-      busy = true;
+      if (users.has(id)) return send(ws, { t: 'err', msg: 'Diesen Namen gibt es schon – nimm einen anderen.' });
       try {
-        if (m.t === 'register') {
-          if (c.regs >= 5) return send(ws, { t: 'err', msg: 'Zu viele neue Konten. Bitte später erneut.' });
-          if (users.size >= MAX_USERS) return send(ws, { t: 'err', msg: 'Registrierung gerade nicht möglich.' });
-          if (users.has(id)) return send(ws, { t: 'err', msg: 'Diesen Namen gibt es schon – nimm einen anderen.' });
-          const salt = crypto.randomBytes(16);
-          const hash = await authSlot(() => hashPin(pin, salt));
-          if (users.has(id)) return send(ws, { t: 'err', msg: 'Diesen Namen gibt es schon – nimm einen anderen.' });
-          users.set(id, { s: salt.toString('base64'), h: hash.toString('base64') });
-          saveUsers();
-          c.regs++;
-        } else {
-          const wait = nameLocked(id);
-          if (wait) return send(ws, { t: 'err', msg: `Zu viele Fehlversuche. Warte ${wait} Sekunden.` });
-          if (!(await checkPin(id, pin))) { registerFail(id, ip); return send(ws, { t: 'err', msg: GENERIC_FAIL }); }
-          failsByName.delete(id);
-        }
-        if (ws.readyState !== 1) return;
-        const prev = online.get(name);
-        if (prev) { announceGone(name, prev); send(prev.ws, { t: 'kicked' }); prev.ws.close(); }
-        me = name;
-        online.set(name, { ws, pub: m.pub, kpub: m.kpub, watchers: new Set() });
-        send(ws, { t: 'ok', name });
-      } catch {
-        send(ws, { t: 'err', msg: 'Server ist ausgelastet. Bitte gleich nochmal.' });
-      } finally { busy = false; }
-      return;
+        const { registrationResponse } = opaque.server.createRegistrationResponse({ serverSetup, userIdentifier: id, registrationRequest: m.req });
+        flow = { kind: 'reg', id, name, at: Date.now() };
+        return send(ws, { t: 'reg1', res: registrationResponse });
+      } catch { return bad(); }
+    }
+    if (m.t === 'reg2' && !me) {
+      if (!flowAlive() || flow.kind !== 'reg' || !opq(m.rec, 400) || !validPub(m.pub) || !validKpub(m.kpub)) { flow = null; return bad(); }
+      const { id, name } = flow; flow = null;
+      if (users.has(id)) return send(ws, { t: 'err', msg: 'Diesen Namen gibt es schon – nimm einen anderen.' });
+      users.set(id, { r: m.rec });
+      saveUsers();
+      ipc(ip).regs++;
+      return becomeOnline(name, m.pub, m.kpub);
+    }
+
+    // ---- login (OPAQUE): log1 -> log1, log2 -> ok. The password never leaves the device. ----
+    if (m.t === 'log1' && !me) {
+      const name = typeof m.name === 'string' ? m.name.toLowerCase() : '';
+      if (!NAME_RE.test(name)) return send(ws, { t: 'err', msg: 'Name: 3–20 Zeichen, nur a–z, 0–9 und _' });
+      if (!opq(m.req, 200)) return bad();
+      if (ipc(ip).fails >= 30) return send(ws, { t: 'err', msg: 'Zu viele Fehlversuche. Bitte später erneut.' });
+      const id = nameId(name);
+      const wait = nameLocked(id);
+      if (wait) return send(ws, { t: 'err', msg: `Zu viele Fehlversuche. Warte ${wait} Sekunden.` });
+      try {
+        // unknown names get an indistinguishable fake response (no user enumeration through login)
+        const { loginResponse, serverLoginState } = opaque.server.startLogin({
+          serverSetup, userIdentifier: id, registrationRecord: users.get(id)?.r ?? null, startLoginRequest: m.req,
+        });
+        registerFail(id, ip, false); // counts as a failed attempt until log2 proves the password
+        flow = { kind: 'login', id, name, state: serverLoginState, at: Date.now() };
+        return send(ws, { t: 'log1', res: loginResponse });
+      } catch { return bad(); }
+    }
+    if (m.t === 'log2' && !me) {
+      if (!flowAlive() || flow.kind !== 'login' || !opq(m.fin, 400) || !validPub(m.pub) || !validKpub(m.kpub)) { flow = null; return bad(); }
+      const { id, name, state } = flow; flow = null;
+      try { opaque.server.finishLogin({ finishLoginRequest: m.fin, serverLoginState: state }); } catch { return send(ws, { t: 'err', msg: GENERIC_FAIL }); }
+      if (!users.has(id)) return send(ws, { t: 'err', msg: GENERIC_FAIL });
+      failsByName.delete(id); // correct password proven -> counter reset
+      const c = ipc(ip); c.fails = Math.max(0, c.fails - 1);
+      return becomeOnline(name, m.pub, m.kpub);
     }
     if (!me) return;
 
@@ -368,22 +394,27 @@ wss.on('connection', (ws, ip) => {
       return send(ws, { t: 'delivered', id: m.id, to });
     }
 
-    if (m.t === 'delete' && !busy) {
-      const pin = typeof m.pin === 'string' ? m.pin : '';
-      if (!PIN_RE.test(pin)) return send(ws, { t: 'delete', ok: false, msg: 'Passwort muss genau 6 Ziffern haben.' });
+    // ---- delete own account: needs a fresh OPAQUE proof of the password ----
+    if (m.t === 'del1') {
+      if (!opq(m.req, 200)) return bad();
       const id = nameId(me);
       if (nameLocked(id)) return send(ws, { t: 'delete', ok: false, msg: 'Zu viele Fehlversuche.' });
-      busy = true;
       try {
-        if (!(await checkPin(id, pin))) { registerFail(id, ip); return send(ws, { t: 'delete', ok: false, msg: 'Passwort falsch.' }); }
-        users.delete(id);
-        saveUsers();
-        send(ws, { t: 'delete', ok: true });
-        ws.close();
-      } catch {
-        send(ws, { t: 'delete', ok: false, msg: 'Server ist ausgelastet.' });
-      } finally { busy = false; }
-      return;
+        const { loginResponse, serverLoginState } = opaque.server.startLogin({ serverSetup, userIdentifier: id, registrationRecord: users.get(id)?.r ?? null, startLoginRequest: m.req });
+        registerFail(id, ip, false);
+        flow = { kind: 'del', id, state: serverLoginState, at: Date.now() };
+        return send(ws, { t: 'del1', res: loginResponse });
+      } catch { return bad(); }
+    }
+    if (m.t === 'del2') {
+      if (!flowAlive() || flow.kind !== 'del' || !opq(m.fin, 400)) { flow = null; return bad(); }
+      const { id, state } = flow; flow = null;
+      try { opaque.server.finishLogin({ finishLoginRequest: m.fin, serverLoginState: state }); } catch { return send(ws, { t: 'delete', ok: false, msg: 'Passwort falsch.' }); }
+      failsByName.delete(id);
+      users.delete(id);
+      saveUsers();
+      send(ws, { t: 'delete', ok: true });
+      return ws.close();
     }
     bad();
   });
@@ -414,4 +445,7 @@ server.on('error', (e) => {
   else console.error('Serverfehler:', e.code);
   process.exit(1);
 });
-server.listen(PORT, HOST, () => console.log(`BetterChats läuft auf ${HOST}:${PORT}`));
+opaque.ready.then(() => {
+  serverSetup = loadSetup();
+  server.listen(PORT, HOST, () => console.log(`BetterChats läuft auf ${HOST}:${PORT} · Server-Schlüssel: ${opaque.server.getPublicKey(serverSetup)}`));
+});

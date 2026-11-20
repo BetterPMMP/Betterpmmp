@@ -26,14 +26,14 @@
         <label>Nutzername
           <input id="name" maxlength="20" placeholder="z. B. leon_05" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" data-gramm="false" data-lt-active="false" required>
         </label>
-        <label>Passwort (6 Ziffern)
-          <input id="pin" type="password" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="off" required>
+        <label>Passwort (6-stellige PIN oder länger)
+          <input id="pin" type="password" maxlength="128" placeholder="••••••" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" required>
         </label>
         <button id="authBtn" class="primary" type="submit">Anmelden</button>
         <p id="authErr" class="err" role="alert"></p>
       </form>
       <ul class="facts">
-        <li>Gespeichert werden nur dein Name und dein Passwort – beide verschlüsselt (gehasht).</li>
+        <li>Dein Passwort verlässt nie dein Gerät – auch nicht verschlüsselt (OPAQUE). Gespeichert wird nur dein Name, gehasht.</li>
         <li>Nachrichten werden in deinem Browser verschlüsselt (Post-Quanten-sicher) und nie auf dem Server gespeichert.</li>
         <li>Es gibt keine Kontaktliste und kein Verzeichnis – du musst den Namen kennen.</li>
         <li>Seite neu laden = alle Chats und Kontakte sind weg.</li>
@@ -59,7 +59,7 @@
       <div class="danger">
         <button id="delToggle" class="ghost small" type="button">Konto löschen…</button>
         <form id="delForm" class="delform" autocomplete="off" hidden>
-          <input id="delPin" type="password" inputmode="numeric" maxlength="6" placeholder="Passwort" autocomplete="off">
+          <input id="delPin" type="password" maxlength="128" placeholder="Passwort" autocomplete="off">
           <button class="warn" type="submit">Löschen</button>
           <p id="delErr" class="err small"></p>
         </form>
