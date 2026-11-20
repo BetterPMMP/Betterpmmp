@@ -31,11 +31,33 @@ if [ "$SSH_MODE" = closed ]; then
 fi
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
 
+export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq nftables nodejs npm >/dev/null
+apt-get install -y -qq nftables acl ca-certificates curl gnupg unattended-upgrades >/dev/null
+
+# ---- Node.js 22 LTS (distribution Node 18 is end-of-life = no security fixes) ----
 NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)"
-[ "$NODE_MAJOR" -ge 18 ] || { echo "Node.js >= 18 nötig (gefunden: $NODE_MAJOR). Siehe https://nodejs.org/en/download"; exit 1; }
-command -v setfacl >/dev/null || apt-get install -y -qq acl >/dev/null
+if [ "$NODE_MAJOR" -lt 20 ]; then
+  install -d -m 755 /etc/apt/keyrings
+  curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor --yes -o /etc/apt/keyrings/nodesource.gpg
+  echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" > /etc/apt/sources.list.d/nodesource.list
+  apt-get update -qq && apt-get install -y -qq nodejs >/dev/null
+fi
+NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)"
+[ "$NODE_MAJOR" -ge 20 ] || { echo "Node.js >= 20 konnte nicht installiert werden."; exit 1; }
+
+# ---- nothing else on this server: remove services BetterChats doesn't need ----
+for pkg in apache2 nginx lighttpd exim4 exim4-base postfix sendmail rpcbind nfs-common nfs-kernel-server avahi-daemon cups cups-daemon \
+           samba vsftpd proftpd-basic telnetd inetutils-telnetd rsh-server xinetd snapd bind9 dnsmasq mariadb-server mysql-server postgresql; do
+  dpkg -s "$pkg" >/dev/null 2>&1 && { echo "Entferne unnötigen Dienst: $pkg"; apt-get purge -y -qq "$pkg" >/dev/null || true; }
+done
+apt-get autoremove -y -qq >/dev/null || true
+# automatic security updates (reboots are left to you)
+cat > /etc/apt/apt.conf.d/20auto-upgrades <<UPG
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+UPG
+systemctl enable --now unattended-upgrades >/dev/null 2>&1 || true
 { [ "$MODE" = onion ] || [ "$SSH_MODE" = onion ]; } && apt-get install -y -qq tor >/dev/null
 
 id betterchats >/dev/null 2>&1 || useradd --system --home /nonexistent --shell /usr/sbin/nologin betterchats
@@ -65,12 +87,30 @@ if [ "$MODE" = public ]; then
     tcp dport \$CHAT_PORT ct state new meter chat6 { ip6 saddr limit rate over 15/second burst 30 packets } add @ban6 { ip6 saddr } drop
     tcp dport \$CHAT_PORT ct state new meter chatc4 { ip saddr ct count over 20 } drop
     tcp dport \$CHAT_PORT ct state new accept"
-  # node must be able to read the certificate
-  if [ -d "/etc/letsencrypt/live/$DOMAIN" ]; then
-    setfacl -R -m u:betterchats:rX /etc/letsencrypt/live /etc/letsencrypt/archive 2>/dev/null || chmod -R g+rX /etc/letsencrypt/live /etc/letsencrypt/archive
-  else
-    echo "HINWEIS: Kein Zertifikat gefunden. Erst: apt install certbot && certbot certonly --standalone -d $DOMAIN"
+  # ---- HTTPS certificate (Let's Encrypt). Port 80 is opened ONLY for the seconds of a renewal. ----
+  apt-get install -y -qq certbot >/dev/null
+  if [ ! -d "/etc/letsencrypt/live/$DOMAIN" ]; then
+    nft list table inet betterchats >/dev/null 2>&1 && nft insert rule inet betterchats input tcp dport 80 accept comment \"certbot\"
+    certbot certonly --standalone --non-interactive --agree-tos --register-unsafely-without-email --key-type ecdsa -d "$DOMAIN" \
+      || { echo "Zertifikat fehlgeschlagen: Zeigt die Domain $DOMAIN (A-Eintrag) wirklich auf diesen Server?"; exit 1; }
   fi
+  install -d /etc/letsencrypt/renewal-hooks/pre /etc/letsencrypt/renewal-hooks/post /etc/letsencrypt/renewal-hooks/deploy
+  cat > /etc/letsencrypt/renewal-hooks/pre/betterchats.sh <<'HOOK'
+#!/bin/sh
+nft insert rule inet betterchats input tcp dport 80 accept comment \"certbot\"
+HOOK
+  cat > /etc/letsencrypt/renewal-hooks/post/betterchats.sh <<'HOOK'
+#!/bin/sh
+for h in $(nft -a list chain inet betterchats input | awk '/certbot/ {print $NF}'); do nft delete rule inet betterchats input handle "$h"; done
+HOOK
+  cat > /etc/letsencrypt/renewal-hooks/deploy/betterchats.sh <<'HOOK'
+#!/bin/sh
+setfacl -R -m u:betterchats:rX /etc/letsencrypt/live /etc/letsencrypt/archive
+systemctl restart betterchats
+HOOK
+  chmod 755 /etc/letsencrypt/renewal-hooks/*/betterchats.sh
+  setfacl -R -m u:betterchats:rX /etc/letsencrypt/live /etc/letsencrypt/archive
+  setfacl -m u:betterchats:x /etc/letsencrypt
 else
   CHAT_RULES="# stealth mode: chat port closed to the outside, Tor connects via localhost"
   grep -q betterchats /etc/tor/torrc || printf '\nHiddenServiceDir /var/lib/tor/betterchats/\nHiddenServicePort 80 127.0.0.1:%s\n' "$CHAT_PORT" >> /etc/tor/torrc
@@ -147,3 +187,8 @@ case "$SSH_MODE" in
   closed) echo "SSH: komplett geschlossen. Wartung nur über die Konsole deines Server-Anbieters." ;;
 esac
 echo "Alles andere ist dicht. Ping wird ignoriert, Scanner werden gesperrt."
+# remove the temporary certbot rule if it is still there
+/etc/letsencrypt/renewal-hooks/post/betterchats.sh 2>/dev/null || true
+echo
+echo "=== Diese Dienste lauschen jetzt auf dem Server (nur BetterChats, Tor und ggf. SSH sollten hier stehen) ==="
+ss -tulpn | awk 'NR==1 || /LISTEN|UNCONN/' 
