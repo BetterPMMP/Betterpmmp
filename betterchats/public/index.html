@@ -6,6 +6,8 @@
   <meta name="referrer" content="no-referrer">
   <title>BetterChats</title>
   <link rel="icon" href="icon.svg">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="format-detection" content="telephone=no">
   <link rel="stylesheet" href="style.css">
   <script src="app.js" defer></script>
 </head>
@@ -21,10 +23,10 @@
       </div>
       <form id="authForm" autocomplete="off">
         <label>Nutzername
-          <input id="name" maxlength="20" placeholder="z. B. leon_05" autocapitalize="none" spellcheck="false" required>
+          <input id="name" maxlength="20" placeholder="z. B. leon_05" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" data-gramm="false" data-lt-active="false" required>
         </label>
         <label>Passwort (6 Ziffern)
-          <input id="pin" type="password" inputmode="numeric" maxlength="6" placeholder="••••••" required>
+          <input id="pin" type="password" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="off" required>
         </label>
         <button id="authBtn" class="primary" type="submit">Anmelden</button>
         <p id="authErr" class="err" role="alert"></p>
@@ -32,7 +34,8 @@
       <ul class="facts">
         <li>Gespeichert werden nur dein Name und dein Passwort – beide verschlüsselt (gehasht).</li>
         <li>Nachrichten werden in deinem Browser verschlüsselt und nie auf dem Server gespeichert.</li>
-        <li>Seite neu laden = alle Chats sind weg.</li>
+        <li>Es gibt keine Kontaktliste und kein Verzeichnis – du musst den Namen kennen.</li>
+        <li>Seite neu laden = alle Chats und Kontakte sind weg.</li>
       </ul>
     </div>
   </main>
@@ -46,11 +49,20 @@
       </header>
       <div class="me">Angemeldet als <strong id="meName"></strong></div>
       <form id="newChat" class="newchat" autocomplete="off">
-        <input id="newName" maxlength="20" placeholder="Name eingeben…" autocapitalize="none" spellcheck="false">
+        <input id="newName" maxlength="20" placeholder="Name eingeben…" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" data-gramm="false" data-lt-active="false">
         <button class="primary" type="submit">Chat</button>
       </form>
       <p id="newErr" class="err small"></p>
+      <p id="noContacts" class="hint">Keine Kontaktliste, kein Verzeichnis.<br>Du musst den Namen deines Gegenübers kennen.</p>
       <ul id="chatList" class="chatlist"></ul>
+      <div class="danger">
+        <button id="delToggle" class="ghost small" type="button">Konto löschen…</button>
+        <form id="delForm" class="delform" autocomplete="off" hidden>
+          <input id="delPin" type="password" inputmode="numeric" maxlength="6" placeholder="Passwort" autocomplete="off">
+          <button class="warn" type="submit">Löschen</button>
+          <p id="delErr" class="err small"></p>
+        </form>
+      </div>
     </aside>
 
     <section class="chat">
@@ -66,6 +78,7 @@
             <span id="peerState" class="state"></span>
           </div>
           <button id="safetyBtn" class="ghost" type="button" title="Sicherheitsnummer prüfen">🔒 Prüfen</button>
+          <button id="clearChat" class="ghost" type="button" title="Chat schließen & Verlauf löschen">🗑</button>
         </header>
         <div id="safety" class="safety" hidden>
           <p>Vergleiche diese Nummer mit deinem Chatpartner (z. B. persönlich oder per Telefon). Stimmt sie überein, liest niemand mit – auch nicht der Server.</p>
@@ -73,7 +86,7 @@
         </div>
         <ol id="msgs" class="msgs"></ol>
         <form id="composer" class="composer" autocomplete="off">
-          <textarea id="text" rows="1" maxlength="4000" placeholder="Nachricht…"></textarea>
+          <textarea id="text" rows="1" maxlength="4000" placeholder="Nachricht…" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" data-gramm="false" data-lt-active="false"></textarea>
           <button class="primary" type="submit">Senden</button>
         </form>
       </div>

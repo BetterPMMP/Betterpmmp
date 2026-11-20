@@ -12,20 +12,41 @@ Der Direktchat, der nichts speichert. Eigenständiges Produkt – hat nichts mit
 
 ## Wie funktioniert die Verschlüsselung?
 
-- Bei jedem Seitenaufruf erzeugt der Browser ein neues ECDH-P-256-Schlüsselpaar. Der private Schlüssel ist nicht exportierbar und verlässt den Tab nie.
-- Jede Nachricht wird mit AES-256-GCM verschlüsselt (Schlüssel via ECDH + HKDF). Absender/Empfänger sind als „additional data“ eingebunden, Nachrichten werden auf 256-Byte-Blöcke aufgefüllt (Länge bleibt verborgen).
-- Der Server leitet nur Chiffretext an den Empfänger weiter, wenn dieser online ist, und vergisst ihn sofort. Ist der Empfänger offline, wird nichts zwischengespeichert.
-- **Sicherheitsnummer** („🔒 Prüfen“): Beide Seiten sehen dieselbe Nummer. Vergleicht man sie persönlich, ist ausgeschlossen, dass jemand (auch der Server) dazwischen sitzt.
+**Auf dem Weg (3 Schichten):**
+1. **Ende-zu-Ende:** Bei jedem Seitenaufruf erzeugt der Browser ein neues ECDH-P-256-Schlüsselpaar (privater Schlüssel nicht exportierbar). Pro Kontakt werden daraus per HKDF zwei Ketten-Schlüssel abgeleitet (einer pro Richtung).
+2. **Jede Nachricht hat ihren eigenen Schlüssel** (Hash-Ratchet). Benutzte Schlüssel werden sofort gelöscht → selbst wer später den Speicher ausliest, kann alte Nachrichten nicht entschlüsseln (Forward Secrecy). Ein vom Server wiederholt zugestellter (Replay-)Ciphertext wird verworfen.
+3. **AES-256-GCM** mit Absender, Empfänger, beiden Schlüsseln und Zähler als „additional data“, aufgefüllt auf 256-Byte-Blöcke (die Länge bleibt verborgen). Darüber liegt noch TLS (HTTPS) – und optional Tor/VPN, siehe unten.
+
+**Auf deinem Gerät:**
+- Der Chatverlauf liegt **im Arbeitsspeicher nur verschlüsselt** (eigener, nicht exportierbarer AES-Schlüssel pro Tab). Entschlüsselt wird nur der gerade offene Chat zur Anzeige.
+- Rechtschreibprüfung, Autokorrektur, Grammarly & Co. sind in allen Feldern abgeschaltet – Chrome/Edge können sonst getippten Text an Google/Microsoft schicken, *während du schreibst*.
+- Keine Kontaktliste, kein Verzeichnis, keine Vorschau. Du musst den Namen deines Gegenübers kennen.
+- Neu laden, Tab schließen, Abmelden, Verbindungsabbruch oder 30 Min. Inaktivität → alles wird gelöscht.
+- Wechselst du den Tab/die App, wird der Chat unscharf gemacht.
+
+**Sicherheitsnummer** („🔒 Prüfen“): Beide Seiten sehen dieselbe Nummer. Vergleicht man sie persönlich, ist ausgeschlossen, dass jemand – auch der Server – dazwischen sitzt. Da jede Sitzung neue Schlüssel bekommt, ändert sie sich nach jedem Login (das wird im Chat angezeigt).
 
 ## Schutz gegen Angriffe
 
-- **Keine SQL-Datenbank** → SQL-Injection ist nicht möglich.
-- **XSS**: Inhalte werden nur per `textContent` eingefügt, dazu eine strikte Content-Security-Policy (keine Inline-Skripte, keine fremden Quellen).
-- **Dateizugriff**: Der Server liefert nur Dateien aus `public/`, Namen per Whitelist (`../`-Tricks laufen ins Leere, `data/` ist nicht erreichbar).
-- **Brute-Force auf die PIN**: Nach 5 Fehlversuchen wird der Name gesperrt (1 min, dann 2, 4, 8 … bis 24 h), zusätzlich max. 30 Fehlversuche pro IP und Stunde. Login-Zeit ist für existierende und nicht existierende Namen gleich.
-- **Fremde Webseiten** dürfen keine WebSocket-Verbindung aufbauen (Origin-Prüfung), Clickjacking ist per `frame-ancestors 'none'` verboten.
-- Größenlimits für Nachrichten, Rate-Limit pro Verbindung, keine Cookies, kein localStorage, `no-store`-Caching, `no-referrer`.
-- Nur eine aktive Sitzung pro Name; bei Verbindungsverlust wird im Browser alles gelöscht.
+| Angriff | Schutz |
+|---|---|
+| SQL-Injection | Es gibt keine Datenbank. |
+| XSS / eingeschleuster Code | Inhalte nur per `textContent`; CSP ohne Inline-Skripte + **Trusted Types** (der Browser verbietet jede HTML-Injektion) |
+| Dateien abrufen (`../`, `/data`) | Server lädt die Webseiten-Dateien beim Start in den RAM und liefert nur diese – es gibt keinen Dateisystem-Zugriff pro Anfrage |
+| PIN durchprobieren | 5 Fehlversuche → Sperre 1, 2, 4 … min bis 24 h; max. 30 Fehlversuche pro IP/Stunde; gleiche Antwortzeit für existierende/unbekannte Namen |
+| Server lahmlegen | max. 4 gleichzeitige Passwort-Prüfungen, max. 10 Verbindungen pro IP, Timeouts gegen Slowloris, Nachrichten- und Größenlimits |
+| Massen-Registrierung | max. 5 neue Konten pro IP/Stunde, Obergrenze Gesamtkonten |
+| Fremde Webseite benutzt deinen Login | Origin-Prüfung bei der Verbindung; keine Cookies |
+| Clickjacking / Einbetten | `frame-ancestors 'none'`, `X-Frame-Options: DENY`, COOP/COEP/CORP |
+| Replay durch den Server | Zähler + gelöschte Schlüssel |
+| Kompressions-Angriffe (CRIME/BREACH) | WebSocket-Kompression aus |
+| Daten-Diebstahl vom Server | Name nur als HMAC, PIN nur als scrypt. Optional `BETTERCHATS_PEPPER` als Umgebungsvariable: dann reicht der `data`-Ordner allein nicht zum Knacken |
+
+## Nicht zurückverfolgbar?
+
+- Der Server schreibt **keine Logs** – keine IPs, keine Nachrichten, keine Zeitpunkte.
+- IP-Adressen werden nur für die Brute-Force-Sperre im RAM gehalten, und auch das nur als gehashter Wert mit einem Schlüssel, der alle 24 h neu gewürfelt wird.
+- **Ehrlich:** Eine Webseite kann kein VPN „einbauen“. Jeder Server sieht technisch die IP, von der die Verbindung kommt. Für echte Anonymität: BetterChats im **Tor Browser** nutzen und den Server als **.onion-Dienst** betreiben (unten). Dann kennt niemand – auch nicht der Server-Betreiber – deine IP. Ein VPN geht auch, verlagert das Vertrauen aber auf den VPN-Anbieter.
 
 ## Starten
 
@@ -34,12 +55,22 @@ npm install
 npm start          # http://localhost:8080
 ```
 
-Umgebungsvariablen: `PORT`, `DATA_DIR`, `TLS_CERT` + `TLS_KEY` (HTTPS direkt), `TRUST_PROXY=1` (hinter Reverse-Proxy, damit die IP-Sperre die echte IP nutzt).
+Umgebungsvariablen: `PORT`, `HOST`, `DATA_DIR`, `TLS_CERT` + `TLS_KEY` (HTTPS direkt), `TRUST_PROXY=1` (hinter Reverse-Proxy), `BETTERCHATS_PEPPER` (geheimer Zusatzschlüssel), `MAX_USERS`.
 
-**Im Internet immer nur über HTTPS betreiben** (z. B. hinter Caddy/nginx mit Let's-Encrypt-Zertifikat). Die Browser-Verschlüsselung (WebCrypto) funktioniert außerhalb von `localhost` ohnehin nur über HTTPS.
+**Im Internet immer nur über HTTPS betreiben** (z. B. Caddy mit Let's Encrypt). Ohne HTTPS verweigert die Seite den Start.
+
+### Als Tor-.onion-Dienst
+
+```
+# /etc/tor/torrc
+HiddenServiceDir /var/lib/tor/betterchats/
+HiddenServicePort 80 127.0.0.1:8080
+```
+Server mit `HOST=127.0.0.1 npm start` starten, Tor neu starten, Adresse steht in `/var/lib/tor/betterchats/hostname`.
 
 ## Ehrliche Grenzen
 
-- Eine 6-stellige PIN hat nur 1 Mio. Möglichkeiten. Die Sperren machen Online-Raten praktisch unmöglich – wer aber die Server-Dateien **und** den Server-Schlüssel stiehlt, kann PINs offline durchprobieren. Den Server also gut schützen.
-- Wer den Server kontrolliert, könnte manipulierten JavaScript-Code ausliefern. Dagegen hilft nur, den Server selbst sicher zu betreiben – und die Sicherheitsnummer zu vergleichen.
-- Der Server sieht, *wer wann wem* schreibt (Metadaten), aber nicht *was*. Er speichert das nicht.
+- Was du gerade tippst und der offene Chat stehen zwangsläufig im Klartext auf deinem Bildschirm. Schadsoftware auf deinem Gerät (Keylogger, Bildschirmaufnahme) kann keine Webseite der Welt verhindern.
+- Eine 6-stellige PIN hat nur 1 Mio. Möglichkeiten. Online-Raten ist durch die Sperren praktisch unmöglich; wer aber Server-Dateien **und** Pepper stiehlt, kann offline raten.
+- Wer den Server kontrolliert, könnte manipulierten JavaScript-Code ausliefern. Die geplanten Apps lösen das, weil der Code dann fest in der App steckt.
+- Der Server sieht im RAM, *wer wem* gerade schreibt (sonst könnte er nicht zustellen) – aber nie *was*, und er speichert nichts davon.
