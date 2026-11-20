@@ -46,12 +46,16 @@ fi
 NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)"
 [ "$NODE_MAJOR" -ge 20 ] || { echo "Node.js >= 20 konnte nicht installiert werden."; exit 1; }
 
-# ---- nothing else on this server: remove services BetterChats doesn't need ----
-for pkg in apache2 nginx lighttpd exim4 exim4-base postfix sendmail rpcbind nfs-common nfs-kernel-server avahi-daemon cups cups-daemon \
+# ---- other services: NEVER removed silently. Listed, and only removed if you type "ja". ----
+# (BetterChats doesn't need them; on a server used for other things too, just answer "nein".)
+for pkg in apache2 nginx lighttpd exim4 postfix sendmail rpcbind nfs-kernel-server avahi-daemon cups-daemon \
            samba vsftpd proftpd-basic telnetd inetutils-telnetd rsh-server xinetd snapd bind9 dnsmasq mariadb-server mysql-server postgresql; do
-  dpkg -s "$pkg" >/dev/null 2>&1 && { echo "Entferne unnötigen Dienst: $pkg"; apt-get purge -y -qq "$pkg" >/dev/null || true; }
+  if dpkg -s "$pkg" >/dev/null 2>&1; then
+    ans=nein
+    [ -t 0 ] && read -r -p "Dienst '$pkg' gefunden – wird für BetterChats NICHT gebraucht. Entfernen? (ja/nein) [nein]: " ans
+    if [ "$ans" = ja ]; then apt-get purge -y -qq "$pkg" >/dev/null || true; echo "  -> $pkg entfernt"; else echo "  -> $pkg bleibt"; fi
+  fi
 done
-apt-get autoremove -y -qq >/dev/null || true
 # automatic security updates (reboots are left to you)
 cat > /etc/apt/apt.conf.d/20auto-upgrades <<UPG
 APT::Periodic::Update-Package-Lists "1";
