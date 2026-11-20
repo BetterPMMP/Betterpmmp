@@ -23,6 +23,11 @@ describe('HTTP surface', () => {
     assert.ok(!/^Date:/mi.test(r.head), 'no Date header');
   });
 
+  test('plain-http deployments do not force https sub-resources (design must load)', async () => {
+    const r = await get(s.port, '/');
+    assert.ok(!r.head.includes('upgrade-insecure-requests'));
+  });
+
   test('path traversal, dotfiles, data dir and source files are unreachable (silent drop)', async () => {
     for (const p of ['/../server.js', '/..%2fserver.js', '/%2e%2e/server.js', '/data/users.json', '/.env', '/server.js',
       '/package.json', '/node_modules/ws/package.json', '/public/app.js', '//etc/passwd', '/index.html/..', '/app.js%00.html']) {

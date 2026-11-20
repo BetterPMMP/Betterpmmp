@@ -144,7 +144,9 @@ const SEC_HEADERS = {
   'Content-Security-Policy': [
     "default-src 'none'", "script-src 'self' 'wasm-unsafe-eval'", "style-src 'self'", "img-src 'self'", "connect-src 'self'",
     "base-uri 'none'", "form-action 'none'", "frame-ancestors 'none'",
-    "require-trusted-types-for 'script'", "trusted-types 'none'", 'upgrade-insecure-requests',
+    "require-trusted-types-for 'script'", "trusted-types 'none'",
+    // only when we really serve HTTPS – on plain http it would make the browser fetch CSS/JS via https and fail
+    ...(env.TLS_CERT || env.TRUST_PROXY ? ['upgrade-insecure-requests'] : []),
   ].join('; '),
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
