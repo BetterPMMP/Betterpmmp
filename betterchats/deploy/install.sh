@@ -9,6 +9,7 @@
 set -euo pipefail
 MODE="${1:-}"; DOMAIN="${2:-}"
 SSH_MODE="${SSH_MODE:-onion}"
+EXTRA_PORTS="${EXTRA_PORTS-auto}"   # other public TCP ports to keep open, e.g. "80,443"; auto = ask if a web server runs
 CHAT_PORT="${CHAT_PORT:-30}"
 SSH_PORT="${SSH_PORT:-$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}')}"; SSH_PORT="${SSH_PORT:-22}"
 [ "$(id -u)" = 0 ] || { echo "Bitte als root ausführen."; exit 1; }
@@ -95,7 +96,13 @@ if [ "$MODE" = public ]; then
   apt-get install -y -qq certbot >/dev/null
   if [ ! -d "/etc/letsencrypt/live/$DOMAIN" ]; then
     nft list table inet betterchats >/dev/null 2>&1 && nft insert rule inet betterchats input tcp dport 80 accept comment \"certbot\"
-    certbot certonly --standalone --non-interactive --agree-tos --register-unsafely-without-email --key-type ecdsa -d "$DOMAIN" \
+    if ss -ltn '( sport = :80 )' | grep -q LISTEN && [ -d /var/www/html ]; then
+      # a web server (e.g. Apache) already owns port 80 -> let it serve the challenge
+      CB="--webroot -w /var/www/html"
+    else
+      CB="--standalone"
+    fi
+    certbot certonly $CB --non-interactive --agree-tos --register-unsafely-without-email --key-type ecdsa -d "$DOMAIN" \
       || { echo "Zertifikat fehlgeschlagen: Zeigt die Domain $DOMAIN (A-Eintrag) wirklich auf diesen Server?"; exit 1; }
   fi
   install -d /etc/letsencrypt/renewal-hooks/pre /etc/letsencrypt/renewal-hooks/post /etc/letsencrypt/renewal-hooks/deploy
@@ -151,8 +158,21 @@ else
   systemctl disable --now ssh.socket ssh sshd 2>/dev/null || true
 fi
 
+# ---- keep other services reachable (never cut off your existing websites) ----
+if [ "$EXTRA_PORTS" = auto ]; then
+  EXTRA_PORTS=""
+  if systemctl is-active --quiet apache2 || systemctl is-active --quiet nginx; then
+    ans=ja
+    [ -t 0 ] && read -r -p "Ein Webserver (Apache/nginx) läuft. Ports 80 und 443 für deine anderen Seiten offen lassen? (ja/nein) [ja]: " ans
+    [ "${ans:-ja}" = ja ] && EXTRA_PORTS="80,443"
+  fi
+fi
+EXTRA_RULES="# no extra ports"
+[ -n "$EXTRA_PORTS" ] && EXTRA_RULES="tcp dport { $EXTRA_PORTS } ct state new accept"
+echo "Zusätzlich offene Ports: ${EXTRA_PORTS:-keine}"
+
 sed -e "s/__SSH_PORT__/$SSH_PORT/" -e "s/__CHAT_PORT__/$CHAT_PORT/" "$SRC/deploy/nftables.conf" \
-  | awk -v r="$CHAT_RULES" -v s="$SSH_RULES" '{ if ($0 ~ /__CHAT_RULES__/) print "    " r; else if ($0 ~ /__SSH_RULES__/) print "    " s; else print }' > /etc/betterchats/nftables.conf
+  | awk -v r="$CHAT_RULES" -v s="$SSH_RULES" -v x="$EXTRA_RULES" '{ if ($0 ~ /__CHAT_RULES__/) print "    " r; else if ($0 ~ /__SSH_RULES__/) print "    " s; else if ($0 ~ /__EXTRA_RULES__/) print "    " x; else print }' > /etc/betterchats/nftables.conf
 nft -c -f /etc/betterchats/nftables.conf
 nft -f /etc/betterchats/nftables.conf
 grep -q betterchats /etc/nftables.conf 2>/dev/null || echo 'include "/etc/betterchats/nftables.conf"' >> /etc/nftables.conf
