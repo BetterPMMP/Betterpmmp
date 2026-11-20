@@ -40,8 +40,7 @@
           ]
         }
       ],
-      "icon": "icon.png",
-      "publisherName": "BetterChats"
+      "icon": "icon.png"
     },
     "nsis": {
       "oneClick": false,
