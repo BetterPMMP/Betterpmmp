@@ -175,6 +175,83 @@ func stripColors(s string) string {
 	return b.String()
 }
 
+// minecraftServers reads the server list of Minecraft Bedrock on this PC (external_servers.txt).
+func minecraftServers() []string {
+	var files []string
+	if la := os.Getenv("LOCALAPPDATA"); la != "" {
+		files = append(files, filepath.Join(la, `Packages\Microsoft.MinecraftUWP_8wekyb3d8bbwe\LocalState\games\com.mojang\minecraftpe\external_servers.txt`))
+	}
+	if ad := os.Getenv("APPDATA"); ad != "" {
+		m, _ := filepath.Glob(filepath.Join(ad, "Minecraft Bedrock", "Users", "*", "games", "com.mojang", "minecraftpe", "external_servers.txt"))
+		files = append(files, m...)
+	}
+	seen := map[string]bool{}
+	var hosts []string
+	for _, f := range files {
+		data, err := os.ReadFile(f)
+		if err != nil {
+			continue
+		}
+		for _, line := range strings.Split(string(data), "\n") {
+			// index:name:host:port:timestamp
+			parts := strings.Split(strings.TrimSpace(line), ":")
+			if len(parts) >= 4 {
+				h := strings.TrimSpace(parts[2])
+				if h != "" && !seen[strings.ToLower(h)] {
+					seen[strings.ToLower(h)] = true
+					hosts = append(hosts, h)
+				}
+			}
+		}
+	}
+	return hosts
+}
+
+// autoFind logs in without a code on every candidate at the same time ("auto"):
+// only the server you are online on (same IP, with OP) shows the popup in the game.
+func autoFind(hosts []string, port int) (SavedServer, error) {
+	type result struct {
+		s   SavedServer
+		err error
+	}
+	ch := make(chan result, len(hosts))
+	for _, h := range hosts {
+		go func(h string) {
+			var c Rcon
+			reply, err := c.Connect(h, port, "auto")
+			c.Close()
+			if err != nil {
+				ch <- result{err: fmt.Errorf("%s: %v", h, err)}
+				return
+			}
+			token, player := parseReply(reply)
+			ch <- result{s: SavedServer{Host: h, Port: port, Login: "token:" + token, Player: player}}
+		}(h)
+	}
+	var errs []string
+	for range hosts {
+		r := <-ch
+		if r.err == nil {
+			return r.s, nil
+		}
+		errs = append(errs, r.err.Error())
+	}
+	return SavedServer{}, fmt.Errorf("%s", strings.Join(errs, "\n"))
+}
+
+func addServer(entry SavedServer) int {
+	i := findServer(entry.Host, entry.Port)
+	if i >= 0 {
+		cfg.Servers[i] = entry
+	} else {
+		cfg.Servers = append(cfg.Servers, entry)
+		i = len(cfg.Servers) - 1
+	}
+	cfg.Current = i
+	saveConfig()
+	return i
+}
+
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(v)
@@ -241,16 +318,7 @@ func main() {
 		} else if c.Remember {
 			login = c.Login
 		}
-		entry := SavedServer{Host: c.Host, Port: c.Port, Login: login, Player: player}
-		i := findServer(c.Host, c.Port)
-		if i >= 0 {
-			cfg.Servers[i] = entry
-		} else {
-			cfg.Servers = append(cfg.Servers, entry)
-			i = len(cfg.Servers) - 1
-		}
-		cfg.Current = i
-		saveConfig()
+		addServer(SavedServer{Host: c.Host, Port: c.Port, Login: login, Player: player})
 		writeJSON(w, map[string]any{"ok": true, "player": player, "state": publicState()})
 	})
 	mux.HandleFunc("/api/use", func(w http.ResponseWriter, r *http.Request) {
@@ -299,6 +367,40 @@ func main() {
 			useServer(cfg.Current) // fall back to the last one used
 		}
 		writeJSON(w, map[string]any{"found": ok, "index": i, "state": publicState()})
+	})
+	mux.HandleFunc("/api/mcservers", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, map[string]any{"hosts": minecraftServers()})
+	})
+	// Without a code: try the given host (or 127.0.0.1 + your Minecraft server list) with "auto".
+	mux.HandleFunc("/api/auto", func(w http.ResponseWriter, r *http.Request) {
+		var c struct {
+			Host string `json:"host"`
+			Port int    `json:"port"`
+		}
+		if !decode(r, &c) {
+			http.Error(w, "bad request", 400)
+			return
+		}
+		if c.Port == 0 {
+			c.Port = 19140
+		}
+		hosts := []string{strings.TrimSpace(c.Host)}
+		if hosts[0] == "" {
+			hosts = append([]string{"127.0.0.1"}, minecraftServers()...)
+		}
+		s, err := autoFind(hosts, c.Port)
+		cfgMu.Lock()
+		defer cfgMu.Unlock()
+		if err != nil {
+			writeJSON(w, map[string]any{"ok": false, "error": err.Error(), "state": publicState()})
+			return
+		}
+		i := addServer(s)
+		if err := useServer(i); err != nil {
+			writeJSON(w, map[string]any{"ok": false, "error": err.Error(), "state": publicState()})
+			return
+		}
+		writeJSON(w, map[string]any{"ok": true, "host": s.Host, "player": s.Player, "state": publicState()})
 	})
 	mux.HandleFunc("/api/disconnect", func(w http.ResponseWriter, r *http.Request) {
 		rcon.Close()

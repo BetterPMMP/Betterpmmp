@@ -47,8 +47,12 @@ func (c *Rcon) Connect(host string, port int, password string) (string, error) {
 		return "", err
 	}
 	reply := ""
+	wait := 10 * time.Second
+	if password == "auto" {
+		wait = 75 * time.Second // the player confirms in the game
+	}
 	for {
-		rid, typ, body, err := c.read(10 * time.Second)
+		rid, typ, body, err := c.read(wait)
 		if err != nil {
 			c.closeLocked()
 			return "", errors.New("Server hat die Anmeldung abgelehnt (Code falsch/abgelaufen oder IP kurz gesperrt)")
@@ -56,6 +60,9 @@ func (c *Rcon) Connect(host string, port int, password string) (string, error) {
 		if typ == 2 { // auth response
 			if rid == -1 {
 				c.closeLocked()
+				if msg, ok := strings.CutPrefix(reply, "error:"); ok {
+					return "", errors.New(msg)
+				}
 				if strings.HasPrefix(password, "pair:") {
 					return "", errors.New("Code falsch oder abgelaufen - im Spiel neu /console koppeln")
 				}

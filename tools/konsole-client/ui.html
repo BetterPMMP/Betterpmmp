@@ -110,6 +110,10 @@
       <button onclick="hideConnect()" id="cancelConn">Abbrechen</button>
       <button class="g" id="doConn" onclick="connect()">Verbinden</button>
     </div>
+    <p style="margin:12px 0 0;font-size:12px;border-top:1px solid var(--line);padding-top:12px">
+      Dein eigener Server? Ohne Code: Adresse eintragen und unten klicken. Du musst dann als OP im
+      Spiel online sein und einmal „Erlauben" drücken.</p>
+    <button style="width:100%;margin-top:8px" id="btnAuto" onclick="autoConnect()">Ohne Code verbinden (eigener Server)</button>
   </div>
 </div>
 
@@ -136,6 +140,15 @@ function setTab(t){tab=t;$("tabPair").classList.toggle("sel",t=="pair");$("tabPa
 function showConnect(){const c=st.servers[st.current];$("host").value=c?c.host:"127.0.0.1";$("port").value=c?c.port:19140;
   $("cmsg").textContent="";$("cancelConn").style.display=st.servers.length?"":"none";$("conn").classList.remove("hide");$("code").focus();}
 function hideConnect(){$("conn").classList.add("hide");}
+async function autoConnect(){
+  const host=$("host").value.trim(), port=parseInt($("port").value)||19140;
+  $("btnAuto").disabled=true;msg("suche deinen Server... jetzt im Spiel „Erlauben" drücken.","");
+  const res=await api("/api/auto",{host,port});
+  $("btnAuto").disabled=false;
+  if(!res.ok){msg(res.error||"Nicht gefunden.","err");return;}
+  $("code").value="";hideConnect();st=res.state;render();
+  out('<span class="sys">Ohne Code verbunden mit '+esc(res.host)+(res.player?' als '+esc(res.player):'')+'.</span>');$("cmd").focus();
+}
 function msg(t,c){const m=$("cmsg");m.textContent=t;m.className="msg "+(c||"");}
 
 async function connect(){

@@ -11,6 +11,8 @@ namespace pocketmine\network;
 
 use pocketmine\BetterPMMPConfig;
 use pocketmine\console\CapturingConsoleSender;
+use pocketmine\console\menu\ConsoleApproveForm;
+use pocketmine\console\menu\ConsoleMenu;
 use pocketmine\Server;
 use pocketmine\utils\TextFormat;
 use Symfony\Component\Filesystem\Path;
@@ -63,6 +65,7 @@ final class Rcon{
 	private const MAX_PACKET = 4096;
 	private const MAX_RESPONSE_CHUNK = 4000;
 	private const AUTH_TIMEOUT = 10.0;
+	private const APPROVE_TIMEOUT = 60.0;
 	private const IDLE_TIMEOUT = 600.0;
 
 	/** @var resource|null */
@@ -71,7 +74,7 @@ final class Rcon{
 	/** @var string[] */
 	private static array $allowedIps = [];
 	private static int $maxConnections = 5;
-	/** @var array<int, array{conn: resource, ip: string, buf: string, auth: bool, since: float, last: float, player?: string}> */
+	/** @var array<int, array{conn: resource, ip: string, buf: string, auth: bool, since: float, last: float, player?: string, pending?: int}> */
 	private static array $clients = [];
 	private static int $nextId = 0;
 	private static ?CapturingConsoleSender $sender = null;
@@ -224,6 +227,12 @@ final class Rcon{
 		self::accept($server);
 		$now = microtime(true);
 		foreach(self::$clients as $id => $client){
+			if(isset($client["pending"])){
+				if($now - $client["since"] > self::APPROVE_TIMEOUT){
+					self::deny($id, "Im Spiel nicht rechtzeitig bestätigt.");
+				}
+				continue;
+			}
 			if((!$client["auth"] && $now - $client["since"] > self::AUTH_TIMEOUT) || $now - $client["last"] > self::IDLE_TIMEOUT){
 				self::close($id);
 				continue;
@@ -295,6 +304,10 @@ final class Rcon{
 
 	private static function handlePacket(Server $server, int $id, int $requestId, int $type, string $body) : void{
 		$client = self::$clients[$id];
+		if($type === self::TYPE_AUTH && trim($body) === "auto"){
+			self::autoLogin($server, $id, $requestId);
+			return;
+		}
 		if($type === self::TYPE_AUTH){
 			$ip = $client["ip"];
 			$now = microtime(true);
@@ -353,6 +366,76 @@ final class Rcon{
 		for($off = 0; $off < $len; $off += self::MAX_RESPONSE_CHUNK){
 			self::send($id, $requestId, self::TYPE_RESPONSE, substr($output, $off, self::MAX_RESPONSE_CHUNK));
 		}
+	}
+
+	/**
+	 * Login without a code: an online player with console rights plays from the same IP as the program.
+	 * That player confirms once in the game (unless rcon.auto-login-ask is false); then the program gets a token.
+	 */
+	private static function autoLogin(Server $server, int $id, int $requestId) : void{
+		$ip = self::$clients[$id]["ip"];
+		if(!BetterPMMPConfig::flag("rcon", "auto-login", true)){
+			self::deny($id, "Automatische Anmeldung ist aus (rcon.auto-login) - im Spiel /console koppeln.", $requestId);
+			return;
+		}
+		$ask = BetterPMMPConfig::flag("rcon", "auto-login-ask", true);
+		$candidates = [];
+		foreach($server->getOnlinePlayers() as $player){
+			if($player->getNetworkSession()->getIp() !== $ip || !ConsoleMenu::canUse($player)){
+				continue;
+			}
+			if(!$ask && JavaBridge::isJavaPlayer($player)){
+				continue; // bridge players all come from 127.0.0.1
+			}
+			$candidates[] = $player;
+		}
+		if(count($candidates) === 0){
+			self::deny($id, "Kein OP-Spieler von deiner IP online. Geh erst auf den Server (mit OP), dann nochmal verbinden.", $requestId);
+			return;
+		}
+		if(!$ask && count($candidates) === 1){
+			self::approve($server, $id, $requestId, $candidates[0]->getName());
+			return;
+		}
+		self::$clients[$id]["pending"] = $requestId;
+		self::$clients[$id]["since"] = microtime(true);
+		foreach($candidates as $player){
+			$player->sendForm(new ConsoleApproveForm($id, $ip));
+		}
+		$server->getLogger()->info("[RCON] $ip will sich ohne Code anmelden - warte auf Bestätigung im Spiel");
+	}
+
+	/** Answer from the in-game popup. */
+	public static function answerApproval(int $id, string $player, bool $allow) : void{
+		if(!isset(self::$clients[$id]["pending"])){
+			return;
+		}
+		$requestId = self::$clients[$id]["pending"];
+		unset(self::$clients[$id]["pending"]);
+		if($allow){
+			self::approve(Server::getInstance(), $id, $requestId, $player);
+		}else{
+			self::deny($id, "$player hat die Anmeldung im Spiel abgelehnt.", $requestId);
+		}
+	}
+
+	private static function approve(Server $server, int $id, int $requestId, string $player) : void{
+		$token = bin2hex(random_bytes(24));
+		self::$tokens[hash("sha256", $token)] = $player;
+		self::saveTokens();
+		self::$clients[$id]["auth"] = true;
+		self::$clients[$id]["player"] = $player;
+		self::$clients[$id]["last"] = microtime(true);
+		self::send($id, $requestId, self::TYPE_RESPONSE, "token:" . $token . "\nplayer:" . $player);
+		self::send($id, $requestId, self::TYPE_AUTH_RESPONSE, "");
+		$server->getLogger()->info("[RCON] " . self::$clients[$id]["ip"] . " ohne Code angemeldet (gekoppelt mit $player)");
+	}
+
+	private static function deny(int $id, string $reason, ?int $requestId = null) : void{
+		$requestId ??= self::$clients[$id]["pending"] ?? 0;
+		self::send($id, $requestId, self::TYPE_RESPONSE, "error:" . $reason);
+		self::send($id, -1, self::TYPE_AUTH_RESPONSE, "");
+		self::close($id);
 	}
 
 	private static function send(int $id, int $requestId, int $type, string $body) : void{
