@@ -59,6 +59,7 @@ use pocketmine\command\defaults\TeleportCommand;
 use pocketmine\command\defaults\TellCommand;
 use pocketmine\command\defaults\TimeCommand;
 use pocketmine\command\defaults\SwapHandsCommand;
+use pocketmine\command\defaults\ConsoleMenuCommand;
 use pocketmine\command\defaults\WeatherCommand;
 use pocketmine\command\defaults\TimingsCommand;
 use pocketmine\command\defaults\TitleCommand;
@@ -134,6 +135,7 @@ class SimpleCommandMap implements CommandMap{
 			new TimeCommand(),
 			new WeatherCommand(),
 			new SwapHandsCommand(),
+			new ConsoleMenuCommand(),
 			new TimingsCommand(),
 			new TitleCommand(),
 			new TransferServerCommand(),

@@ -12,7 +12,7 @@ vanilla game engine on top so that you can play survival from start to finish.
 
 GitHub: https://github.com/BetterPMMP/Betterpmmp
 
-Current version: **5.68-vanilla-beta.1** (API 5.51.0, plugins for PocketMine-MP 5 keep working).
+Current version: **5.69-vanilla-beta.1** (API 5.51.0, plugins for PocketMine-MP 5 keep working).
 
 > Status: beta. Many systems behave like vanilla, but not every detail matches
 > the official Bedrock Dedicated Server yet. See `VANILLA-PARITY.md` for an honest
@@ -111,6 +111,13 @@ Current version: **5.68-vanilla-beta.1** (API 5.51.0, plugins for PocketMine-MP 
   mob caps, pathfinding budget, map diagnostics.
 - Works next to world plugins like MultiWorld.
 
+### Console menu and BetterPMMP-Konsole.exe
+- `/console` (also `/konsole`, `/cmd`): admins run console commands from a menu inside the game,
+  with quick buttons, history and a confirmation for dangerous commands (`console-menu` in `betterpmmp.yml`).
+- Built-in RCON (TCP 19140, `rcon` in `betterpmmp.yml`). `/console koppeln` shows a one-time code to pair
+  `tools/konsole-client/BetterPMMP-Konsole.exe`, a Windows program with a menu that finds the server you are
+  playing on and runs commands there. Every command is logged.
+
 ---
 
 <a name="deutsch"></a>
@@ -128,7 +135,7 @@ Anfang bis Ende spielen kann.
 
 GitHub: https://github.com/BetterPMMP/Betterpmmp
 
-Aktuelle Version: **5.68-vanilla-beta.1** (API 5.51.0, Plugins für PocketMine-MP 5 laufen weiter).
+Aktuelle Version: **5.69-vanilla-beta.1** (API 5.51.0, Plugins für PocketMine-MP 5 laufen weiter).
 
 > Stand: Beta. Viele Systeme verhalten sich wie in Vanilla, aber noch nicht jedes
 > Detail stimmt mit dem offiziellen Bedrock Dedicated Server überein. Den ehrlichen
@@ -233,3 +240,10 @@ Aktuelle Version: **5.68-vanilla-beta.1** (API 5.51.0, Plugins für PocketMine-M
 - `betterpmmp.yml`: festlegen, in welchen Welten Mobs spawnen, Mob-Kategorien an- und
   ausschalten, Mob-Obergrenzen, Rechenbudget für die Wegfindung, Karten-Diagnose.
 - Läuft neben Welt-Plugins wie MultiWorld.
+
+### Konsolen-Menü und BetterPMMP-Konsole.exe
+- `/console` (auch `/konsole`, `/cmd`): Admins führen im Spiel Konsolen-Befehle über ein Menü aus,
+  mit Schnell-Buttons, Verlauf und Nachfrage bei gefährlichen Befehlen (`console-menu` in `betterpmmp.yml`).
+- Eingebautes RCON (TCP 19140, `rcon` in `betterpmmp.yml`). `/console koppeln` zeigt einen Einmal-Code für
+  `tools/konsole-client/BetterPMMP-Konsole.exe`: ein Windows-Programm mit Menü, das den Server findet, auf dem
+  du gerade spielst, und dort Befehle ausführt. Jeder Befehl wird protokolliert.

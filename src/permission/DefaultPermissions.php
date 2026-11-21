@@ -75,6 +75,7 @@ abstract class DefaultPermissions{
 		//BetterPMMP: permissions without a core translation key get a plain description
 		self::registerPermission(new Permission(Names::COMMAND_WEATHER, "Allows the user to change the weather"), [$operatorRoot]);
 		self::registerPermission(new Permission(Names::COMMAND_SWAPHANDS, "Allows the user to swap the items in both hands"), [$everyoneRoot]);
+		self::registerPermission(new Permission(Names::COMMAND_CONSOLE, "Allows the user to run console commands from the in-game console menu"), [$operatorRoot]);
 
 		self::registerNoArgsDesc(Names::COMMAND_DUMPMEMORY, [$consoleRoot]);
 

@@ -24,6 +24,7 @@ use function file_get_contents;
 use function explode;
 use function count;
 use function array_slice;
+use function array_values;
 use function array_keys;
 use function array_key_exists;
 use function file_exists;
@@ -155,6 +156,15 @@ final class BetterPMMPConfig{
 	/** A yes/no switch from betterpmmp.yml (missing keys use the default). */
 	public static function flag(string $section, string $key, bool $default) : bool{
 		return self::bool($section, $key, $default);
+	}
+
+	/**
+	 * A list from betterpmmp.yml (missing keys or non-lists give an empty list).
+	 * @return mixed[]
+	 */
+	public static function list(string $section, string $key) : array{
+		$v = self::get($section, $key, []);
+		return is_array($v) ? array_values($v) : [];
 	}
 
 	/** A text value from betterpmmp.yml (missing keys use the default). */

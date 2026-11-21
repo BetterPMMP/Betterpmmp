@@ -1095,6 +1095,7 @@ class Server{
 				return;
 			}
 			\pocketmine\network\JavaBridge::start($this); //BetterPMMP: Java Edition players via ViaProxy
+			\pocketmine\network\Rcon::start($this); //BetterPMMP: console from outside (BetterPMMP-Konsole.exe)
 
 			if($this->configGroup->getPropertyBool(Yml::ANONYMOUS_STATISTICS_ENABLED, true)){
 				$this->sendUsageTicker = self::TICKS_PER_STATS_REPORT;
@@ -1592,6 +1593,7 @@ class Server{
 			}
 
 			\pocketmine\network\JavaBridge::stop();
+			\pocketmine\network\Rcon::stop();
 
 			if(isset($this->network)){
 				$this->network->getSessionManager()->close($this->configGroup->getPropertyString(Yml::SETTINGS_SHUTDOWN_MESSAGE, "Server closed"));
@@ -1945,6 +1947,7 @@ class Server{
 
 		Timings::$connection->startTiming();
 		$this->network->tick();
+		\pocketmine\network\Rcon::tick($this);
 		Timings::$connection->stopTiming();
 
 		if(($this->tickCounter % self::TARGET_TICKS_PER_SECOND) === 0){

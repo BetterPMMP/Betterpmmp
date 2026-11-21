@@ -70,6 +70,7 @@ final class DefaultPermissionNames{
 	public const COMMAND_TIME_QUERY = "pocketmine.command.time.query";
 	public const COMMAND_WEATHER = "pocketmine.command.weather"; //BetterPMMP
 	public const COMMAND_SWAPHANDS = "pocketmine.command.swaphands"; //BetterPMMP
+	public const COMMAND_CONSOLE = "pocketmine.command.console"; //BetterPMMP
 	public const COMMAND_TIME_SET = "pocketmine.command.time.set";
 	public const COMMAND_TIME_START = "pocketmine.command.time.start";
 	public const COMMAND_TIME_STOP = "pocketmine.command.time.stop";

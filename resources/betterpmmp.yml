@@ -81,3 +81,39 @@ java-bridge:
   real-light: true                  # echtes Licht (Sonne, Fackeln, Höhlen) an Java-Spieler schicken - wichtig für Shader
   build-log: true                   # schreibt jeden Java-Klick beim Bauen ins Log (Fehlersuche), false = aus
   fast-build-fix: true              # false = gesetzte Blöcke wie im Original-ViaBedrock bestätigen (falls schnelles Bauen Probleme macht)
+
+# ---------------------------------------------------------------
+# Konsolen-Menü im Spiel (/console, auch /konsole oder /cmd)
+# ---------------------------------------------------------------
+# Admins können im Spiel Konsolen-Befehle ausführen und sehen die Ausgabe
+# in einem Fenster. Erlaubt für alle mit pocketmine.command.console (OPs).
+# Jeder Befehl wird in der Server-Konsole protokolliert.
+console-menu:
+  enabled: true
+  players: []          # leer = alle OPs, sonst nur diese Namen, z. B. ["Steve"]
+  confirm: ["stop", "kill", "ban", "ban-ip", "deop", "transferserver"]   # fragt vorher nach
+  buttons:             # Schnell-Buttons ("Beschriftung": "Befehl"), {player} = dein Name
+    - "Spieler online": "list"
+    - "Server-Status": "status"
+    - "Tag": "time set day"
+    - "Nacht": "time set night"
+    - "Sonne": "weather clear"
+    - "Kreativ für mich": "gamemode creative {player}"
+    - "Überleben für mich": "gamemode survival {player}"
+    - "Welt speichern": "save-all"
+    - "Server stoppen": "stop"
+
+# ---------------------------------------------------------------
+# RCON (Konsole von außen mit BetterPMMP-Konsole.exe)
+# ---------------------------------------------------------------
+# Standard-RCON-Protokoll (TCP), funktioniert auch mit anderen RCON-Programmen.
+# Anmelden: im Spiel /console koppeln -> Code in der .exe eingeben (nur für
+# Spieler mit Konsolen-Recht). Kopplungen stehen in konsole-kopplungen.json,
+# /console entkoppeln entfernt deine. 5 falsche Anmeldungen = IP 5 Minuten gesperrt.
+# Der Port muss in Firewall/Router (TCP) offen sein, wenn du nicht am Server-PC sitzt.
+rcon:
+  enabled: true
+  port: 19140          # TCP-Port für RCON
+  password: ""         # optional (mind. 8 Zeichen) für andere RCON-Programme - wer es kennt, hat volle Konsole!
+  allowed-ips: []      # leer = alle, sonst z. B. ["127.0.0.1", "203.0.113.5"]
+  max-connections: 5

@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BetterPMMP-Konsole</title>
+<style>
+  :root{
+    --bg:#11161d; --panel:#1b222c; --panel2:#232c38; --line:#303a49;
+    --text:#e7edf3; --muted:#8c9aad; --green:#43b581; --green2:#3aa876;
+    --red:#e24b4b; --accent:#5a8bd6; --mono:ui-monospace,"Cascadia Code",Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column}
+  header{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+  header h1{font-size:15px;margin:0;font-weight:600;letter-spacing:.3px}
+  header .grow{flex:1}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red)}
+  .dot.on{background:var(--green);box-shadow:0 0 6px var(--green)}
+  .status{font-size:13px;color:var(--muted)}
+  button{font-family:inherit;font-size:13px;border:none;border-radius:7px;padding:8px 14px;cursor:pointer;color:#fff;background:var(--panel2);transition:.12s}
+  button:hover{filter:brightness(1.15)}
+  button.g{background:var(--green)} button.g:hover{background:var(--green2)}
+  button.r{background:var(--red)}
+  button:disabled{opacity:.45;cursor:default;filter:none}
+  main{flex:1;display:flex;min-height:0}
+  .side{width:230px;background:var(--panel);border-right:1px solid var(--line);padding:12px;overflow:auto;display:flex;flex-direction:column;gap:7px}
+  .side h2{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:6px 2px 2px}
+  .qbtn{text-align:left;background:var(--panel2);display:flex;flex-direction:column;gap:2px}
+  .qbtn small{color:var(--muted);font-family:var(--mono);font-size:11px}
+  .center{flex:1;display:flex;flex-direction:column;min-width:0}
+  #out{flex:1;margin:0;padding:14px 16px;overflow:auto;font-family:var(--mono);font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word;background:#0c1116}
+  #out .cmd{color:var(--accent)} #out .err{color:var(--red)} #out .sys{color:var(--muted)}
+  .inrow{display:flex;gap:8px;padding:10px;background:var(--panel);border-top:1px solid var(--line)}
+  .inrow .pre{align-self:center;color:var(--muted);font-family:var(--mono)}
+  input{flex:1;font-family:var(--mono);font-size:14px;background:#0c1116;color:var(--text);border:1px solid var(--line);border-radius:7px;padding:9px 11px}
+  input:focus{outline:none;border-color:var(--accent)}
+  .overlay{position:fixed;inset:0;background:rgba(5,8,12,.72);display:flex;align-items:center;justify-content:center;z-index:5}
+  .overlay.hide{display:none}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;width:360px;max-width:92vw}
+  .card h3{margin:0 0 4px;font-size:17px}
+  .card p{margin:0 0 16px;color:var(--muted);font-size:13px;line-height:1.5}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+  .field input{width:100%}
+  .row{display:flex;gap:10px}.row>*{flex:1}
+  .check{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-bottom:14px}
+  .msg{font-size:13px;margin-bottom:12px;min-height:18px}
+  .msg.err{color:var(--red)} .msg.ok{color:var(--green)}
+  .tabs{display:flex;gap:6px;margin-bottom:14px}
+  .tabs button{flex:1;background:var(--panel2)}
+  .tabs button.sel{background:var(--accent)}
+  .srv{text-align:left;background:var(--panel2);display:flex;justify-content:space-between;align-items:center;gap:6px}
+  .srv.cur{outline:2px solid var(--green)}
+  .srv small{color:var(--muted);font-size:11px;display:block}
+  .srv .x{background:none;padding:2px 6px;color:var(--muted)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .grid button{padding:7px 6px;font-size:12px}
+  .big{font-size:40px;font-weight:700;letter-spacing:6px;text-align:center;color:var(--green);font-family:var(--mono);margin:6px 0}
+</style>
+</head>
+<body>
+<header>
+  <div class="dot" id="dot"></div>
+  <h1>BetterPMMP-Konsole</h1>
+  <span class="status" id="hstatus">nicht verbunden</span>
+  <div class="grow"></div>
+  <button class="r" id="btnDisc" onclick="disconnect()">Trennen</button>
+</header>
+<main>
+  <div class="side" id="side">
+    <h2>Server</h2>
+    <div id="servers"></div>
+    <button onclick="detect()">Wo bin ich? (suchen)</button>
+    <button class="g" onclick="showConnect()">+ Server koppeln</button>
+    <h2 id="meHead">Mein Spieler</h2>
+    <div id="me"></div>
+    <h2>Welt &amp; Server</h2>
+    <div id="quick"></div>
+    <h2>Verlauf</h2>
+    <div id="hist"></div>
+  </div>
+  <div class="center">
+    <pre id="out"></pre>
+    <div class="inrow">
+      <span class="pre">/</span>
+      <input id="cmd" placeholder="Befehl eingeben, z. B. time set day" autocomplete="off" spellcheck="false" disabled>
+      <button class="g" id="send" onclick="runInput()" disabled>Senden</button>
+    </div>
+  </div>
+</main>
+
+<div class="overlay" id="conn">
+  <div class="card">
+    <h3>Mit Server verbinden</h3>
+    <p>Trag deinen BetterPMMP-Server ein. Zum Koppeln im Spiel <b>/console koppeln</b> eingeben.</p>
+    <div class="tabs">
+      <button id="tabPair" class="sel" onclick="setTab('pair')">Koppeln (Code)</button>
+      <button id="tabPass" onclick="setTab('pass')">Passwort</button>
+    </div>
+    <div class="row">
+      <div class="field"><label>Server-Adresse / IP</label><input id="host" placeholder="127.0.0.1"></div>
+      <div class="field" style="max-width:110px"><label>RCON-Port</label><input id="port" placeholder="19140"></div>
+    </div>
+    <div class="field" id="fPair"><label>Kopplungs-Code (aus dem Spiel)</label><input id="code" placeholder="6-stelliger Code" maxlength="6" inputmode="numeric"></div>
+    <div class="field" id="fPass" style="display:none"><label>RCON-Passwort</label><input id="pass" type="password" placeholder="aus betterpmmp.yml"></div>
+    <label class="check"><input type="checkbox" id="remember" checked> auf diesem PC merken</label>
+    <div class="msg" id="cmsg"></div>
+    <div class="row">
+      <button onclick="hideConnect()" id="cancelConn">Abbrechen</button>
+      <button class="g" id="doConn" onclick="connect()">Verbinden</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let st={servers:[],current:-1,player:"",buttons:[],history:[],connected:false},tab="pair";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const clean=s=>s.replace(/§./g,"");
+const ME=[["Kreativ","gamemode creative {player}"],["Überleben","gamemode survival {player}"],["Zuschauer","gamemode spectator {player}"],["Abenteuer","gamemode adventure {player}"],
+  ["Heilen","effect {player} instant_health 1 10"],["Satt","effect {player} saturation 1 10"],["Nachtsicht","effect {player} night_vision 600 0"],["Effekte weg","effect {player} clear"],
+  ["+1000 XP","xp 1000 {player}"],["+30 Level","xp 30L {player}"],["Diamanten","give {player} diamond 64"],["Netherit-Schwert","give {player} netherite_sword 1"],
+  ["Inventar leeren","clear {player}"],["Spawn hier setzen","spawnpoint {player}"],["OP geben","op {player}"],["Mich töten","kill {player}"]];
+const WORLD=[["Spieler online","list"],["Status / TPS","status"],["Tag","time set day"],["Nacht","time set night"],["Sonne","weather clear"],["Regen","weather rain"],
+  ["Gewitter","weather thunder"],["Friedlich","difficulty peaceful"],["Normal","difficulty normal"],["Schwer","difficulty hard"],["Welt speichern","save-all"],["Whitelist an","whitelist on"],
+  ["Whitelist aus","whitelist off"],["Server stoppen","stop"]];
+const CONFIRM=["stop","kill","ban","ban-ip","deop","clear"];
+
+async function api(path,body){
+  const r=await fetch(path,{method:body?"POST":"GET",headers:{"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined});
+  return r.json();
+}
+function setTab(t){tab=t;$("tabPair").classList.toggle("sel",t=="pair");$("tabPass").classList.toggle("sel",t=="pass");
+  $("fPair").style.display=t=="pair"?"":"none";$("fPass").style.display=t=="pass"?"":"none";}
+function showConnect(){const c=st.servers[st.current];$("host").value=c?c.host:"127.0.0.1";$("port").value=c?c.port:19140;
+  $("cmsg").textContent="";$("cancelConn").style.display=st.servers.length?"":"none";$("conn").classList.remove("hide");$("code").focus();}
+function hideConnect(){$("conn").classList.add("hide");}
+function msg(t,c){const m=$("cmsg");m.textContent=t;m.className="msg "+(c||"");}
+
+async function connect(){
+  const host=$("host").value.trim()||"127.0.0.1", port=parseInt($("port").value)||19140;
+  let login;
+  if(tab=="pair"){const code=$("code").value.trim();if(!/^\d{6}$/.test(code)){msg("Bitte den 6-stelligen Code aus dem Spiel eingeben.","err");return;}login="pair:"+code;}
+  else{login=$("pass").value;if(!login){msg("Bitte das RCON-Passwort eingeben.","err");return;}}
+  $("doConn").disabled=true;msg("verbinde...","");
+  const res=await api("/api/connect",{host,port,login,remember:$("remember").checked});
+  $("doConn").disabled=false;
+  if(!res.ok){msg(res.error||"Verbindung fehlgeschlagen.","err");return;}
+  $("code").value="";$("pass").value="";hideConnect();
+  st=res.state;render();
+  out('<span class="sys">Gekoppelt mit '+esc(host)+':'+port+(res.player?' als '+esc(res.player):'')+'. Beim nächsten Start verbindet die Konsole automatisch.</span>');
+  $("cmd").focus();
+}
+async function useSrv(i){out('<span class="sys">verbinde mit '+esc(st.servers[i].host)+'...</span>');
+  const r=await api("/api/use",{index:i});st=r.state;render();
+  out(r.ok?'<span class="sys">Verbunden.</span>':'<span class="err">'+esc(r.error)+'</span>');}
+async function forget(i,e){e.stopPropagation();if(!confirm("Server "+st.servers[i].host+" vergessen?"))return;const r=await api("/api/forget",{index:i});st=r.state;render();}
+async function detect(){
+  if(!st.servers.length){showConnect();return;}
+  out('<span class="sys">suche, auf welchem Server du gerade online bist...</span>');
+  const r=await api("/api/autodetect",{});st=r.state;render();
+  if(r.found){const s=st.servers[r.index];out('<span class="sys">Gefunden: du ('+esc(s.player)+') bist auf '+esc(s.host)+':'+s.port+'. Verbunden.</span>');}
+  else out('<span class="sys">Auf keinem gekoppelten Server online gefunden'+(st.connected?' – nutze den zuletzt benutzten.':'.')+'</span>');
+}
+async function disconnect(){await api("/api/disconnect",{});st.connected=false;render();out('<span class="sys">Verbindung getrennt.</span>');}
+
+async function runInput(){const v=$("cmd").value.trim();if(!v)return;$("cmd").value="";await run(v,true);}
+async function run(cmd,typed){
+  if(!st.connected){out('<span class="err">Nicht verbunden.</span>');return;}
+  if(cmd.includes("{player}")&&!st.player){out('<span class="err">Für diesen Server ist kein Spielername bekannt – per Code koppeln.</span>');return;}
+  const label=cmd.replace(/^\//,"").split(" ")[0].toLowerCase();
+  if(!typed&&CONFIRM.includes(label)&&!confirm("Wirklich ausführen?\n/"+cmd.replace(/\{player\}/g,st.player)))return;
+  const res=await api("/api/cmd",{command:cmd.replace(/^\//,"")});
+  out('<span class="cmd">/'+esc(res.command||cmd)+'</span>');
+  if(res.output)out(esc(clean(res.output)));
+  else if(res.ok)out('<span class="sys">(keine Ausgabe)</span>');
+  if(!res.ok)out('<span class="err">'+esc(res.error||"Fehler")+'</span>');
+  st.connected=!!res.connected;
+  if(typed){st.history=[cmd,...(st.history||[]).filter(x=>x!=cmd)].slice(0,15);api("/api/save",{buttons:st.buttons||[],history:st.history});}
+  render();
+}
+function out(html){const o=$("out");o.innerHTML+="\n"+html;o.scrollTop=o.scrollHeight;}
+
+function btnGrid(el,list){el.innerHTML="";el.className="grid";
+  list.forEach(([l,c])=>{const b=document.createElement("button");b.textContent=l;b.title="/"+c.replace(/\{player\}/g,st.player||"{player}");
+    b.disabled=!st.connected;b.onclick=()=>run(c,false);el.appendChild(b);});}
+function render(){
+  $("dot").classList.toggle("on",st.connected);
+  const c=st.servers[st.current];
+  $("hstatus").textContent=st.connected&&c?("verbunden · "+c.host+":"+c.port+(st.player?" · "+st.player:"")):"nicht verbunden";
+  $("btnDisc").disabled=!st.connected;$("cmd").disabled=!st.connected;$("send").disabled=!st.connected;
+  const sv=$("servers");sv.innerHTML="";
+  if(!st.servers.length)sv.innerHTML='<div class="status" style="padding:2px 4px">noch keiner – koppeln</div>';
+  st.servers.forEach((s,i)=>{const b=document.createElement("button");b.className="srv"+(i==st.current&&st.connected?" cur":"");
+    b.innerHTML='<span>'+esc(s.host)+':'+s.port+'<small>'+(s.player?esc(s.player):"Passwort")+'</small></span><span class="x" title="vergessen">✕</span>';
+    b.onclick=()=>useSrv(i);b.querySelector(".x").onclick=e=>forget(i,e);sv.appendChild(b);});
+  $("meHead").textContent=st.player?"Mein Spieler ("+st.player+")":"Mein Spieler";
+  btnGrid($("me"),ME);
+  btnGrid($("quick"),(st.buttons&&st.buttons.length)?st.buttons.map(b=>[b.label,b.command]):WORLD);
+  const h=$("hist");h.innerHTML="";
+  (st.history||[]).forEach(c=>{const b=document.createElement("button");b.className="qbtn";b.innerHTML='<small>/'+esc(c)+'</small>';
+    b.onclick=()=>{$("cmd").value=c;$("cmd").focus();};h.appendChild(b);});
+}
+
+$("cmd").addEventListener("keydown",e=>{if(e.key=="Enter")runInput();});
+$("code").addEventListener("keydown",e=>{if(e.key=="Enter")connect();});
+$("pass").addEventListener("keydown",e=>{if(e.key=="Enter")connect();});
+setInterval(()=>api("/api/ping").then(r=>{if(st.connected&&!r.connected){st.connected=false;render();}}).catch(()=>{}),4000);
+
+(async()=>{st=await api("/api/state");render();
+  if(!st.servers.length){out('<span class="sys">Willkommen! Geh auf deinen BetterPMMP-Server, tippe <b>/console koppeln</b> und gib den Code hier ein.</span>');showConnect();}
+  else await detect();})();
+</script>
+</body>
+</html>
