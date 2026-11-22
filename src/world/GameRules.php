@@ -65,7 +65,7 @@ final class GameRules{
 		"showdeathmessages" => ["showDeathMessages", true],
 		"showrecipemessages" => ["showRecipeMessages", true],
 		"showtags" => ["showTags", true],
-		"spawnradius" => ["spawnRadius", 10],
+		"spawnradius" => ["spawnRadius", 5],
 		"tntexplodes" => ["tntExplodes", true],
 		"tntexplosiondropdecay" => ["tntExplosionDropDecay", false],
 	];

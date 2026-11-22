@@ -116,7 +116,7 @@ class Painting extends Entity{
 			}
 		}
 
-		if($drops){
+		if($drops && \pocketmine\world\GameRules::bool($this->getWorld(), "doentitydrops")){
 			//non-living entities don't have a way to create drops generically yet
 			$this->getWorld()->dropItem($this->location, VanillaItems::PAINTING());
 		}

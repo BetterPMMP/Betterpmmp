@@ -81,6 +81,9 @@ final class ChorusFlower extends Flowable implements Ageable{
 	}
 
 	public function onProjectileHit(Projectile $projectile, RayTraceResult $hitResult) : void{
+		if(!\pocketmine\world\GameRules::bool($this->position->getWorld(), "projectilescanbreakblocks")){
+			return; //BetterPMMP: game rule projectilesCanBreakBlocks
+		}
 		$this->position->getWorld()->useBreakOn($this->position);
 	}
 

@@ -132,6 +132,31 @@ class Bed extends Transparent implements Colored, HorizontalFacing{
 				return true;
 			}
 
+			//BetterPMMP: beds explode in the Nether and the End like in vanilla (game rule respawnBlocksExplode)
+			$dimension = $this->position->getWorld()->getDimensionId();
+			if($dimension !== \pocketmine\data\bedrock\DimensionIds::OVERWORLD){
+				$world = $this->position->getWorld();
+				if(\pocketmine\world\GameRules::bool($world, "respawnblocksexplode")){
+					$head = $this->isHeadPart() ? $this : $other;
+					$center = $head->position->add(0.5, 0.5, 0.5);
+					$world->setBlock($other->position, VanillaBlocks::AIR());
+					$world->setBlock($this->position, VanillaBlocks::AIR());
+					$ev = new \pocketmine\event\block\BlockPreExplodeEvent($this, 5, $player);
+					$ev->setIncendiary(true);
+					$ev->call();
+					if(!$ev->isCancelled()){
+						$explosion = new \pocketmine\world\Explosion(\pocketmine\world\Position::fromObject($center, $world), $ev->getRadius(), $this, $ev->getFireChance());
+						if($ev->isBlockBreaking()){
+							$explosion->explodeA();
+						}
+						$explosion->explodeB();
+					}
+				}else{
+					$player->sendMessage(KnownTranslationFactory::tile_bed_noSleep()->prefix(TextFormat::GRAY));
+				}
+				return true;
+			}
+
 			$time = $this->position->getWorld()->getTimeOfDay();
 
 			$isNight = ($time >= World::TIME_NIGHT && $time < World::TIME_SUNRISE) || $this->position->getWorld()->getWeather()->isThundering(); //BetterPMMP: sleep in thunderstorms

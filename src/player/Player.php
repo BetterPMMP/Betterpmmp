@@ -2840,6 +2840,13 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 
 		$this->logger->debug("Waiting for safe respawn position to be located");
 		$spawn = $this->getSpawn();
+		//BetterPMMP: game rule spawnRadius - without a bed or anchor players respawn somewhere around the world spawn
+		if(!$this->hasValidCustomSpawn()){
+			$radius = \pocketmine\world\GameRules::int($spawn->getWorld(), "spawnradius");
+			if($radius > 0){
+				$spawn = new Position($spawn->x + mt_rand(-$radius, $radius), $spawn->y, $spawn->z + mt_rand(-$radius, $radius), $spawn->getWorld());
+			}
+		}
 		$spawn->getWorld()->requestSafeSpawn($spawn)->onCompletion(
 			function(Position $safeSpawn) : void{
 				if(!$this->isConnected()){

@@ -91,7 +91,9 @@ class MinecartEntity extends Entity implements Rideable{
 		$this->hitDamage += $source->getFinalDamage() * 10;
 		if($this->hitDamage > 40){
 			$name = $this->dropItemName();
-			$this->getWorld()->dropItem($this->location, $name !== null ? (\pocketmine\item\ExtraVanillaItems::get($name) ?? VanillaItems::MINECART()) : VanillaItems::MINECART());
+			if(\pocketmine\world\GameRules::bool($this->getWorld(), "doentitydrops")){
+				$this->getWorld()->dropItem($this->location, $name !== null ? (\pocketmine\item\ExtraVanillaItems::get($name) ?? VanillaItems::MINECART()) : VanillaItems::MINECART());
+			}
 			$this->flagForDespawn();
 		}
 	}

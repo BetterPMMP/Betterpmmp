@@ -863,6 +863,7 @@ return array(
     'pocketmine\\command\\defaults\\FillCommand' => $baseDir . '/src/command/defaults/FillCommand.php',
     'pocketmine\\command\\defaults\\SetblockCommand' => $baseDir . '/src/command/defaults/SetblockCommand.php',
     'pocketmine\\command\\defaults\\GameruleCommand' => $baseDir . '/src/command/defaults/GameruleCommand.php',
+    'pocketmine\\network\\mcpe\\camera\\CameraPresets' => $baseDir . '/src/network/mcpe/camera/CameraPresets.php',
     'pocketmine\\item\\custom\\CustomItems' => $baseDir . '/src/item/custom/CustomItems.php',
     'pocketmine\\item\\custom\\CustomFood' => $baseDir . '/src/item/custom/CustomFood.php',
     'pocketmine\\item\\custom\\CustomItem' => $baseDir . '/src/item/custom/CustomItem.php',

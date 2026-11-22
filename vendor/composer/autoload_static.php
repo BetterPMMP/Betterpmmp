@@ -997,6 +997,7 @@ class ComposerStaticInit01c34b5648e4177bfa963b48f7da5526
         'pocketmine\\command\\defaults\\FillCommand' => __DIR__ . '/../..' . '/src/command/defaults/FillCommand.php',
         'pocketmine\\command\\defaults\\SetblockCommand' => __DIR__ . '/../..' . '/src/command/defaults/SetblockCommand.php',
         'pocketmine\\command\\defaults\\GameruleCommand' => __DIR__ . '/../..' . '/src/command/defaults/GameruleCommand.php',
+        'pocketmine\\network\\mcpe\\camera\\CameraPresets' => __DIR__ . '/../..' . '/src/network/mcpe/camera/CameraPresets.php',
         'pocketmine\\item\\custom\\CustomItems' => __DIR__ . '/../..' . '/src/item/custom/CustomItems.php',
         'pocketmine\\item\\custom\\CustomFood' => __DIR__ . '/../..' . '/src/item/custom/CustomFood.php',
         'pocketmine\\item\\custom\\CustomItem' => __DIR__ . '/../..' . '/src/item/custom/CustomItem.php',

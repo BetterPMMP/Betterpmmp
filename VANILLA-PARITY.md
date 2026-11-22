@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.77-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.78-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -49,6 +49,14 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel), Lama mit Truhe, Panda-Aussehen je Gen |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.78
+
+| System | Stand |
+|---|---|
+| Restliche Gamerules mit Wirkung | 🟡 ungetestet – **commandBlocksEnabled** (Befehlsblöcke laufen nicht), **maxCommandChainLength** (Kettenlänge), **commandBlockOutput** (Operatoren in der Welt sehen die Ausgabe), **doEntityDrops** (Boote, Loren, Rüstungsständer, Gemälde), **projectilesCanBreakBlocks** (Chorusblüten), **respawnBlocksExplode** (Seelenanker und Betten), **spawnRadius** (Bedrock-Standard 5: ohne Bett irgendwo im Umkreis des Weltspawns), **tntExplosionDropDecay** (Bedrock-Standard aus: TNT lässt jeden zerstörten Block fallen, vorher nur 25 %). showBorderEffect, showRecipeMessages und doLimitedCrafting wertet der Client aus |
+| Betten im Nether und End | 🟡 ungetestet – explodieren wie in Vanilla (Stärke 5, Feuer) |
+| `/camera set` | 🟡 ungetestet – Kamera-Voreinstellungen (`free`, `first_person`, `third_person`, `third_person_front`, `fixed_boom`, `follow_orbit`) werden beim Beitreten geschickt; `set <preset> [ease <Zeit> <Typ>] [pos x y z] [rot x y] [facing x y z|<Ziel>] [default]`. Abschaltbar mit `camera.presets: false`, falls Clients deswegen getrennt werden |
 
 ## Neu in 5.77
 

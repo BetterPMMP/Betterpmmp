@@ -17,6 +17,10 @@
 graphics:
   vibrant-visuals: true
 
+# Kamera-Voreinstellungen beim Beitreten schicken (für /camera set). Bei Verbindungsproblemen auf false stellen.
+camera:
+  presets: true
+
 mob-spawning:
   worlds: ["default"]
   # Welten, in denen NIE Mobs spawnen (z. B. Lobby, Minispiele)

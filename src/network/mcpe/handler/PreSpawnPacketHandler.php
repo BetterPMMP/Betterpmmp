@@ -127,6 +127,11 @@ class PreSpawnPacketHandler extends PacketHandler{
 			$this->session->getLogger()->debug("Sending items");
 			$this->session->sendDataPacket(ItemRegistryPacket::create($typeConverter->getItemTypeDictionary()->getEntries()));
 
+			//BetterPMMP: camera presets for /camera set (camera.presets: false in betterpmmp.yml turns this off)
+			if(\pocketmine\BetterPMMPConfig::flag("camera", "presets", true)){
+				$this->session->sendDataPacket(\pocketmine\network\mcpe\camera\CameraPresets::packet());
+			}
+
 			$this->session->getLogger()->debug("Sending actor identifiers");
 			$this->session->sendDataPacket(StaticPacketCache::getInstance()->getAvailableActorIdentifiers());
 
