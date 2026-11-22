@@ -120,7 +120,7 @@ class PreSpawnPacketHandler extends PacketHandler{
 				new NetworkPermissions(disableClientSounds: true),
 				null,
 				new ServerTelemetryData("", "", "", ""),
-				StaticPacketCache::getInstance()->getBlockPaletteEntries(),
+				[...StaticPacketCache::getInstance()->getBlockPaletteEntries(), ...\pocketmine\block\custom\CustomBlocks::paletteEntries()],
 				0,
 			));
 
@@ -133,7 +133,7 @@ class PreSpawnPacketHandler extends PacketHandler{
 			}
 
 			$this->session->getLogger()->debug("Sending actor identifiers");
-			$this->session->sendDataPacket(StaticPacketCache::getInstance()->getAvailableActorIdentifiers());
+			$this->session->sendDataPacket(\pocketmine\entity\custom\CustomEntities::actorIdentifiers(StaticPacketCache::getInstance()->getAvailableActorIdentifiers()));
 
 			$this->session->getLogger()->debug("Sending biome definitions");
 			$this->session->sendDataPacket(StaticPacketCache::getInstance()->getBiomeDefs());

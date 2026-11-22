@@ -95,6 +95,7 @@ class RuntimeBlockStateRegistry{
 		foreach(ExtraVanillaBlocks::getAll() as $block){
 			$this->register($block);
 		}
+		\pocketmine\block\custom\CustomBlocks::registerBlocks($this); //BetterPMMP: custom_blocks.yml
 	}
 
 	/**

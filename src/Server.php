@@ -815,6 +815,8 @@ class Server{
 
 			$this->dataPath = realpath($dataPath) . DIRECTORY_SEPARATOR;
 			$this->pluginPath = realpath($pluginPath) . DIRECTORY_SEPARATOR;
+			//BetterPMMP: custom blocks must be known before any block registry exists (also in worker threads)
+			\pocketmine\block\custom\CustomBlocks::prepare($this->dataPath, $this->logger);
 
 			$this->logger->info("Loading server configuration");
 			$pocketmineYmlPath = Path::join($this->dataPath, "pocketmine.yml");
@@ -1022,7 +1024,9 @@ class Server{
 			$this->craftingManager = CraftingManagerFromDataHelper::make(BedrockDataFiles::RECIPES);
 
 			$this->resourceManager = new ResourcePackManager(Path::join($this->dataPath, "resource_packs"), $this->logger);
-			\pocketmine\item\custom\CustomItems::load($this->dataPath, $this->resourceManager, $this->logger); //BetterPMMP: custom_items.yml
+			\pocketmine\entity\custom\CustomEntities::load($this->dataPath, $this->logger); //BetterPMMP: custom_entities.yml
+			\pocketmine\item\custom\CustomItems::load($this->dataPath, $this->resourceManager, $this->logger); //BetterPMMP: custom_items.yml and the resource pack of all custom content
+			\pocketmine\block\custom\CustomBlocks::addToCreative();
 
 			$pluginGraylist = null;
 			$graylistFile = Path::join($this->dataPath, "plugin_list.yml");

@@ -85,11 +85,15 @@ class TypeConverter{
 		$canonicalBlockStatesRaw = Filesystem::fileGetContents(BedrockDataFiles::CANONICAL_BLOCK_STATES_NBT);
 		$metaMappingRaw = Filesystem::fileGetContents(BedrockDataFiles::BLOCK_STATE_META_MAP_JSON);
 		$this->blockTranslator = new BlockTranslator(
-			BlockStateDictionary::loadFromString($canonicalBlockStatesRaw, $metaMappingRaw),
+			//BetterPMMP: custom blocks sorted into the palette like the client does it
+			\pocketmine\block\custom\CustomBlocks::extendDictionary(BlockStateDictionary::loadFromString($canonicalBlockStatesRaw, $metaMappingRaw)),
 			GlobalBlockStateHandlers::getSerializer()
 		);
 
 		$this->itemTypeDictionary = ItemTypeDictionaryFromDataHelper::loadFromString(Filesystem::fileGetContents(BedrockDataFiles::REQUIRED_ITEM_LIST_JSON));
+		if(($customBlockItems = \pocketmine\block\custom\CustomBlocks::itemEntries()) !== []){
+			$this->itemTypeDictionary = new ItemTypeDictionary([...$this->itemTypeDictionary->getEntries(), ...$customBlockItems]);
+		}
 		$this->shieldRuntimeId = $this->itemTypeDictionary->fromStringId(ItemTypeNames::SHIELD);
 
 		$this->itemTranslator = new ItemTranslator(

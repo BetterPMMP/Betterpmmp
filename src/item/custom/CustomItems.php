@@ -79,8 +79,8 @@ final class CustomItems{
 		}
 		$config = new Config($file, Config::YAML, ["items" => []]);
 		$entries = $config->get("items", []);
-		if(!is_array($entries) || count($entries) === 0){
-			return;
+		if(!is_array($entries)){
+			$entries = [];
 		}
 
 		$definitions = [];
@@ -108,7 +108,7 @@ final class CustomItems{
 				"food" => is_array($data["food"] ?? null) ? $data["food"] : null,
 			];
 		}
-		if($definitions === []){
+		if($definitions === [] && \pocketmine\block\custom\CustomBlocks::definitions() === [] && \pocketmine\entity\custom\CustomEntities::getTypes() === []){
 			return;
 		}
 		ksort($definitions); //stable type ids no matter in which order the file lists them
@@ -152,7 +152,9 @@ final class CustomItems{
 		}catch(\Throwable $e){
 			$logger->error("[Custom items] The resource pack with the textures could not be built: " . $e->getMessage());
 		}
-		$logger->info("[Custom items] " . count(self::$items) . " custom item(s) loaded");
+		if(self::$items !== []){
+			$logger->info("[Custom items] " . count(self::$items) . " custom item(s) loaded");
+		}
 	}
 
 	/**
@@ -215,6 +217,11 @@ final class CustomItems{
 			$textureData[$key] = ["textures" => "textures/items/" . $key];
 			$lang .= "item." . $identifier . ".name=" . $definition["name"] . "\n";
 		}
+		foreach([...\pocketmine\block\custom\CustomBlocks::packFiles(), ...\pocketmine\entity\custom\CustomEntities::packFiles()] as $name => $data){
+			$files[$name] = $data;
+		}
+		$lang .= ($files["texts/blocks.lang"] ?? "") . ($files["texts/entities.lang"] ?? "");
+		unset($files["texts/blocks.lang"], $files["texts/entities.lang"]);
 		$files["textures/item_texture.json"] = (string) json_encode(["resource_pack_name" => "betterpmmp_custom_items", "texture_name" => "atlas.items", "texture_data" => $textureData], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 		$files["texts/en_US.lang"] = $lang;
 		$files["texts/de_DE.lang"] = $lang;
@@ -227,7 +234,7 @@ final class CustomItems{
 		$version = [1, (int) hexdec(substr($hash, 0, 4)), (int) hexdec(substr($hash, 4, 4))];
 		$files["manifest.json"] = (string) json_encode([
 			"format_version" => 2,
-			"header" => ["name" => "BetterPMMP custom items", "description" => "Textures of the server's custom items", "uuid" => $uuid, "version" => $version, "min_engine_version" => [1, 21, 0]],
+			"header" => ["name" => "BetterPMMP custom content", "description" => "Textures and models of the server's custom items, blocks and entities", "uuid" => $uuid, "version" => $version, "min_engine_version" => [1, 21, 0]],
 			"modules" => [["type" => "resources", "uuid" => $moduleUuid, "version" => $version]],
 		], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 

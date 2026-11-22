@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.78-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.79-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -49,6 +49,14 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel), Lama mit Truhe, Panda-Aussehen je Gen |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.79
+
+| System | Stand |
+|---|---|
+| Eigene Blöcke | 🟡 offline geprüft, im Spiel ungetestet – `custom_blocks.yml` und Texturen in `custom_blocks/` (eine für alle Seiten oder oben/unten/seitlich getrennt), Härte, passendes Werkzeug, Leuchtkraft, Explosionswiderstand. Die Blöcke stehen in jedem Thread im Block-Register (auch beim Senden und Erzeugen von Chunks), werden mit dem Weltformat des Spiels gespeichert, gehen mit `/give`, `/setblock`, `/fill`, stehen im Kreativinventar (Bauen). Der Client bekommt sie in der Blockpalette; ihre Netzwerk-IDs werden so einsortiert wie der Client sortiert (FNV-1a-64 des Namens), alle Vanilla-IDs bleiben in derselben Reihenfolge (geprüft). Ohne Einträge in der Datei ändert sich nichts |
+| Eigene Wesen | 🟡 offline geprüft, im Spiel ungetestet – `custom_entities.yml`, Skin und optional ein Blockbench-Modell (`.geo.json`) in `custom_entities/`, sonst ein Quader in Wesengröße. Friedlich (wandert, flieht) oder feindlich (jagt Spieler, Nahkampf wie ein Zombie), Leben, Tempo, Schaden, Folgereichweite, Größe, EP, Drops, feuerfest. `/summon`, Selektoren `@e[type=…]`, werden mit der Welt gespeichert. Fehlt: Animationen, Spawn-Eier, natürliches Spawnen |
+| Ein Resource-Pack für alles | eigene Items, Blöcke und Wesen landen zusammen in `betterpmmp_custom_items.mcpack` |
 
 ## Neu in 5.78
 

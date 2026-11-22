@@ -208,7 +208,7 @@ final class TargetSelector{
 		}
 		if(isset($args["type"])){
 			[$negate, $type] = self::negation($args["type"]);
-			$id = $entity instanceof Player ? "minecraft:player" : $entity::getNetworkTypeId();
+			$id = $entity instanceof Player ? "minecraft:player" : (method_exists($entity, "getIdentifier") ? $entity->getIdentifier() : $entity::getNetworkTypeId());
 			$wanted = str_contains($type, ":") ? strtolower($type) : "minecraft:" . strtolower($type);
 			if(($id === $wanted) === $negate){
 				return false;

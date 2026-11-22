@@ -66,6 +66,7 @@ final class StringToItemParser extends StringToTParser{
 				$result->registerBlock($alias, fn() => clone $block);
 			}
 		}
+		\pocketmine\block\custom\CustomBlocks::registerAliases($result); //BetterPMMP: custom_blocks.yml
 		self::registerDynamicItems($result);
 		self::registerItems($result);
 		//BetterPMMP: palette items without a dedicated core class (elytra, shield, saddle, ...)
