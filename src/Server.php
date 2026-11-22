@@ -1022,6 +1022,7 @@ class Server{
 			$this->craftingManager = CraftingManagerFromDataHelper::make(BedrockDataFiles::RECIPES);
 
 			$this->resourceManager = new ResourcePackManager(Path::join($this->dataPath, "resource_packs"), $this->logger);
+			\pocketmine\item\custom\CustomItems::load($this->dataPath, $this->resourceManager, $this->logger); //BetterPMMP: custom_items.yml
 
 			$pluginGraylist = null;
 			$graylistFile = Path::join($this->dataPath, "plugin_list.yml");

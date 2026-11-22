@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.76-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.77-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -49,6 +49,13 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel), Lama mit Truhe, Panda-Aussehen je Gen |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.77
+
+| System | Stand |
+|---|---|
+| Eigene Items | 🟡 offline geprüft, im Spiel ungetestet – `custom_items.yml` (wird beim ersten Start mit Beispiel angelegt) und Texturen als PNG in `custom_items/`. Jedes Item bekommt eine eigene ID, steht im Kreativinventar, geht mit `/give`, wird gespeichert; Einstellungen: Name, Textur, Stapelgröße, wie ein Werkzeug gehalten, Verzauberungsglanz, essbar (Nährwert, Sättigung, immer essbar). Die Texturen gehen als automatisch gebautes Resource-Pack (`betterpmmp_custom_items.mcpack`) an die Bedrock-Spieler; ID und Version ändern sich nur, wenn sich etwas ändert. Für Java-Spieler übersetzt ViaBedrock eigene Items nicht sicher |
+| Eigene Blöcke | ❌ noch nicht – sie ändern die Blockliste, die jeder Chunk und jeder Generator-Thread benutzt; ein Fehler trennt alle Spieler oder beschädigt Welten. Kommt nach einem Testlauf mit eigenen Items |
 
 ## Neu in 5.76
 
