@@ -2780,6 +2780,14 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		$this->setDeathPosition($this->getPosition());
 
 		$ev = new PlayerDeathEvent($this, $this->getDrops(), $this->getXpDropAmount(), null);
+		//BetterPMMP: game rules keepInventory and showDeathMessages
+		if(\pocketmine\world\GameRules::bool($this->getWorld(), "keepinventory")){
+			$ev->setKeepInventory(true);
+			$ev->setKeepXp(true);
+		}
+		if(!\pocketmine\world\GameRules::bool($this->getWorld(), "showdeathmessages")){
+			$ev->setDeathMessage("");
+		}
 		$ev->call();
 
 		if(!$ev->getKeepInventory()){

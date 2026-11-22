@@ -590,7 +590,7 @@ class Villager extends Mob implements Ageable, \pocketmine\entity\trade\Trader{
 	/** Work at the job site; farmers harvest and replant crops. */
 	private function tickWork(bool $scan, int $tickDiff) : void{
 		$navigator = $this->getNavigator();
-		if($this->profession === VillagerTrades::FARMER && $this->harvestTarget === null && $scan){
+		if($this->profession === VillagerTrades::FARMER && $this->harvestTarget === null && $scan && \pocketmine\world\GameRules::bool($this->getWorld(), "mobgriefing")){
 			$this->harvestTarget = $this->findBlocksNear(9, 2, "crop", 1)[0] ?? null;
 		}
 		if($this->harvestTarget !== null){

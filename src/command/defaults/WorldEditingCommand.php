@@ -30,6 +30,9 @@ abstract class WorldEditingCommand extends VanillaCommand{
 
 	/** Where the command runs: the sender's position, or the default world's spawn for the console. */
 	protected function senderPosition(CommandSender $sender) : Position{
+		if($sender instanceof \pocketmine\command\utils\ExecuteContext && $sender->position->isValid()){
+			return $sender->position;
+		}
 		if($sender instanceof Entity){
 			return $sender->getPosition();
 		}
@@ -53,9 +56,15 @@ abstract class WorldEditingCommand extends VanillaCommand{
 			$left = self::number(substr($values[0], 1));
 			$up = self::number(substr($values[1], 1));
 			$forward = self::number(substr($values[2], 1));
-			$yaw = $sender instanceof Entity ? deg2rad($sender->getLocation()->getYaw()) : 0.0;
-			$pitch = $sender instanceof Entity ? deg2rad($sender->getLocation()->getPitch()) : 0.0;
-			$eye = $sender instanceof Entity ? $sender->getEyeHeight() : 0.0;
+			if($sender instanceof \pocketmine\command\utils\ExecuteContext){
+				$yaw = deg2rad($sender->yaw);
+				$pitch = deg2rad($sender->pitch);
+				$eye = 0.0; //execute positions are at the feet ("anchored eyes" is not supported)
+			}else{
+				$yaw = $sender instanceof Entity ? deg2rad($sender->getLocation()->getYaw()) : 0.0;
+				$pitch = $sender instanceof Entity ? deg2rad($sender->getLocation()->getPitch()) : 0.0;
+				$eye = $sender instanceof Entity ? $sender->getEyeHeight() : 0.0;
+			}
 			//forward vector like the client: yaw 0 = south (+z)
 			$fx = -sin($yaw) * cos($pitch);
 			$fy = -sin($pitch);

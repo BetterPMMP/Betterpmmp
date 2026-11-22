@@ -53,6 +53,10 @@ final class DefaultPermissionNames{
 	public const COMMAND_OP_TAKE = "pocketmine.command.op.take";
 	public const COMMAND_PARTICLE = "pocketmine.command.particle";
 	public const COMMAND_SETBLOCK = "pocketmine.command.setblock";
+	public const COMMAND_GAMERULE = "pocketmine.command.gamerule";
+	public const COMMAND_CLONE = "pocketmine.command.clone";
+	public const COMMAND_SCOREBOARD = "pocketmine.command.scoreboard";
+	public const COMMAND_EXECUTE = "pocketmine.command.execute";
 	public const COMMAND_FILL = "pocketmine.command.fill";
 	public const COMMAND_SUMMON = "pocketmine.command.summon";
 	public const COMMAND_TELLRAW = "pocketmine.command.tellraw";

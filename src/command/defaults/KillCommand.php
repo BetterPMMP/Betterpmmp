@@ -48,6 +48,31 @@ class KillCommand extends VanillaCommand{
 			throw new InvalidCommandSyntaxException();
 		}
 
+		//BetterPMMP: selectors such as @e[type=zombie,r=20] kill every matching entity, like vanilla
+		if(isset($args[0]) && \pocketmine\command\utils\TargetSelector::isSelector($args[0]) && $args[0] !== "@s"){
+			if(!$this->testPermission($sender, DefaultPermissionNames::COMMAND_KILL_OTHER)){
+				return true;
+			}
+			$killed = [];
+			foreach(\pocketmine\command\utils\TargetSelector::select($sender, $args[0]) as $entity){
+				if($entity instanceof \pocketmine\entity\Living){
+					if(!$entity->isAlive()){
+						continue;
+					}
+					$entity->attack(new EntityDamageEvent($entity, EntityDamageEvent::CAUSE_SUICIDE, $entity->getHealth()));
+				}else{
+					$entity->flagForDespawn();
+				}
+				$killed[] = $entity instanceof \pocketmine\player\Player ? $entity->getName() : ($entity->getNameTag() !== "" ? $entity->getNameTag() : ($entity instanceof \pocketmine\entity\Living ? $entity->getName() : $entity::getNetworkTypeId()));
+			}
+			if($killed === []){
+				$sender->sendMessage(\pocketmine\utils\TextFormat::RED . "No targets matched selector");
+				return true;
+			}
+			Command::broadcastCommandMessage($sender, count($killed) === 1 ? KnownTranslationFactory::commands_kill_successful($killed[0]) : "Killed " . count($killed) . " entities");
+			return true;
+		}
+
 		$player = $this->fetchPermittedPlayerTarget($sender, $args[0] ?? null, DefaultPermissionNames::COMMAND_KILL_SELF, DefaultPermissionNames::COMMAND_KILL_OTHER);
 		if($player === null){
 			return true;

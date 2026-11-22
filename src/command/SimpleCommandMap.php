@@ -141,6 +141,10 @@ class SimpleCommandMap implements CommandMap{
 			new WhitelistCommand(),
 			new XpCommand(),
 			new \pocketmine\command\defaults\SetblockCommand(),
+			new \pocketmine\command\defaults\GameruleCommand(),
+			new \pocketmine\command\defaults\CloneCommand(),
+			new \pocketmine\command\defaults\ScoreboardCommand(),
+			new \pocketmine\command\defaults\ExecuteCommand(),
 			new \pocketmine\command\defaults\FillCommand(),
 			new \pocketmine\command\defaults\SummonCommand(),
 			new \pocketmine\command\defaults\TellrawCommand(),
@@ -215,8 +219,74 @@ class SimpleCommandMap implements CommandMap{
 		return true;
 	}
 
+	/**
+	 * BetterPMMP: like vanilla, a selector that matches several players (@a, @e, @r[c=3] ...) runs the command
+	 * once for every player - for all commands, plugin commands included. Commands that understand selectors
+	 * themselves (they can also target mobs) get the selector as it is.
+	 * @param string[] $args
+	 */
+	private function executeWithSelectors(CommandSender $sender, Command $command, string $label, array $args) : void{
+		static $selectorAware = ["kill", "tellraw", "playsound", "say", "me", "summon", "gamerule", "setblock", "fill", "clone", "execute", "scoreboard"];
+		$index = null;
+		foreach($args as $i => $arg){
+			if(\pocketmine\command\utils\TargetSelector::isSelector($arg) && strtolower($arg) !== "@s"){
+				$index = $i;
+				break;
+			}
+		}
+		if($index === null || in_array($command->getLabel(), $selectorAware, true)){
+			$command->execute($sender, $label, $args);
+			return;
+		}
+		$players = \pocketmine\command\utils\TargetSelector::selectPlayers($sender, $args[$index]);
+		if($players === []){
+			$sender->sendMessage(TextFormat::RED . "No targets matched selector");
+			return;
+		}
+		if(count($players) === 1 && $command instanceof \pocketmine\command\defaults\VanillaCommand){
+			$args[$index] = $players[0]->getName(); //exact player, not a name prefix
+			$command->execute($sender, $label, $args);
+			return;
+		}
+		foreach($players as $player){
+			$args[$index] = $player->getName();
+			$command->execute($sender, $label, $args);
+		}
+	}
+
+	/** BetterPMMP: the command line of the running command after its label, unchanged (JSON, "run ..." of /execute) */
+	private static ?string $rawArguments = null;
+
+	/**
+	 * The raw text of the running command after its first $skip arguments (null outside of a command).
+	 * Lets commands read JSON or a nested command exactly as typed instead of split into words.
+	 */
+	public static function rawArgumentsAfter(int $skip) : ?string{
+		if(self::$rawArguments === null){
+			return null;
+		}
+		if(preg_match_all('/"((?:\\\\.|[^\\\\"])*)"|(\S+)/u', self::$rawArguments, $matches, PREG_OFFSET_CAPTURE) === false){
+			return null;
+		}
+		if($skip >= count($matches[0])){
+			return "";
+		}
+		return substr(self::$rawArguments, $matches[0][$skip][1]);
+	}
+
 	public function dispatch(CommandSender $sender, string $commandLine) : bool{
 		$args = CommandStringHelper::parseQuoteAware($commandLine);
+		$previousRaw = self::$rawArguments;
+		self::$rawArguments = preg_match('/^\s*\S+\s*(.*)$/su', $commandLine, $rawMatch) === 1 ? $rawMatch[1] : "";
+		try{
+			return $this->dispatchParsed($sender, $args);
+		}finally{
+			self::$rawArguments = $previousRaw;
+		}
+	}
+
+	/** @param string[] $args */
+	private function dispatchParsed(CommandSender $sender, array $args) : bool{
 
 		$sentCommandLabel = array_shift($args);
 		if($sentCommandLabel !== null && ($target = $this->getCommand($sentCommandLabel)) !== null){
@@ -225,7 +295,7 @@ class SimpleCommandMap implements CommandMap{
 
 			try{
 				if($target->testPermission($sender)){
-					$target->execute($sender, $sentCommandLabel, $args);
+					$this->executeWithSelectors($sender, $target, $sentCommandLabel, $args);
 				}
 			}catch(InvalidCommandSyntaxException $e){
 				$sender->sendMessage($sender->getLanguage()->translate(KnownTranslationFactory::commands_generic_usage($target->getUsage())));

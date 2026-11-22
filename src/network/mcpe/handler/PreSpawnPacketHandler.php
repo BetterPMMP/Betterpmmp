@@ -91,10 +91,8 @@ class PreSpawnPacketHandler extends PacketHandler{
 			$levelSettings->rainLevel = 0; //TODO: implement these properly
 			$levelSettings->lightningLevel = 0;
 			$levelSettings->commandsEnabled = true;
-			$levelSettings->gameRules = [
-				"naturalregeneration" => new BoolGameRule(false, false), //Hack for client side regeneration
-				"locatorbar" => new BoolGameRule(false, false) //Disable client-side tracking of nearby players
-			];
+			//BetterPMMP: the world's game rules (natural regeneration and the locator bar stay off on the client)
+			$levelSettings->gameRules = \pocketmine\world\GameRules::network($world);
 			$levelSettings->experiments = new Experiments([], false);
 
 			$this->session->sendDataPacket(StartGamePacket::create(

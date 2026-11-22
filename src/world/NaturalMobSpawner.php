@@ -76,7 +76,8 @@ final class NaturalMobSpawner{
 	private array $nextPatrolTick = [];
 
 	public function tick(World $world) : void{
-		if(!\pocketmine\BetterPMMPConfig::mobSpawningEnabled($world)){
+		//BetterPMMP: game rule doMobSpawning
+		if(!\pocketmine\BetterPMMPConfig::mobSpawningEnabled($world) || !\pocketmine\world\GameRules::bool($world, "domobspawning")){
 			return;
 		}
 		$eligiblePlayers = [];

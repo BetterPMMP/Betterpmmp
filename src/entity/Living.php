@@ -554,6 +554,25 @@ abstract class Living extends Entity{
 	}
 
 	public function attack(EntityDamageEvent $source) : void{
+		//BetterPMMP: game rules fallDamage, fireDamage, drowningDamage, freezeDamage and pvp
+		if($this instanceof \pocketmine\player\Player){
+			$world = $this->getWorld();
+			$rule = match($source->getCause()){
+				EntityDamageEvent::CAUSE_FALL => "falldamage",
+				EntityDamageEvent::CAUSE_FIRE, EntityDamageEvent::CAUSE_FIRE_TICK, EntityDamageEvent::CAUSE_LAVA => "firedamage",
+				EntityDamageEvent::CAUSE_DROWNING => "drowningdamage",
+				default => null,
+			};
+			if($rule !== null && !\pocketmine\world\GameRules::bool($world, $rule)){
+				$source->cancel();
+			}
+			if($source instanceof EntityDamageByEntityEvent && !\pocketmine\world\GameRules::bool($world, "pvp")){
+				$damager = $source->getDamager();
+				if($damager instanceof \pocketmine\player\Player || ($damager instanceof \pocketmine\entity\projectile\Projectile && $damager->getOwningEntity() instanceof \pocketmine\player\Player)){
+					$source->cancel();
+				}
+			}
+		}
 		//BetterPMMP: getting hit vibrates (sculk sensors)
 		if($this->isAlive() && !$source->isCancelled() && $source instanceof EntityDamageByEntityEvent){
 			\pocketmine\world\SculkVibrations::emit($this->getWorld(), $this->location);
@@ -683,7 +702,9 @@ abstract class Living extends Entity{
 
 	protected function onDeath() : void{
 		$this->applyDeathEffects();
-		$ev = new EntityDeathEvent($this, $this->applyLooting($this->getDrops()), $this->getXpDropAmount());
+		//BetterPMMP: game rule doMobLoot
+		$loot = $this instanceof Human || \pocketmine\world\GameRules::bool($this->getWorld(), "domobloot");
+		$ev = new EntityDeathEvent($this, $loot ? $this->applyLooting($this->getDrops()) : [], $loot ? $this->getXpDropAmount() : 0);
 		$ev->call();
 		foreach($ev->getDrops() as $item){
 			$this->getWorld()->dropItem($this->location, $item);

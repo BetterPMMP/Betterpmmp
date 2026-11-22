@@ -56,7 +56,8 @@ final class TargetSelector{
 		$origin = self::origin($sender, $server);
 
 		if($kind === "s"){
-			$candidates = $sender instanceof Entity ? [$sender] : [];
+			$self = $sender instanceof ExecuteContext ? $sender->executor : $sender;
+			$candidates = $self instanceof Entity && !$self->isClosed() ? [$self] : [];
 		}elseif($kind === "e" || $kind === "n"){
 			$candidates = [];
 			foreach($origin === null ? $server->getWorldManager()->getWorlds() : [$origin->getWorld()] as $world){
@@ -123,6 +124,9 @@ final class TargetSelector{
 	}
 
 	private static function origin(CommandSender $sender, Server $server) : ?Position{
+		if($sender instanceof ExecuteContext){
+			return $sender->position->isValid() ? $sender->position : null;
+		}
 		if($sender instanceof Entity){
 			return $sender->getPosition();
 		}

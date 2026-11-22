@@ -97,6 +97,11 @@ class Explosion{
 		if($this->radius < 0.1){
 			return false;
 		}
+		//BetterPMMP: game rule mobGriefing - creepers, ghast fireballs, withers ... do not break blocks
+		$cause = $this->what instanceof \pocketmine\entity\projectile\Projectile ? $this->what->getOwningEntity() : $this->what;
+		if($cause instanceof \pocketmine\entity\Living && !$cause instanceof \pocketmine\entity\Human && !GameRules::bool($this->world, "mobgriefing")){
+			return false;
+		}
 
 		$blockFactory = RuntimeBlockStateRegistry::getInstance();
 

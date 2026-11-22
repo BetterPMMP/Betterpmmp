@@ -119,6 +119,11 @@ final class Weather{
 		if(!$this->hasWeather()){
 			return;
 		}
+		//BetterPMMP: game rule doWeatherCycle - the weather stays as it is (lightning and snow still happen)
+		if(!\pocketmine\world\GameRules::bool($this->world, "doweathercycle")){
+			$this->tickChunks();
+			return;
+		}
 		$wasRaining = $this->raining;
 		$wasThundering = $this->thundering;
 		if(--$this->thunderTime <= 0){

@@ -32,6 +32,9 @@ trait BreaksDoors{
 
 	protected function tickDoorBreaking(int $tickDiff) : void{
 		$world = $this->getWorld();
+		if(!\pocketmine\world\GameRules::bool($world, "mobgriefing")){
+			return; //BetterPMMP: game rule mobGriefing
+		}
 		$hard = $world->getDifficulty() === World::DIFFICULTY_HARD;
 		$this->getNavigator()->setCanBreakDoors($hard && !$this->isBabyMob());
 		$door = $hard && !$this->isBabyMob() && $this->isCollidedHorizontally ? $this->doorInFront() : null;

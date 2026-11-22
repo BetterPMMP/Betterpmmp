@@ -606,6 +606,7 @@ class World implements ChunkManager{
 		$this->initRandomTickBlocksFromConfig($cfg);
 
 		$this->timings = new WorldTimings($this);
+		GameRules::apply($this); //BetterPMMP: e.g. doDaylightCycle false keeps the time standing
 	}
 
 	private function initRandomTickBlocksFromConfig(ServerConfigGroup $cfg) : void{
@@ -673,6 +674,7 @@ class World implements ChunkManager{
 	 * @internal
 	 */
 	public function onUnload() : void{
+		GameRules::forget($this);
 		\pocketmine\block\utils\RedstonePower::forgetWorld($this);
 		if($this->unloaded){
 			throw new \LogicException("Tried to close a world which is already closed");
@@ -1174,13 +1176,20 @@ class World implements ChunkManager{
 			return;
 		}
 
-		$resetTime = true;
+		//BetterPMMP: game rule playersSleepingPercentage (spectators do not count)
+		$sleeping = 0;
+		$counted = 0;
 		foreach($this->getPlayers() as $p){
-			if(!$p->isSleeping()){
-				$resetTime = false;
-				break;
+			if($p->isSpectator()){
+				continue;
+			}
+			++$counted;
+			if($p->isSleeping()){
+				++$sleeping;
 			}
 		}
+		$needed = max(1, (int) ceil($counted * min(100, GameRules::int($this, "playerssleepingpercentage")) / 100));
+		$resetTime = $counted > 0 && $sleeping >= $needed;
 
 		if($resetTime){
 			$time = $this->getTimeOfDay();
@@ -1193,7 +1202,9 @@ class World implements ChunkManager{
 				$this->getWeather()->clearAfterSleep();
 
 				foreach($this->getPlayers() as $p){
-					PhantomSpawner::rested($p); //BetterPMMP: sleeping keeps phantoms away
+					if($p->isSleeping()){
+						PhantomSpawner::rested($p); //BetterPMMP: sleeping keeps phantoms away
+					}
 					$p->stopSleep();
 				}
 			}
@@ -1515,7 +1526,8 @@ class World implements ChunkManager{
 		foreach($chunk->getSubChunks() as $Y => $subChunk){
 			if(!$subChunk->isEmptyFast()){
 				$k = 0;
-				for($i = 0; $i < $this->tickedBlocksPerSubchunkPerTick; ++$i){
+				//BetterPMMP: game rule randomTickSpeed (Bedrock default 1 = the configured number of blocks)
+				for($i = 0, $ticked = $this->tickedBlocksPerSubchunkPerTick * GameRules::int($this, "randomtickspeed"); $i < $ticked; ++$i){
 					if(($i % 5) === 0){
 						//60 bits will be used by 5 blocks (12 bits each)
 						$k = mt_rand(0, (1 << 60) - 1);
@@ -2479,7 +2491,8 @@ class World implements ChunkManager{
 		}
 
 		$drops = [];
-		if($player === null || $player->hasFiniteResources()){
+		//BetterPMMP: game rule doTileDrops
+		if(($player === null || $player->hasFiniteResources()) && GameRules::bool($this, "dotiledrops")){
 			$drops = array_merge(...array_map(fn(Block $block) => $block->getDrops($item), $affectedBlocks));
 		}
 

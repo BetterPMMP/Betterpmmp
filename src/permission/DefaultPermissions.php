@@ -74,6 +74,10 @@ abstract class DefaultPermissions{
 		$everyoneRoot = self::registerNoArgsDesc(self::ROOT_USER, [$operatorRoot]);
 		//BetterPMMP: permissions without a core translation key get a plain description
 		self::registerPermission(new Permission(Names::COMMAND_WEATHER, "Allows the user to change the weather"), [$operatorRoot]);
+		self::registerPermission(new Permission(Names::COMMAND_CLONE, "Allows the user to clone blocks"), [$operatorRoot]);
+		self::registerPermission(new Permission(Names::COMMAND_SCOREBOARD, "Allows the user to change the scoreboard"), [$operatorRoot]);
+		self::registerPermission(new Permission(Names::COMMAND_EXECUTE, "Allows the user to run commands as other entities"), [$operatorRoot]);
+		self::registerPermission(new Permission(Names::COMMAND_GAMERULE, "Allows the user to change game rules"), [$operatorRoot]);
 		self::registerPermission(new Permission(Names::COMMAND_SETBLOCK, "Allows the user to change a block"), [$operatorRoot]);
 		self::registerPermission(new Permission(Names::COMMAND_FILL, "Allows the user to fill an area with blocks"), [$operatorRoot]);
 		self::registerPermission(new Permission(Names::COMMAND_SUMMON, "Allows the user to summon entities"), [$operatorRoot]);

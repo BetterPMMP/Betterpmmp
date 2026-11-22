@@ -1559,7 +1559,7 @@ class EndermanMob extends GenericHostileMob{
 		}
 		// chasing: teleport towards a target that is far away or out of reach
 		$target = $this->getCombatTarget();
-		if($target === null){
+		if($target === null && \pocketmine\world\GameRules::bool($this->getWorld(), "mobgriefing")){
 			for($i = 0; $i < $tickDiff; ++$i){
 				if($this->carriedBlock === null){
 					if(mt_rand(0, 19) === 0){
@@ -2806,7 +2806,7 @@ class SnowGolemMob extends GenericAnimalMob{
 		$this->throwCooldown = max(0, $this->throwCooldown - $tickDiff);
 		$pos = $this->getPosition();
 		$world = $this->getWorld();
-		if($this->ticksLived % 10 === 0){
+		if($this->ticksLived % 10 === 0 && \pocketmine\world\GameRules::bool($world, "mobgriefing")){
 			[$temperature] = \pocketmine\world\weather\Weather::biomeClimate($world->getBiomeId($pos->getFloorX(), $pos->getFloorY(), $pos->getFloorZ()));
 			if($temperature < 0.8 && $world->getBlockAt($pos->getFloorX(), $pos->getFloorY(), $pos->getFloorZ())->getTypeId() === \pocketmine\block\BlockTypeIds::AIR && $world->getBlockAt($pos->getFloorX(), $pos->getFloorY() - 1, $pos->getFloorZ())->isFullCube()){
 				$world->setBlockAt($pos->getFloorX(), $pos->getFloorY(), $pos->getFloorZ(), VanillaBlocks::SNOW_LAYER());

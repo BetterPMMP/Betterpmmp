@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.73-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.74-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -49,6 +49,17 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel), Lama mit Truhe, Panda-Aussehen je Gen |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.74
+
+| System | Stand |
+|---|---|
+| `/gamerule` | 🟡 ungetestet – alle 38 Bedrock-Regeln, gespeichert in `level.dat` unter denselben Namen wie beim offiziellen Server, je Welt. **Mit Wirkung:** keepInventory, showDeathMessages, doMobLoot, doTileDrops, fallDamage, fireDamage, drowningDamage, freezeDamage, pvp, naturalRegeneration, doDaylightCycle, doWeatherCycle, doMobSpawning, doInsomnia, doFireTick, tntExplodes, mobGriefing (Creeper/Ghast/Wither-Explosionen, Endermen, Zombies an Türen, Schneegolems, Dorfbauern), randomTickSpeed, playersSleepingPercentage, sendCommandFeedback; showCoordinates, doImmediateRespawn, showDaysPlayed, recipesUnlock, showTags u. a. werden an den Client geschickt. **Nur gespeichert:** commandBlockOutput, commandBlocksEnabled, doEntityDrops, doLimitedCrafting, functionCommandLimit, maxCommandChainLength, projectilesCanBreakBlocks, respawnBlocksExplode, spawnRadius, tntExplosionDropDecay, showBorderEffect, showRecipeMessages |
+| Mehrere Ziele | 🟡 ungetestet – Ein Selektor mit mehreren Spielern (`@a`, `@a[r=10]` …) führt jeden Befehl einmal pro Spieler aus, auch Befehle von Plugins. `/kill @e[type=zombie]` tötet Mobs, Gegenstände und andere Wesen |
+| `/clone` | 🟡 ungetestet – `replace`/`masked`, `normal`/`force`/`move`, kopiert Truheninhalte, Schilder usw., Vanilla-Limit 32768 |
+| `/scoreboard` | 🟡 ungetestet – `objectives add/remove/list/setdisplay` (sidebar, list, belowname, auf-/absteigend), `players list/set/add/remove/reset/random/test/operation` (`+= -= *= /= %= = < > ><`), Selektoren und freie Namen; gespeichert in `betterpmmp_scoreboard.json`; `/tellraw` kann Punkte anzeigen (`{"score":{"name":"@p","objective":"kills"}}`) |
+| `/execute` | 🟡 ungetestet – `as`, `at`, `positioned [as]`, `rotated [as]`, `facing [entity]`, `align`, `anchored`, `in`, `if/unless entity|block|score` (`matches 1..5`, Vergleiche), `run`; `@s` ist das ausführende Wesen, `~`/`^` beginnen an der neuen Position |
+| `/tellraw` mit Leerzeichen | 🟡 ungetestet – das JSON wird so gelesen, wie es eingegeben wurde |
 
 ## Neu in 5.73
 

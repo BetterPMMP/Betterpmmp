@@ -39,7 +39,11 @@ final class TellrawCommand extends VanillaCommand{
 		if(count($args) < 2){
 			throw new InvalidCommandSyntaxException();
 		}
-		$data = json_decode(implode(" ", array_slice($args, 1)), true);
+		//the JSON exactly as typed (splitting into words would break text with spaces)
+		$data = json_decode(\pocketmine\command\SimpleCommandMap::rawArgumentsAfter(1) ?? implode(" ", array_slice($args, 1)), true);
+		if(!is_array($data)){
+			$data = json_decode(implode(" ", array_slice($args, 1)), true);
+		}
 		if(!is_array($data)){
 			$sender->sendMessage("§cInvalid JSON message");
 			return true;
@@ -76,6 +80,19 @@ final class TellrawCommand extends VanillaCommand{
 				$names[] = $entity instanceof Player ? $entity->getDisplayName() : ($entity->getNameTag() !== "" ? $entity->getNameTag() : $entity->getName());
 			}
 			return implode(", ", $names);
+		}
+		if(isset($part["score"]) && is_array($part["score"]) && is_string($part["score"]["objective"] ?? null)){
+			//{"score":{"name":"@p","objective":"kills"}} ("*" = the player reading it)
+			$name = is_string($part["score"]["name"] ?? null) ? $part["score"]["name"] : "*";
+			$names = $name === "*" ? [$viewer->getName()] : (TargetSelector::isSelector($name) ? array_map(fn($e) => \pocketmine\command\defaults\ScoreboardCommand::scoreName($e), TargetSelector::select($sender, $name)) : [$name]);
+			$values = [];
+			foreach($names as $participant){
+				$score = \pocketmine\scoreboard\Scoreboard::get()->getScore($part["score"]["objective"], $participant);
+				if($score !== null){
+					$values[] = (string) $score;
+				}
+			}
+			return implode(", ", $values);
 		}
 		if(isset($part["translate"]) && is_string($part["translate"])){
 			$with = [];

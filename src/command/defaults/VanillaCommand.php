@@ -53,6 +53,9 @@ abstract class VanillaCommand extends Command{
 			}
 		}elseif($sender instanceof Player){
 			$player = $sender;
+		}elseif($sender instanceof \pocketmine\command\utils\ExecuteContext && $sender->executor instanceof Player){
+			//BetterPMMP: "/execute as <player> run <command>" - the executor is the target, the permission is the runner's
+			$player = $sender->executor;
 		}else{
 			throw new InvalidCommandSyntaxException();
 		}
