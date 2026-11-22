@@ -62,6 +62,9 @@ class TeleportCommand extends VanillaCommand{
 	}
 
 	public function execute(CommandSender $sender, string $commandLabel, array $args){
+		if(($handled = $this->teleportEntities($sender, $args)) !== null){
+			return $handled;
+		}
 		switch(count($args)){
 			case 1: // /tp targetPlayer
 			case 3: // /tp x y z
@@ -120,5 +123,80 @@ class TeleportCommand extends VanillaCommand{
 			default:
 				throw new AssumptionFailedError("This branch should be unreachable (for now)");
 		}
+	}
+
+	/**
+	 * BetterPMMP: /tp with selectors for any entity (/tp @e[type=cow] @p, /tp @a ~ ~10 ~) and inside
+	 * /execute (/execute as @e run tp @s ~ ~1 ~). Null when the plain player form below applies.
+	 * @param string[] $args
+	 */
+	private function teleportEntities(CommandSender $sender, array $args) : ?bool{
+		$count = count($args);
+		$context = $sender instanceof \pocketmine\command\utils\ExecuteContext ? $sender : null;
+		$hasSelector = false;
+		foreach($args as $arg){
+			if(\pocketmine\command\utils\TargetSelector::isSelector($arg)){
+				$hasSelector = true;
+			}
+		}
+		if(!$hasSelector && $context === null){
+			return null;
+		}
+		if($count === 2 || $count === 4 || $count === 6){
+			$subjects = \pocketmine\command\utils\TargetSelector::select($sender, $args[0]);
+			$rest = array_slice($args, 1);
+		}elseif($count === 1 || $count === 3 || $count === 5){
+			$self = $context !== null ? $context->executor : ($sender instanceof \pocketmine\entity\Entity ? $sender : null);
+			if($self === null){
+				throw new InvalidCommandSyntaxException();
+			}
+			$subjects = [$self];
+			$rest = $args;
+		}else{
+			throw new InvalidCommandSyntaxException();
+		}
+		if($subjects === []){
+			$sender->sendMessage(\pocketmine\utils\TextFormat::RED . "No targets matched selector");
+			return true;
+		}
+		$others = false;
+		foreach($subjects as $subject){
+			if($subject !== $sender && !($context !== null && $subject === $context->executor && $context->origin === $subject)){
+				$others = true;
+			}
+		}
+		if(!$this->testPermission($sender, $others ? DefaultPermissionNames::COMMAND_TELEPORT_OTHER : DefaultPermissionNames::COMMAND_TELEPORT_SELF)){
+			return true;
+		}
+		if(count($rest) === 1){
+			$destination = \pocketmine\command\utils\TargetSelector::select($sender, $rest[0])[0] ?? null;
+			if($destination === null){
+				$sender->sendMessage(\pocketmine\utils\TextFormat::RED . "No targets matched selector");
+				return true;
+			}
+			foreach($subjects as $subject){
+				$subject->teleport($destination->getLocation());
+			}
+			$name = $destination instanceof \pocketmine\player\Player ? $destination->getName() : ($destination->getNameTag() !== "" ? $destination->getNameTag() : $destination::getNetworkTypeId());
+			Command::broadcastCommandMessage($sender, "Teleported " . count($subjects) . " entities to " . $name);
+			return true;
+		}
+		foreach($subjects as $subject){
+			//~ starts at the execute position (inside /execute), otherwise at the entity itself
+			$base = $context !== null ? $context->position : $subject->getLocation();
+			$location = $subject->getLocation();
+			$yaw = count($rest) === 5 ? (float) $rest[3] : $location->yaw;
+			$pitch = count($rest) === 5 ? (float) $rest[4] : $location->pitch;
+			$subject->teleport(new Location(
+				$this->getRelativeDouble($base->x, $sender, $rest[0]),
+				$this->getRelativeDouble($base->y, $sender, $rest[1], World::Y_MIN, World::Y_MAX),
+				$this->getRelativeDouble($base->z, $sender, $rest[2]),
+				$base->getWorld(),
+				$yaw,
+				$pitch
+			));
+		}
+		Command::broadcastCommandMessage($sender, "Teleported " . count($subjects) . " entities");
+		return true;
 	}
 }

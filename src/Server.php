@@ -1932,6 +1932,8 @@ class Server{
 		if($this->tickCounter % 200 === 0){
 			\pocketmine\network\JavaBridge::watchdog($this);
 		}
+		\pocketmine\command\defaults\ScheduleCommand::tick($this);
+		\pocketmine\command\defaults\TickingareaCommand::tick($this);
 
 		Timings::$scheduler->startTiming();
 		$this->pluginManager->tickSchedulers($this->tickCounter);

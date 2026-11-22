@@ -145,6 +145,14 @@ class SimpleCommandMap implements CommandMap{
 			new \pocketmine\command\defaults\CloneCommand(),
 			new \pocketmine\command\defaults\ScoreboardCommand(),
 			new \pocketmine\command\defaults\ExecuteCommand(),
+			new \pocketmine\command\defaults\SpreadplayersCommand(),
+			new \pocketmine\command\defaults\RideCommand(),
+			new \pocketmine\command\defaults\FogCommand(),
+			new \pocketmine\command\defaults\HudCommand(),
+			new \pocketmine\command\defaults\CameraCommand(),
+			new \pocketmine\command\defaults\ScheduleCommand(),
+			new \pocketmine\command\defaults\TickingareaCommand(),
+			new \pocketmine\command\defaults\StructureCommand(),
 			new \pocketmine\command\defaults\TagCommand(),
 			new \pocketmine\command\defaults\FunctionCommand(),
 			new \pocketmine\command\defaults\DaylockCommand(),
@@ -232,7 +240,7 @@ class SimpleCommandMap implements CommandMap{
 	 * @param string[] $args
 	 */
 	private function executeWithSelectors(CommandSender $sender, Command $command, string $label, array $args) : void{
-		static $selectorAware = ["kill", "tellraw", "playsound", "say", "me", "summon", "gamerule", "setblock", "fill", "clone", "execute", "scoreboard", "tag", "function", "stopsound", "damage"];
+		static $selectorAware = ["kill", "tellraw", "playsound", "say", "me", "summon", "gamerule", "setblock", "fill", "clone", "execute", "scoreboard", "tag", "function", "stopsound", "damage", "tp", "effect", "spreadplayers", "ride", "fog", "hud", "camera", "schedule", "tickingarea", "structure"];
 		$index = null;
 		foreach($args as $i => $arg){
 			if(\pocketmine\command\utils\TargetSelector::isSelector($arg) && strtolower($arg) !== "@s"){

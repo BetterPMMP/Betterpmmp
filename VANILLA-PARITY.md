@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.75-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.76-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -49,6 +49,20 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel), Lama mit Truhe, Panda-Aussehen je Gen |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.76
+
+| System | Stand |
+|---|---|
+| `/effect` und `/tp` für Mobs | 🟡 ungetestet – `/effect @e[type=zombie] slowness 10`, `/tp @e[type=cow] @p`, `/tp @a ~ ~10 ~`; in `/execute` gilt `~` ab der Execute-Position |
+| `/spreadplayers` | 🟡 ungetestet – zufällige sichere Plätze (nicht in Wasser/Lava) mit Mindestabstand |
+| `/ride` | 🟡 ungetestet – `start_riding` (mit `teleport_rider`/`teleport_ride`), `stop_riding`, `evict_riders` |
+| `/fog` | 🟡 ungetestet – `push`/`pop`/`remove` mit Nebel-Einstellungen aus Resource-Packs, je Spieler ein Stapel |
+| `/hud` | 🟡 ungetestet – `hide`/`reset` für alle oder einzelne HUD-Teile |
+| `/camera` | 🟡 ungetestet – `fade` (Zeiten, Farbe 0–255) und `clear`. Fehlt: `set` (Kamera-Presets werden noch nicht an den Client geschickt) |
+| `/schedule` | 🟡 ungetestet – `delay add <Funktion> <Zeit>[t|s|d] [append|replace]`, `clear`, `on_area_loaded add` |
+| `/tickingarea` | 🟡 ungetestet – Rechteck oder Kreis (Radius 1–4), bleibt geladen und tickt ohne Spieler, max. 10 pro Welt und 100 Chunks pro Bereich, gespeichert in `betterpmmp_tickingareas.json` |
+| `/structure` | 🟡 ungetestet – `save`/`load`/`delete` im Format des Spiels (`.mcstructure`) in `structures/` (auch `behavior_packs/*/structures/`), mit Truheninhalten und Wesen, Drehung 0–270°, Spiegeln, Integrität und Seed. Max. 64 × 384 × 64 |
 
 ## Neu in 5.75
 
