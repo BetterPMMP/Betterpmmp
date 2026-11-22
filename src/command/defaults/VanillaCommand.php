@@ -38,7 +38,14 @@ abstract class VanillaCommand extends Command{
 
 	protected function fetchPermittedPlayerTarget(CommandSender $sender, ?string $target, string $selfPermission, string $otherPermission) : ?Player{
 		//TODO: we need proper command selector support, but this one is useful and easy to hack in for now
-		if($target !== null && $target !== "@s"){
+		if($target !== null && $target !== "@s" && \pocketmine\command\utils\TargetSelector::isSelector($target)){
+			//BetterPMMP: vanilla selectors (@p, @r, @a[...]); commands with one target take the first match
+			$player = \pocketmine\command\utils\TargetSelector::selectPlayers($sender, $target)[0] ?? null;
+			if($player === null){
+				$sender->sendMessage(KnownTranslationFactory::pocketmine_command_error_playerNotFound($target)->prefix(TextFormat::RED));
+				return null;
+			}
+		}elseif($target !== null && $target !== "@s"){
 			$player = $sender->getServer()->getPlayerByPrefix($target);
 			if($player === null){
 				$sender->sendMessage(KnownTranslationFactory::pocketmine_command_error_playerNotFound($target)->prefix(TextFormat::RED));

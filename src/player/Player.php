@@ -1488,8 +1488,10 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 
 			$horizontalDistanceTravelled = sqrt((($from->x - $to->x) ** 2) + (($from->z - $to->z) ** 2));
 			if($horizontalDistanceTravelled > 0){
-				//TODO: check for swimming
-				if($this->isSprinting()){
+				//BetterPMMP: swimming costs hunger like sprinting (vanilla 0.01 per block)
+				if($this->isSwimming()){
+					$this->hungerManager->exhaust(0.01 * $horizontalDistanceTravelled, PlayerExhaustEvent::CAUSE_SWIMMING);
+				}elseif($this->isSprinting()){
 					$this->hungerManager->exhaust(0.01 * $horizontalDistanceTravelled, PlayerExhaustEvent::CAUSE_SPRINTING);
 				}else{
 					$this->hungerManager->exhaust(0.0, PlayerExhaustEvent::CAUSE_WALKING);

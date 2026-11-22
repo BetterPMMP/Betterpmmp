@@ -141,7 +141,9 @@ class ResourcePacksPacketHandler extends PacketHandler{
 			hasScripts: false,
 			worldTemplateId: Uuid::fromString(Uuid::NIL),
 			worldTemplateVersion: "",
-			forceDisableVibrantVisuals: true,
+			//BetterPMMP: let clients use Vibrant Visuals (new lighting, shadows, water, fog) like a vanilla world;
+			//can be turned off with graphics.vibrant-visuals: false in betterpmmp.yml
+			forceDisableVibrantVisuals: !\pocketmine\BetterPMMPConfig::flag("graphics", "vibrant-visuals", true),
 		));
 		$this->session->getLogger()->debug("Waiting for client to accept resource packs");
 	}

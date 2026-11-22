@@ -140,6 +140,11 @@ class SimpleCommandMap implements CommandMap{
 			new VersionCommand(),
 			new WhitelistCommand(),
 			new XpCommand(),
+			new \pocketmine\command\defaults\SetblockCommand(),
+			new \pocketmine\command\defaults\FillCommand(),
+			new \pocketmine\command\defaults\SummonCommand(),
+			new \pocketmine\command\defaults\TellrawCommand(),
+			new \pocketmine\command\defaults\PlaysoundCommand(),
 		]);
 	}
 

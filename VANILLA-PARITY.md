@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.72-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.73-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -49,6 +49,19 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel), Lama mit Truhe, Panda-Aussehen je Gen |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.73
+
+| System | Stand |
+|---|---|
+| Vibrant Visuals | 🟡 ungetestet – Der Server hat Bedrock-Clients die neue Grafik (Vibrant Visuals: Licht, Schatten, Wasser, Nebel) bisher ausdrücklich verboten (`forceDisableVibrantVisuals`). Jetzt ist sie erlaubt; ob sie läuft, entscheidet der Client (Gerät, Einstellung „Grafikmodus“). Abschaltbar mit `graphics.vibrant-visuals: false` in `betterpmmp.yml` |
+| Schwimmen kostet Hunger | 🟡 ungetestet – wie Sprinten 0,01 Erschöpfung pro Block |
+| Zielauswahl | 🟡 ungetestet – `@a`, `@p`, `@r`, `@s`, `@e`, `@n` mit `x y z r rm dx dy dz c type name m l lm` (auch `!`); funktioniert in allen Befehlen mit Spielerziel (`/give @p`, `/tp @r`, `/gamemode 1 @a[r=10]` …) |
+| `/setblock` | 🟡 ungetestet – `replace`, `destroy`, `keep`, Koordinaten mit `~` und `^` |
+| `/fill` | 🟡 ungetestet – `replace [Filter]`, `destroy`, `keep`, `hollow`, `outline`, Vanilla-Limit 32768 Blöcke |
+| `/summon` | 🟡 ungetestet – alle Wesen, Position, Namensschild |
+| `/tellraw` | 🟡 ungetestet – Bedrock-rawtext mit `text`, `selector`, `translate`/`with` |
+| `/playsound` | 🟡 ungetestet – Ziel, Position, Lautstärke, Tonhöhe, Mindestlautstärke |
 
 ## Neu in 5.72
 
