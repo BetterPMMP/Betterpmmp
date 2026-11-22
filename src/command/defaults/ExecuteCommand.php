@@ -161,7 +161,14 @@ final class ExecuteCommand extends WorldEditingCommand{
 					break;
 				case "anchored":
 					$this->need($args, $i, 1);
-					$next = $contexts; //feet/eyes: positions here are always at the feet
+					$eyes = match(strtolower($args[$i + 1])){
+						"eyes" => true,
+						"feet" => false,
+						default => throw new InvalidCommandSyntaxException(),
+					};
+					foreach($contexts as $c){
+						$next[] = $c->with(anchoredEyes: $eyes);
+					}
 					$i += 2;
 					break;
 				case "in":
@@ -312,7 +319,7 @@ final class ExecuteCommand extends WorldEditingCommand{
 	}
 
 	private function face(ExecuteContext $c, Vector3 $target) : ExecuteContext{
-		$d = $target->subtractVector($c->position);
+		$d = $target->subtractVector($c->position->add(0, $c->anchorHeight(), 0));
 		$horizontal = sqrt($d->x * $d->x + $d->z * $d->z);
 		return $c->with(yaw: rad2deg(atan2(-$d->x, $d->z)), pitch: rad2deg(-atan2($d->y, $horizontal)));
 	}

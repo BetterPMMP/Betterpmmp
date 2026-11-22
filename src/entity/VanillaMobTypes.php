@@ -2716,9 +2716,74 @@ class SkeletonMob extends GenericRangedHostileMob{
 }
 
 class SkeletonHorseMob extends GenericAnimalMob implements \pocketmine\entity\riding\Rideable{
-	use \pocketmine\entity\riding\MountableAnimalTrait;
+	use \pocketmine\entity\riding\MountableAnimalTrait {
+		initEntity as private initMountable;
+		saveNBT as private saveMountable;
+	}
 	protected function mountKind() : string{ return "skeleton_horse"; }
 	protected const ENTITY_ID = EntityIds::SKELETON_HORSE;
+
+	/** BetterPMMP: skeleton trap - left by lightning, turns into four skeleton horsemen when a player comes near */
+	private bool $trap = false;
+	private int $trapTicks = 0;
+
+	public function makeTrap() : void{
+		$this->trap = true;
+	}
+
+	public function isTrap() : bool{
+		return $this->trap;
+	}
+
+	protected function initEntity(CompoundTag $nbt) : void{
+		$this->initMountable($nbt);
+		$this->trap = $nbt->getByte("SkeletonTrap", 0) === 1;
+		$this->trapTicks = $nbt->getInt("SkeletonTrapTime", 0);
+	}
+
+	public function saveNBT() : CompoundTag{
+		$nbt = $this->saveMountable();
+		if($this->trap){
+			$nbt->setByte("SkeletonTrap", 1)->setInt("SkeletonTrapTime", $this->trapTicks);
+		}
+		return $nbt;
+	}
+
+	protected function entityBaseTick(int $tickDiff = 1) : bool{
+		$hasUpdate = parent::entityBaseTick($tickDiff);
+		if(!$this->trap || !$this->isAlive()){
+			return $hasUpdate;
+		}
+		if(($this->trapTicks += $tickDiff) >= 18000){
+			$this->flagForDespawn(); //vanilla: an untriggered trap is gone after 15 minutes
+			return $hasUpdate;
+		}
+		foreach($this->getWorld()->getPlayers() as $player){
+			if($player->isSurvival() && $player->getPosition()->distanceSquared($this->getPosition()) <= 100){
+				$this->springTrap();
+				break;
+			}
+		}
+		return $hasUpdate;
+	}
+
+	private function springTrap() : void{
+		$this->trap = false;
+		$world = $this->getWorld();
+		\pocketmine\world\weather\Weather::strike($world, $this->getPosition())->setVisualOnly();
+		$horses = [$this];
+		for($i = 0; $i < 3; ++$i){
+			$horse = new self(\pocketmine\entity\Location::fromObject($this->getPosition()->add(mt_rand(-10, 10) / 10, 0, mt_rand(-10, 10) / 10), $world, mt_rand(0, 359), 0));
+			$horse->spawnToAll();
+			$horses[] = $horse;
+		}
+		foreach($horses as $horse){
+			$rider = new SkeletonMob(\pocketmine\entity\Location::fromObject($horse->getPosition(), $world, $horse->getLocation()->getYaw(), 0));
+			$rider->getArmorInventory()->setHelmet(VanillaItems::IRON_HELMET());
+			$rider->spawnToAll();
+			\pocketmine\entity\riding\RidingManager::mount($rider, $horse);
+		}
+	}
 	protected const DISPLAY_NAME = "Skeleton Horse";
 	protected const SPAWN_EGG_GETTER = "SKELETON_HORSE_SPAWN_EGG";
 	protected const HEIGHT = 1.8;

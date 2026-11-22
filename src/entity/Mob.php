@@ -114,9 +114,36 @@ abstract class Mob extends Living{
 				$this->flagForDespawn();
 				return $hasUpdate;
 			}
-			$this->tickWandering($tickDiff);
+			$vehicle = \pocketmine\entity\riding\RidingManager::getVehicle($this);
+			if($vehicle instanceof Mob && $vehicle->isAlive()){
+				$this->tickRidingMob($vehicle, $tickDiff);
+			}elseif(!(\pocketmine\entity\riding\RidingManager::getDriver($this) instanceof Mob)){
+				//a mob carrying another mob (chicken jockey, skeleton horseman) is steered by its rider
+				$this->tickWandering($tickDiff);
+			}
 		}
 		return $hasUpdate;
+	}
+
+	/**
+	 * BetterPMMP: a mob riding another mob (jockeys) thinks and fights as usual, but it is the mount that walks:
+	 * towards the rider's target, otherwise wherever the rider wanted to go. The rider stays in the saddle.
+	 */
+	private function tickRidingMob(Mob $vehicle, int $tickDiff) : void{
+		$this->tickWandering($tickDiff);
+		$target = method_exists($this, "getCombatTarget") ? $this->getCombatTarget() : null;
+		if($target !== null){
+			$vehicle->getNavigator()->moveTo($target->getPosition(), $vehicle->getWalkSpeed(true), 1.0);
+		}elseif(!$vehicle->getNavigator()->isMoving()){
+			$vehicle->tickWandering($tickDiff);
+		}
+		$this->getNavigator()->stop();
+		$seat = \pocketmine\entity\riding\RidingManager::seatPositionOf($this);
+		if($seat !== null){
+			$this->setPosition($seat);
+			$this->setMotion(new \pocketmine\math\Vector3(0, 0, 0));
+			$this->setRotation($vehicle->getLocation()->getYaw(), $this->getLocation()->getPitch());
+		}
 	}
 
 	private function tickDaylightBurning(int $tickDiff) : void{

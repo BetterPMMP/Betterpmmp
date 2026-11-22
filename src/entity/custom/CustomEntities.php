@@ -54,7 +54,11 @@ final class CustomEntities{
 
 	/** @var array<string, CustomEntityType> */
 	private static array $types = [];
-	/** @var array<string, array{texture: string, geometry: ?string}> identifier => files for the pack */
+	/** @var array<string, array{biomes: list<string>, dimension: string, group: array{int, int}, max: int, chance: float, time: string}> */
+	private static array $spawning = [];
+	/** @var array<int, int> world id => calls of tickSpawning() */
+	private static array $spawnCalls = [];
+	/** @var array<string, array{texture: string, geometry: ?string, animationFile: ?string, animations: array<string, string>}> identifier => files for the pack */
 	private static array $files = [];
 
 	/** @return array<string, CustomEntityType> */
@@ -95,6 +99,36 @@ final class CustomEntities{
 					continue;
 				}
 			}
+			$animationFile = null;
+			$animations = [];
+			if(isset($data["animation-file"])){
+				$animationFile = Path::join($dir, (string) $data["animation-file"]);
+				$known = is_file($animationFile) ? json_decode((string) file_get_contents($animationFile), true) : null;
+				if(!is_array($known) || !is_array($known["animations"] ?? null)){
+					$logger->warning("[Custom entities] $identifier: animation file $animationFile is missing or not a Bedrock animation file (.animation.json)");
+					$animationFile = null;
+				}else{
+					foreach(["idle", "walk", "attack"] as $state){
+						$name = $data["animations"][$state] ?? null;
+						if(is_string($name) && isset($known["animations"][$name])){
+							$animations[$state] = $name;
+						}elseif($name !== null){
+							$logger->warning("[Custom entities] $identifier: animation \"$name\" is not in $animationFile");
+						}
+					}
+				}
+			}
+			$spawn = is_array($data["spawn"] ?? null) ? $data["spawn"] : null;
+			if($spawn !== null){
+				self::$spawning[$identifier] = [
+					"biomes" => array_map(fn($b) => strtolower((string) $b), is_array($spawn["biomes"] ?? null) ? $spawn["biomes"] : []),
+					"dimension" => strtolower((string) ($spawn["dimension"] ?? "overworld")),
+					"group" => [max(1, (int) ($spawn["group"][0] ?? 1)), max(1, (int) ($spawn["group"][1] ?? $spawn["group"][0] ?? 1))],
+					"max" => max(1, (int) ($spawn["max-nearby"] ?? 4)),
+					"chance" => max(0.0, min(1.0, (float) ($spawn["chance"] ?? 0.1))),
+					"time" => strtolower((string) ($spawn["time"] ?? "any")),
+				];
+			}
 			$drops = [];
 			foreach(is_array($data["drops"] ?? null) ? $data["drops"] : [] as $item => $amount){
 				[$min, $max] = is_array($amount) ? [(int) ($amount[0] ?? 1), (int) ($amount[1] ?? $amount[0] ?? 1)] : [(int) $amount, (int) $amount];
@@ -117,10 +151,85 @@ final class CustomEntities{
 			$class = $type->hostile ? CustomHostileEntity::class : CustomPassiveEntity::class;
 			EntityFactory::getInstance()->register($class, fn(World $world, CompoundTag $nbt) : \pocketmine\entity\Entity => new $class(EntityDataHelper::parseLocation($nbt, $world), $nbt, $type), [$identifier]);
 			self::$types[$identifier] = $type;
-			self::$files[$identifier] = ["texture" => $texture, "geometry" => $geometry];
+			self::$files[$identifier] = ["texture" => $texture, "geometry" => $geometry, "animationFile" => $animationFile, "animations" => $animations];
 		}
 		if(self::$types !== []){
 			$logger->info("[Custom entities] " . count(self::$types) . " custom entit" . (count(self::$types) === 1 ? "y" : "ies") . " loaded");
+		}
+	}
+
+	/**
+	 * Natural spawning of custom entities that have a "spawn" section, every 10 seconds around a random player:
+	 * in the given biomes and dimension, on solid ground with room to stand, 24-48 blocks away, at most
+	 * max-nearby of the kind within 64 blocks. Hostile ones only where it is dark (block light 0, night or under a roof).
+	 */
+	public static function tickSpawning(World $world) : void{
+		//called every 10 ticks per world: try every 20th call (10 seconds)
+		if(self::$spawning === [] || (self::$spawnCalls[$world->getId()] = (self::$spawnCalls[$world->getId()] ?? 0) + 1) % 20 !== 0){
+			return;
+		}
+		if(!\pocketmine\world\GameRules::bool($world, "domobspawning")){
+			return;
+		}
+		$players = $world->getPlayers();
+		if($players === []){
+			return;
+		}
+		$player = $players[array_rand($players)];
+		$dimension = match($world->getDimensionId()){
+			\pocketmine\data\bedrock\DimensionIds::NETHER => "nether",
+			\pocketmine\data\bedrock\DimensionIds::THE_END => "the_end",
+			default => "overworld",
+		};
+		foreach(self::$spawning as $identifier => $rule){
+			$type = self::$types[$identifier];
+			if($rule["dimension"] !== $dimension || mt_rand() / mt_getrandmax() > $rule["chance"] || ($type->hostile && $world->getDifficulty() === World::DIFFICULTY_PEACEFUL)){
+				continue;
+			}
+			$nearby = 0;
+			foreach($world->getEntities() as $entity){
+				if($entity instanceof CustomPassiveEntity || $entity instanceof CustomHostileEntity){
+					if($entity->getIdentifier() === $identifier && $entity->getPosition()->distanceSquared($player->getPosition()) < 64 * 64){
+						++$nearby;
+					}
+				}
+			}
+			if($nearby >= $rule["max"]){
+				continue;
+			}
+			$angle = mt_rand() / mt_getrandmax() * M_PI * 2;
+			$distance = mt_rand(24, 48);
+			$x = (int) ($player->getPosition()->x + cos($angle) * $distance);
+			$z = (int) ($player->getPosition()->z + sin($angle) * $distance);
+			if(!$world->isChunkLoaded($x >> 4, $z >> 4)){
+				continue;
+			}
+			$y = $world->getHighestBlockAt($x, $z);
+			if($y === null || !$world->getBlockAt($x, $y, $z)->isSolid() || $world->getBlockAt($x, $y + 1, $z)->isSolid() || $world->getBlockAt($x, $y + 2, $z)->isSolid()){
+				continue;
+			}
+			if($rule["biomes"] !== []){
+				$biome = \pocketmine\data\bedrock\LegacyBiomeIdToStringIdMap::getInstance()->legacyToString($world->getBiomeId($x, $y + 1, $z)) ?? "";
+				if(!in_array(str_replace("minecraft:", "", $biome), array_map(fn(string $b) => str_replace("minecraft:", "", $b), $rule["biomes"]), true)){
+					continue;
+				}
+			}
+			$time = $world->getTimeOfDay();
+			$night = $time >= World::TIME_NIGHT && $time < World::TIME_SUNRISE;
+			if(($rule["time"] === "night" && !$night) || ($rule["time"] === "day" && $night)){
+				continue;
+			}
+			if($type->hostile && ($world->getBlockLightAt($x, $y + 1, $z) > 0 || ($world->getRealBlockSkyLightAt($x, $y + 1, $z) > 7 && !$night))){
+				continue;
+			}
+			$count = mt_rand($rule["group"][0], max($rule["group"][0], $rule["group"][1]));
+			for($i = 0; $i < $count && $nearby + $i < $rule["max"]; ++$i){
+				$class = $type->hostile ? CustomHostileEntity::class : CustomPassiveEntity::class;
+				$location = \pocketmine\entity\Location::fromObject(new \pocketmine\math\Vector3($x + 0.5 + mt_rand(-2, 2), $y + 1, $z + 0.5 + mt_rand(-2, 2)), $world, mt_rand(0, 359), 0);
+				$entity = new $class($location, null, $type);
+				$entity->markNaturalSpawned();
+				$entity->spawnToAll();
+			}
 		}
 	}
 
@@ -175,15 +284,32 @@ final class CustomEntities{
 				$geometry = "geometry.betterpmmp." . $key;
 				$files["models/entity/" . $key . ".geo.json"] = self::boxGeometry($geometry, $type, $skin);
 			}
+			$description = [
+				"identifier" => $identifier,
+				"materials" => ["default" => "entity_alphatest"],
+				"textures" => ["default" => "textures/entity/betterpmmp/" . $key],
+				"geometry" => ["default" => $geometry],
+				"render_controllers" => ["controller.render.default"],
+			];
+			if($source["animationFile"] !== null && $source["animations"] !== []){
+				$files["animations/" . $key . ".animation.json"] = (string) file_get_contents($source["animationFile"]);
+				$description["animations"] = $source["animations"];
+				//like vanilla mobs: idle always, walking blended by the movement speed, attacking while it swings
+				$animate = [];
+				if(isset($source["animations"]["idle"])){
+					$animate[] = "idle";
+				}
+				if(isset($source["animations"]["walk"])){
+					$animate[] = ["walk" => "query.modified_move_speed"];
+				}
+				if(isset($source["animations"]["attack"])){
+					$animate[] = ["attack" => "variable.attack_time > 0"];
+				}
+				$description["scripts"] = ["pre_animation" => ["variable.attack_time = query.attack_time;"], "animate" => $animate];
+			}
 			$files["entity/" . $key . ".entity.json"] = (string) json_encode([
 				"format_version" => "1.10.0",
-				"minecraft:client_entity" => ["description" => [
-					"identifier" => $identifier,
-					"materials" => ["default" => "entity_alphatest"],
-					"textures" => ["default" => "textures/entity/betterpmmp/" . $key],
-					"geometry" => ["default" => $geometry],
-					"render_controllers" => ["controller.render.default"],
-				]],
+				"minecraft:client_entity" => ["description" => $description],
 			], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 			$files["texts/entities.lang"] = ($files["texts/entities.lang"] ?? "") . "entity." . $identifier . ".name=" . $type->name . "\n";
 		}
@@ -229,6 +355,13 @@ final class CustomEntities{
 #   experience     dropped experience (default 3)
 #   drops          item: amount or item: [min, max]
 #   fireproof      true = no fire or lava damage
+#   animation-file Blockbench animations in custom_entities/ (.animation.json), with
+#   animations     idle, walk, attack: the animation names in that file (walk plays while moving,
+#                  attack while hitting)
+#   spawn          natural spawning: biomes (list, e.g. [plains, forest]; empty = all), dimension
+#                  (overworld, nether, the_end), group [min, max], max-nearby (within 64 blocks),
+#                  chance (0 to 1 per try, every 10 seconds), time (day, night or any).
+#                  Hostile ones only spawn in the dark and never on Peaceful
 #
 # Never remove or rename an entity that already exists in a world: it would be deleted when its chunk loads.
 #
@@ -245,6 +378,14 @@ final class CustomEntities{
 #     damage: 4
 #     drops:
 #       gold_nugget: [1, 3]
+#     animation-file: goblin.animation.json
+#     animations:
+#       walk: animation.goblin.walk
+#       attack: animation.goblin.attack
+#     spawn:
+#       biomes: [plains, forest]
+#       group: [1, 3]
+#       time: night
 #   myserver:snail:
 #     name: "Snail"
 #     texture: snail.png

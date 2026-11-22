@@ -593,6 +593,8 @@ final class JavaInventoryClick{
 	// ------------------------------------------------------------- crafting
 
 	private ?CraftingRecipe $craftRecipe = null;
+	/** @var list<int> grid slots the last matched recipe does not use up */
+	private static array $keptSlots = [];
 	private int $craftRepetitions = 0;
 
 	/** The crafting grid of the current window: the 2x2 grid of the inventory screen or a crafting table. */
@@ -612,6 +614,12 @@ final class JavaInventoryClick{
 		if($grid->getContents() === []){
 			return null;
 		}
+		//BetterPMMP: fireworks, dyed leather armour, map and book copies (the Bedrock client computes these itself)
+		if(($special = \pocketmine\crafting\SpecialRecipes::match($grid->getContents())) !== null){
+			self::$keptSlots = $special[2];
+			return [$special[0], $special[1]];
+		}
+		self::$keptSlots = [];
 		$manager = $player->getServer()->getCraftingManager();
 		foreach([$manager->getShapedRecipes(), $manager->getShapelessRecipes()] as $groups){
 			foreach($groups as $recipes){
@@ -641,9 +649,12 @@ final class JavaInventoryClick{
 			return;
 		}
 		[$recipe, $result] = $found;
+		$kept = self::$keptSlots;
 		$times = PHP_INT_MAX;
-		foreach($grid->getContents() as $item){
-			$times = min($times, $item->getCount());
+		foreach($grid->getContents() as $slot => $item){
+			if(!in_array($slot, $kept, true)){
+				$times = min($times, $item->getCount());
+			}
 		}
 		if(!$all){
 			$times = 1;
@@ -674,6 +685,9 @@ final class JavaInventoryClick{
 				$this->setCursor($cursor->isNull() ? clone $result : $cursor->setCount($cursor->getCount() + $result->getCount()));
 			}
 			foreach($grid->getContents() as $slot => $item){
+				if(in_array($slot, self::$keptSlots, true)){
+					continue;
+				}
 				$current = $this->get($grid, $slot);
 				$current->pop();
 				$this->set($grid, $slot, $current);

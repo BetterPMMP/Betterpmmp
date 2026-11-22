@@ -11,7 +11,14 @@ namespace pocketmine\item\custom;
 
 use pocketmine\data\bedrock\item\SavedItemData;
 use pocketmine\inventory\CreativeCategory;
+use pocketmine\inventory\ArmorInventory;
 use pocketmine\inventory\CreativeInventory;
+use pocketmine\block\BlockToolType;
+use pocketmine\item\Armor;
+use pocketmine\item\ArmorTypeInfo;
+use pocketmine\item\ToolTier;
+use pocketmine\nbt\tag\ListTag;
+use pocketmine\nbt\tag\StringTag;
 use pocketmine\item\Item;
 use pocketmine\item\ItemIdentifier;
 use pocketmine\item\StringToItemParser;
@@ -106,7 +113,16 @@ final class CustomItems{
 				"hand-equipped" => (bool) ($data["hand-equipped"] ?? false),
 				"glint" => (bool) ($data["glint"] ?? false),
 				"food" => is_array($data["food"] ?? null) ? $data["food"] : null,
+				"tool" => is_array($data["tool"] ?? null) ? $data["tool"] : null,
+				"armor" => is_array($data["armor"] ?? null) ? $data["armor"] : null,
 			];
+			if($definitions[$identifier]["tool"] !== null && self::toolType((string) ($definitions[$identifier]["tool"]["type"] ?? "")) === null){
+				$logger->warning("[Custom items] $identifier: tool type must be pickaxe, axe, shovel, hoe or sword");
+				unset($definitions[$identifier]);
+			}elseif($definitions[$identifier]["armor"] !== null && self::armorSlot((string) ($definitions[$identifier]["armor"]["slot"] ?? "")) === null){
+				$logger->warning("[Custom items] $identifier: armor slot must be helmet, chestplate, leggings or boots");
+				unset($definitions[$identifier]);
+			}
 		}
 		if($definitions === [] && \pocketmine\block\custom\CustomBlocks::definitions() === [] && \pocketmine\entity\custom\CustomEntities::getTypes() === []){
 			return;
@@ -125,10 +141,7 @@ final class CustomItems{
 		$index = 0;
 		foreach($definitions as $identifier => $definition){
 			$typeId = self::BASE_TYPE_ID + $index++;
-			$food = $definition["food"];
-			$item = $food !== null
-				? new CustomFood(new ItemIdentifier($typeId), $definition["name"], $definition["max-stack"], (int) ($food["nutrition"] ?? 4), (float) ($food["saturation"] ?? 2.4), (bool) ($food["can-always-eat"] ?? false))
-				: new CustomItem(new ItemIdentifier($typeId), $definition["name"], $definition["max-stack"]);
+			$item = self::createItem(new ItemIdentifier($typeId), $definition);
 			try{
 				$serializer->map($item, fn() => new SavedItemData($identifier));
 				$deserializer->map($identifier, fn() => clone $item);
@@ -138,8 +151,8 @@ final class CustomItems{
 				continue;
 			}
 			$runtimeId = $nextRuntimeId++;
-			$newEntries[] = new ItemTypeEntry($identifier, $runtimeId, true, 1, new CacheableNbt(self::components($identifier, $runtimeId, $definition)));
 			self::$items[$identifier] = $item;
+			$newEntries[] = new ItemTypeEntry($identifier, $runtimeId, true, 1, new CacheableNbt(self::components($identifier, $runtimeId, $definition)));
 		}
 		self::addToDictionary($dictionary, $newEntries);
 		foreach(self::$items as $item){
@@ -155,6 +168,77 @@ final class CustomItems{
 		if(self::$items !== []){
 			$logger->info("[Custom items] " . count(self::$items) . " custom item(s) loaded");
 		}
+	}
+
+	private const TOOL_TYPES = [
+		"pickaxe" => BlockToolType::PICKAXE,
+		"axe" => BlockToolType::AXE,
+		"shovel" => BlockToolType::SHOVEL,
+		"hoe" => BlockToolType::HOE,
+		"sword" => BlockToolType::SWORD,
+	];
+	private const ARMOR_SLOTS = [
+		"helmet" => [ArmorInventory::SLOT_HEAD, "slot.armor.head", "armor_head"],
+		"chestplate" => [ArmorInventory::SLOT_CHEST, "slot.armor.chest", "armor_torso"],
+		"leggings" => [ArmorInventory::SLOT_LEGS, "slot.armor.legs", "armor_legs"],
+		"boots" => [ArmorInventory::SLOT_FEET, "slot.armor.feet", "armor_feet"],
+	];
+	/** blocks each tool mines faster, as Molang for the client (it predicts the breaking time) */
+	private const DIGGER_TAGS = [
+		"pickaxe" => "q.any_tag('minecraft:is_pickaxe_item_destructible', 'stone', 'metal', 'rail', 'iron_pick_diggable', 'diamond_pick_diggable', 'gold_pick_diggable', 'stone_pick_diggable')",
+		"axe" => "q.any_tag('minecraft:is_axe_item_destructible', 'wood', 'pumpkin', 'plant', 'log')",
+		"shovel" => "q.any_tag('minecraft:is_shovel_item_destructible', 'dirt', 'sand', 'gravel', 'grass', 'snow')",
+		"hoe" => "q.any_tag('minecraft:is_hoe_item_destructible', 'crop')",
+		"sword" => "q.any_tag('minecraft:is_sword_item_destructible')",
+	];
+
+	private static function toolType(string $name) : ?int{
+		return self::TOOL_TYPES[strtolower($name)] ?? null;
+	}
+
+	/** @return array{int, string, string}|null [armor inventory slot, client slot, enchantable slot] */
+	private static function armorSlot(string $name) : ?array{
+		return self::ARMOR_SLOTS[strtolower($name)] ?? null;
+	}
+
+	private static function tier(string $name) : ToolTier{
+		foreach(ToolTier::cases() as $tier){
+			if(strtolower($tier->name) === strtolower($name)){
+				return $tier;
+			}
+		}
+		return ToolTier::IRON;
+	}
+
+	/** @param array<string, mixed> $definition */
+	private static function createItem(ItemIdentifier $id, array $definition) : Item{
+		if(($food = $definition["food"]) !== null){
+			return new CustomFood($id, $definition["name"], $definition["max-stack"], (int) ($food["nutrition"] ?? 4), (float) ($food["saturation"] ?? 2.4), (bool) ($food["can-always-eat"] ?? false));
+		}
+		if(($tool = $definition["tool"]) !== null){
+			$tier = self::tier((string) ($tool["tier"] ?? "iron"));
+			$type = (string) $tool["type"];
+			//vanilla attack: sword = tier + 4, axe = tier + 3 (iron 6, diamond 7), pickaxe = tier + 2, shovel = tier + 1, hoe 1
+			$attack = (int) ($tool["attack"] ?? match($type){
+				"sword" => $tier->getBaseAttackPoints(),
+				"axe" => $tier->getBaseAttackPoints() - 1,
+				"pickaxe" => $tier->getBaseAttackPoints() - 2,
+				"shovel" => $tier->getBaseAttackPoints() - 3,
+				default => 1,
+			});
+			return new CustomTool($id, $definition["name"], $tier, self::TOOL_TYPES[$type], max(1, (int) ($tool["durability"] ?? $tier->getMaxDurability())), max(1, $attack));
+		}
+		if(($armor = $definition["armor"]) !== null){
+			[$slot] = self::ARMOR_SLOTS[strtolower((string) $armor["slot"])];
+			return new Armor($id, $definition["name"], new ArmorTypeInfo(
+				max(0, (int) ($armor["defense"] ?? 2)),
+				max(1, (int) ($armor["durability"] ?? 200)),
+				$slot,
+				max(0, (int) ($armor["toughness"] ?? 0)),
+				(bool) ($armor["fireproof"] ?? false)
+			));
+		}
+		return new CustomItem($id, $definition["name"], $definition["max-stack"]);
 	}
 
 	/**
@@ -177,6 +261,33 @@ final class CustomItems{
 			->setTag("minecraft:icon", clone $icon)
 			->setTag("minecraft:display_name", CompoundTag::create()->setString("value", $definition["name"]))
 			->setTag("minecraft:max_stack_size", CompoundTag::create()->setByte("value", $definition["max-stack"]));
+		if(($tool = $definition["tool"]) !== null){
+			$type = strtolower((string) $tool["type"]);
+			$tier = self::tier((string) ($tool["tier"] ?? "iron"));
+			$item = self::$items[$identifier] ?? null;
+			$properties->setInt("max_stack_size", 1)->setByte("hand_equipped", 1)
+				->setString("enchantable_slot", $type)->setInt("enchantable_value", $tier->getEnchantability());
+			$components->setTag("minecraft:max_stack_size", CompoundTag::create()->setByte("value", 1));
+			$components->setTag("minecraft:durability", CompoundTag::create()->setInt("max_durability", max(1, (int) ($tool["durability"] ?? $tier->getMaxDurability()))));
+			$components->setTag("minecraft:damage", CompoundTag::create()->setInt("value", $item instanceof CustomTool ? $item->getAttackPoints() : 1));
+			$components->setTag("minecraft:digger", CompoundTag::create()
+				->setByte("use_efficiency", 1)
+				->setTag("destroy_speeds", new ListTag([CompoundTag::create()
+					->setTag("block", CompoundTag::create()->setString("tags", self::DIGGER_TAGS[$type]))
+					->setInt("speed", $tier->getBaseEfficiency())], \pocketmine\nbt\NBT::TAG_Compound)));
+			$components->setTag("minecraft:tags", CompoundTag::create()->setTag("tags", new ListTag([
+				new StringTag("minecraft:is_" . $type),
+				new StringTag("minecraft:" . strtolower($tier->name) . "_tier"),
+				new StringTag("minecraft:is_tool"),
+			], \pocketmine\nbt\NBT::TAG_String)));
+		}
+		if(($armor = $definition["armor"]) !== null){
+			[, $clientSlot, $enchantSlot] = self::ARMOR_SLOTS[strtolower((string) $armor["slot"])];
+			$properties->setInt("max_stack_size", 1)->setString("enchantable_slot", $enchantSlot)->setInt("enchantable_value", 10);
+			$components->setTag("minecraft:max_stack_size", CompoundTag::create()->setByte("value", 1));
+			$components->setTag("minecraft:durability", CompoundTag::create()->setInt("max_durability", max(1, (int) ($armor["durability"] ?? 200))));
+			$components->setTag("minecraft:wearable", CompoundTag::create()->setString("slot", $clientSlot)->setInt("protection", max(0, (int) ($armor["defense"] ?? 2))));
+		}
 		$food = $definition["food"];
 		if($food !== null){
 			$properties->setInt("use_duration", 32)->setInt("use_animation", 1); //eat
@@ -264,6 +375,10 @@ final class CustomItems{
 #   hand-equipped  true = held like a tool (default false)
 #   glint          true = enchantment glint (default false)
 #   food           makes it edible: nutrition (hunger points), saturation, can-always-eat
+#   tool           makes it a tool: type (pickaxe, axe, shovel, hoe, sword), tier (wood, stone, iron, gold,
+#                  diamond, netherite, copper; default iron), durability, attack (defaults from the tier)
+#   armor          makes it armour: slot (helmet, chestplate, leggings, boots), defense, durability, toughness,
+#                  fireproof. It protects, but is not drawn on the player's body (that needs a model)
 #
 # Example (remove the # in front of the lines to use it):
 #
@@ -271,6 +386,19 @@ final class CustomItems{
 #   myserver:ruby:
 #     name: "Ruby"
 #     texture: ruby.png
+#   myserver:ruby_sword:
+#     name: "Ruby Sword"
+#     tool:
+#       type: sword
+#       tier: diamond
+#       attack: 8
+#       durability: 2000
+#   myserver:ruby_helmet:
+#     name: "Ruby Helmet"
+#     armor:
+#       slot: helmet
+#       defense: 3
+#       durability: 400
 #   myserver:golden_bread:
 #     name: "Golden Bread"
 #     food:

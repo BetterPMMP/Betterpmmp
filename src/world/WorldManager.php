@@ -430,6 +430,12 @@ class WorldManager{
 				$this->server->getLogger()->logException($e);
 			}
 			foreach($this->worlds as $world){
+				try{
+					StructureInhabitants::tick($world); //BetterPMMP: shulkers, elder guardians, witches
+					\pocketmine\entity\custom\CustomEntities::tickSpawning($world); //BetterPMMP: custom_entities.yml
+				}catch(\Throwable $e){
+					$world->getLogger()->logException($e);
+				}
 				$this->naturalMobSpawner->tick($world);
 				if(EndDragonFight::isEndWorld($world)){
 					try{

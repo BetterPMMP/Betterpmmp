@@ -64,8 +64,16 @@ final class EndCity extends Structure{
 			$sizes[$name] = [$template->sizeX, $template->sizeY, $template->sizeZ];
 		}
 		$start = new StructureStart($this->getName(), $chunkX, $chunkZ, true);
+		$sentries = 0;
 		foreach(EndCityLayout::generate($sizes, $random, $x, $y, $z, $rotation) as $part){
 			[$minX, $minY, $minZ, $maxX, $maxY, $maxZ] = $part["box"];
+			//"Sentry" markers of the templates are where vanilla puts the shulkers
+			foreach(JavaTemplate::get("end_city/" . $part["name"])?->blocks ?? [] as [$bx, $by, $bz, , , $marker]){
+				if($marker === "Sentry"){
+					[$rx, $rz] = EndCityLayout::rotate($bx, $bz, $part["rot"]);
+					$start->markers["mob:shulker:" . $sentries++] = [$part["x"] + $rx, $part["y"] + $by, $part["z"] + $rz];
+				}
+			}
 			$start->add(new StructurePiece($minX, $minY, $minZ, $maxX, $maxY, $maxZ, function(StructureCanvas $c, Random $r) use ($part) : void{
 				$this->place($c, $r, $part["name"], $part["x"], $part["y"], $part["z"], $part["rot"], $part["overwrite"]);
 			}, $random->nextInt()));

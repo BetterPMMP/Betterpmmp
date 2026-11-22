@@ -42,6 +42,12 @@ class LightningBolt extends Entity implements NeverSavedWithChunkEntity{
 
 	private const LIFETIME = 10;
 	private bool $struck = false;
+	/** BetterPMMP: only light and thunder (skeleton trap), no fire and no damage */
+	private bool $visualOnly = false;
+
+	public function setVisualOnly() : void{
+		$this->visualOnly = true;
+	}
 
 	public static function getNetworkTypeId() : string{ return EntityIds::LIGHTNING_BOLT; }
 
@@ -75,6 +81,9 @@ class LightningBolt extends Entity implements NeverSavedWithChunkEntity{
 			$player->getNetworkSession()->sendDataPacket($pk);
 		}
 		$world->addSound($pos, new \pocketmine\world\sound\VanillaSound(LevelSoundEvent::EXPLODE));
+		if($this->visualOnly){
+			return;
+		}
 
 		$below = $world->getBlockAt($pos->getFloorX(), $pos->getFloorY() - 1, $pos->getFloorZ());
 		if($below instanceof LightningRod){

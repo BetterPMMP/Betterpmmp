@@ -59,7 +59,7 @@ abstract class WorldEditingCommand extends VanillaCommand{
 			if($sender instanceof \pocketmine\command\utils\ExecuteContext){
 				$yaw = deg2rad($sender->yaw);
 				$pitch = deg2rad($sender->pitch);
-				$eye = 0.0; //execute positions are at the feet ("anchored eyes" is not supported)
+				$eye = $sender->anchorHeight();
 			}else{
 				$yaw = $sender instanceof Entity ? deg2rad($sender->getLocation()->getYaw()) : 0.0;
 				$pitch = $sender instanceof Entity ? deg2rad($sender->getLocation()->getPitch()) : 0.0;

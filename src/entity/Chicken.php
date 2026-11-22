@@ -16,7 +16,14 @@ use pocketmine\item\VanillaItems;
 use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 use function mt_rand;
 
-class Chicken extends Animal{
+class Chicken extends Animal implements \pocketmine\entity\riding\Rideable{
+	//BetterPMMP: a baby zombie can ride a chicken (chicken jockey)
+	use \pocketmine\entity\riding\RideableTrait;
+
+	public function getMaxRiders() : int{ return 1; }
+	public function getSeatPosition(int $seat) : \pocketmine\math\Vector3{ return new \pocketmine\math\Vector3(0, 0.4, 0); }
+	public function isControlledByDriver() : bool{ return false; }
+
 	public static function getNetworkTypeId() : string{ return EntityIds::CHICKEN; }
 	protected function getInitialSizeInfo() : EntitySizeInfo{ return new EntitySizeInfo(0.7, 0.4); }
 	public function getName() : string{ return "Chicken"; }

@@ -675,6 +675,7 @@ class World implements ChunkManager{
 	 */
 	public function onUnload() : void{
 		GameRules::forget($this);
+		StructureInhabitants::forget($this);
 		\pocketmine\block\utils\RedstonePower::forgetWorld($this);
 		if($this->unloaded){
 			throw new \LogicException("Tried to close a world which is already closed");

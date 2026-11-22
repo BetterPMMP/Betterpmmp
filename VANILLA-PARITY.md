@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.79-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.80-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -49,6 +49,20 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel), Lama mit Truhe, Panda-Aussehen je Gen |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.80
+
+| System | Stand |
+|---|---|
+| Selektoren mit Leerzeichen | 🟡 ungetestet – `@e[type=zombie, r=10]` wie in Vanilla, auch in `/execute … run` |
+| `/execute anchored eyes` | 🟡 ungetestet – `^` und `facing` gehen von den Augen aus |
+| Hühnerjockeys | 🟡 ungetestet – 5 % der Babyzombies spawnen auf einem Huhn; Mobs können allgemein auf Mobs reiten (der Reiter bleibt im Sattel und lenkt das Reittier zu seinem Ziel) |
+| Skelettpferd-Falle | 🟡 ungetestet – etwa 1 % der natürlichen Blitze (Leicht 0,75 %, Schwer 1,5 %) hinterlässt ein Fallen-Skelettpferd statt Feuer; kommt ein Spieler auf 10 Blöcke heran, schlägt ein Blitz ein und es werden vier Skelettreiter mit Eisenhelm und Bogen; ohne Auslösung verschwindet es nach 15 Minuten |
+| Bewohner von Strukturen | 🟡 ungetestet – Shulker an den Vanilla-Stellen der End-Städte, drei Großwächter im Ozeanmonument, eine Hexe in der Hexenhütte; erscheinen, sobald ein Spieler in die Nähe kommt, einmal pro Struktur (gemerkt in `betterpmmp_structure_mobs.json` im Weltordner) und nur, wo die Struktur auch steht |
+| Eigene Items: Werkzeuge und Rüstung | 🟡 offline geprüft – `tool:` (Spitzhacke, Axt, Schaufel, Hacke, Schwert; Stufe Holz bis Netherit, Haltbarkeit, Angriff) mit Abbautempo auch für den Client, `armor:` (Helm, Brustplatte, Hose, Stiefel; Schutz, Haltbarkeit, Härte, feuerfest). Rüstung wird nicht am Körper gezeichnet |
+| Eigene Wesen: Animationen und Spawnen | 🟡 offline geprüft – Blockbench-Animationen (Ruhe, Laufen, Angriff), natürliches Spawnen nach Biom, Dimension, Gruppe, Tageszeit und Höchstzahl in der Nähe; feindliche nur im Dunkeln |
+| Java: Sonderrezepte | 🟡 offline geprüft – Feuerwerksraketen (Flugdauer, Sterne), Feuerwerkssterne (Farben, Form, Schweif, Funkeln), Verblassfarben, Lederrüstung färben (Farbmischung wie Vanilla), Karten kopieren, Bücher kopieren (Original bleibt liegen) |
+| Papagei auf der Schulter | ✅ war schon vorhanden (Eintrag war veraltet) |
 
 ## Neu in 5.79
 

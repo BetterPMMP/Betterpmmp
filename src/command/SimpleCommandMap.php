@@ -282,10 +282,22 @@ class SimpleCommandMap implements CommandMap{
 		if(preg_match_all('/"((?:\\\\.|[^\\\\"])*)"|(\S+)/u', self::$rawArguments, $matches, PREG_OFFSET_CAPTURE) === false){
 			return null;
 		}
-		if($skip >= count($matches[0])){
+		//count arguments like dispatch() does: a selector split by spaces is one argument
+		$starts = [];
+		$depth = 0;
+		foreach($matches[0] as [$token, $offset]){
+			if($depth === 0){
+				$starts[] = $offset;
+			}
+			if($depth > 0 || str_starts_with($token, "@")){
+				$depth += substr_count($token, "[") - substr_count($token, "]");
+				$depth = max(0, $depth);
+			}
+		}
+		if($skip >= count($starts)){
 			return "";
 		}
-		return substr(self::$rawArguments, $matches[0][$skip][1]);
+		return substr(self::$rawArguments, $starts[$skip]);
 	}
 
 	public function dispatch(CommandSender $sender, string $commandLine) : bool{
@@ -299,8 +311,39 @@ class SimpleCommandMap implements CommandMap{
 		}
 	}
 
+	/**
+	 * Selectors may contain spaces inside their brackets like in vanilla ("@e[type=zombie, r=10]"): the words
+	 * split there are joined back into one argument.
+	 * @param string[] $args
+	 * @return string[]
+	 */
+	private static function joinSelectors(array $args) : array{
+		$joined = [];
+		$open = null;
+		foreach($args as $arg){
+			if($open !== null){
+				$open .= " " . $arg;
+				if(substr_count($open, "[") <= substr_count($open, "]")){
+					$joined[] = $open;
+					$open = null;
+				}
+				continue;
+			}
+			if(str_starts_with($arg, "@") && substr_count($arg, "[") > substr_count($arg, "]")){
+				$open = $arg;
+				continue;
+			}
+			$joined[] = $arg;
+		}
+		if($open !== null){
+			$joined[] = $open;
+		}
+		return $joined;
+	}
+
 	/** @param string[] $args */
 	private function dispatchParsed(CommandSender $sender, array $args) : bool{
+		$args = self::joinSelectors($args);
 
 		$sentCommandLabel = array_shift($args);
 		if($sentCommandLabel !== null && ($target = $this->getCommand($sentCommandLabel)) !== null){

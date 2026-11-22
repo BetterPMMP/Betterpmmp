@@ -29,7 +29,8 @@ final class ExecuteContext implements CommandSender{
 		public readonly ?Entity $executor,
 		public readonly Position $position,
 		public readonly float $yaw,
-		public readonly float $pitch
+		public readonly float $pitch,
+		public readonly bool $anchoredEyes = false
 	){
 		$this->perm = $origin;
 	}
@@ -47,8 +48,13 @@ final class ExecuteContext implements CommandSender{
 		return new self($sender, null, $position, 0.0, 0.0);
 	}
 
-	public function with(?Entity $executor = null, ?Position $position = null, ?float $yaw = null, ?float $pitch = null, bool $keepExecutor = true) : self{
-		return new self($this->origin, $keepExecutor && $executor === null ? $this->executor : $executor, $position ?? $this->position, $yaw ?? $this->yaw, $pitch ?? $this->pitch);
+	public function with(?Entity $executor = null, ?Position $position = null, ?float $yaw = null, ?float $pitch = null, ?bool $anchoredEyes = null) : self{
+		return new self($this->origin, $executor ?? $this->executor, $position ?? $this->position, $yaw ?? $this->yaw, $pitch ?? $this->pitch, $anchoredEyes ?? $this->anchoredEyes);
+	}
+
+	/** Height of the anchor above the position: the executor's eyes after "anchored eyes", otherwise 0. */
+	public function anchorHeight() : float{
+		return $this->anchoredEyes && $this->executor instanceof \pocketmine\entity\Living ? $this->executor->getEyeHeight() : 0.0;
 	}
 
 	public function getPosition() : Position{ return $this->position; }
