@@ -169,7 +169,12 @@ final class TargetSelector{
 			if(count($parts) !== 2){
 				throw new InvalidCommandSyntaxException();
 			}
-			$args[strtolower(trim($parts[0]))] = trim($parts[1]);
+			$key = strtolower(trim($parts[0]));
+			if($key === "tag"){
+				$args["tag"] = isset($args["tag"]) ? $args["tag"] . "\0" . trim($parts[1]) : trim($parts[1]); //several tag= filters all apply
+			}else{
+				$args[$key] = trim($parts[1]);
+			}
 		}
 		return $args;
 	}
@@ -214,6 +219,15 @@ final class TargetSelector{
 			$entityName = $entity instanceof Player ? $entity->getName() : ($entity->getNameTag() !== "" ? $entity->getNameTag() : ($entity instanceof Living ? $entity->getName() : ""));
 			if((strtolower($entityName) === strtolower(trim($name, "\""))) === $negate){
 				return false;
+			}
+		}
+		if(isset($args["tag"])){
+			foreach(explode("\0", $args["tag"]) as $filter){
+				[$negate, $tag] = self::negation($filter);
+				$has = $tag === "" ? $entity->getCommandTags() === [] : $entity->hasCommandTag($tag);
+				if($has === $negate){
+					return false; //tag=x needs x, tag=!x must not have x, tag= needs none, tag=! needs any
+				}
 			}
 		}
 		if(isset($args["m"])){

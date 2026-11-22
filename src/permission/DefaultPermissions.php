@@ -77,6 +77,12 @@ abstract class DefaultPermissions{
 		self::registerPermission(new Permission(Names::COMMAND_CLONE, "Allows the user to clone blocks"), [$operatorRoot]);
 		self::registerPermission(new Permission(Names::COMMAND_SCOREBOARD, "Allows the user to change the scoreboard"), [$operatorRoot]);
 		self::registerPermission(new Permission(Names::COMMAND_EXECUTE, "Allows the user to run commands as other entities"), [$operatorRoot]);
+		self::registerPermission(new Permission(Names::COMMAND_TAG, "Allows the user to manage entity tags"), [$operatorRoot]);
+		self::registerPermission(new Permission(Names::COMMAND_FUNCTION, "Allows the user to run function files"), [$operatorRoot]);
+		self::registerPermission(new Permission(Names::COMMAND_DAYLOCK, "Allows the user to lock the day-night cycle"), [$operatorRoot]);
+		self::registerPermission(new Permission(Names::COMMAND_STOPSOUND, "Allows the user to stop sounds"), [$operatorRoot]);
+		self::registerPermission(new Permission(Names::COMMAND_DAMAGE, "Allows the user to damage entities"), [$operatorRoot]);
+		self::registerPermission(new Permission(Names::COMMAND_LOCATE, "Allows the user to locate structures"), [$operatorRoot]);
 		self::registerPermission(new Permission(Names::COMMAND_GAMERULE, "Allows the user to change game rules"), [$operatorRoot]);
 		self::registerPermission(new Permission(Names::COMMAND_SETBLOCK, "Allows the user to change a block"), [$operatorRoot]);
 		self::registerPermission(new Permission(Names::COMMAND_FILL, "Allows the user to fill an area with blocks"), [$operatorRoot]);

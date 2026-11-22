@@ -145,6 +145,12 @@ class SimpleCommandMap implements CommandMap{
 			new \pocketmine\command\defaults\CloneCommand(),
 			new \pocketmine\command\defaults\ScoreboardCommand(),
 			new \pocketmine\command\defaults\ExecuteCommand(),
+			new \pocketmine\command\defaults\TagCommand(),
+			new \pocketmine\command\defaults\FunctionCommand(),
+			new \pocketmine\command\defaults\DaylockCommand(),
+			new \pocketmine\command\defaults\StopsoundCommand(),
+			new \pocketmine\command\defaults\DamageCommand(),
+			new \pocketmine\command\defaults\LocateCommand(),
 			new \pocketmine\command\defaults\FillCommand(),
 			new \pocketmine\command\defaults\SummonCommand(),
 			new \pocketmine\command\defaults\TellrawCommand(),
@@ -226,7 +232,7 @@ class SimpleCommandMap implements CommandMap{
 	 * @param string[] $args
 	 */
 	private function executeWithSelectors(CommandSender $sender, Command $command, string $label, array $args) : void{
-		static $selectorAware = ["kill", "tellraw", "playsound", "say", "me", "summon", "gamerule", "setblock", "fill", "clone", "execute", "scoreboard"];
+		static $selectorAware = ["kill", "tellraw", "playsound", "say", "me", "summon", "gamerule", "setblock", "fill", "clone", "execute", "scoreboard", "tag", "function", "stopsound", "damage"];
 		$index = null;
 		foreach($args as $i => $arg){
 			if(\pocketmine\command\utils\TargetSelector::isSelector($arg) && strtolower($arg) !== "@s"){
