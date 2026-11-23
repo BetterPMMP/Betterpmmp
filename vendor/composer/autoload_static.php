@@ -997,6 +997,8 @@ class ComposerStaticInit01c34b5648e4177bfa963b48f7da5526
         'pocketmine\\command\\defaults\\FillCommand' => __DIR__ . '/../..' . '/src/command/defaults/FillCommand.php',
         'pocketmine\\command\\defaults\\SetblockCommand' => __DIR__ . '/../..' . '/src/command/defaults/SetblockCommand.php',
         'pocketmine\\command\\defaults\\GameruleCommand' => __DIR__ . '/../..' . '/src/command/defaults/GameruleCommand.php',
+        'pocketmine\\item\\CopperGolemSpawnEgg' => __DIR__ . '/../..' . '/src/item/CopperGolemSpawnEgg.php',
+        'pocketmine\\item\\PlacingBedrockItem' => __DIR__ . '/../..' . '/src/item/PlacingBedrockItem.php',
         'pocketmine\\crafting\\SpecialRecipes' => __DIR__ . '/../..' . '/src/crafting/SpecialRecipes.php',
         'pocketmine\\item\\custom\\CustomTool' => __DIR__ . '/../..' . '/src/item/custom/CustomTool.php',
         'pocketmine\\world\\StructureInhabitants' => __DIR__ . '/../..' . '/src/world/StructureInhabitants.php',

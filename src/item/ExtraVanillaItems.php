@@ -159,6 +159,13 @@ final class ExtraVanillaItems{
 			str_ends_with($name, "_cushion") => new PlaceableEntityItem($id, $display, $name, 64),
 			$name === "minecraft:lead" => new LeadItem($id, "Lead", $name, 64),
 			$name === "minecraft:empty_map" => new EmptyMapItem($id, "Empty Map", $name, 64),
+			//BetterPMMP: palette items that place a block of the same name (they could not be placed before)
+			$name === "minecraft:poplar_door" => new PlacingBedrockItem($id, "Poplar Door", $name, 64, "minecraft:poplar_door"),
+			$name === "minecraft:poplar_sign" => new PlacingBedrockItem($id, "Poplar Sign", $name, 16, "minecraft:poplar_standing_sign", "minecraft:poplar_wall_sign"),
+			$name === "minecraft:poplar_hanging_sign" => new PlacingBedrockItem($id, "Poplar Hanging Sign", $name, 16, "minecraft:poplar_hanging_sign"),
+			$name === "minecraft:kelp" => new PlacingBedrockItem($id, "Kelp", $name, 64, "minecraft:kelp"),
+			$name === "minecraft:straw_bed" => new PlacingBedrockItem($id, "Straw Bed", $name, 1, "minecraft:straw_bed"),
+			$name === "minecraft:copper_golem_spawn_egg" => new CopperGolemSpawnEgg($id, "Copper Golem Spawn Egg"),
 			default => new GenericBedrockItem($id, $display, $name, self::stackSize($name)),
 		};
 	}

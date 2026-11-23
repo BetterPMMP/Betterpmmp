@@ -863,6 +863,8 @@ return array(
     'pocketmine\\command\\defaults\\FillCommand' => $baseDir . '/src/command/defaults/FillCommand.php',
     'pocketmine\\command\\defaults\\SetblockCommand' => $baseDir . '/src/command/defaults/SetblockCommand.php',
     'pocketmine\\command\\defaults\\GameruleCommand' => $baseDir . '/src/command/defaults/GameruleCommand.php',
+    'pocketmine\\item\\CopperGolemSpawnEgg' => $baseDir . '/src/item/CopperGolemSpawnEgg.php',
+    'pocketmine\\item\\PlacingBedrockItem' => $baseDir . '/src/item/PlacingBedrockItem.php',
     'pocketmine\\crafting\\SpecialRecipes' => $baseDir . '/src/crafting/SpecialRecipes.php',
     'pocketmine\\item\\custom\\CustomTool' => $baseDir . '/src/item/custom/CustomTool.php',
     'pocketmine\\world\\StructureInhabitants' => $baseDir . '/src/world/StructureInhabitants.php',
