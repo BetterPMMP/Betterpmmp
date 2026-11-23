@@ -254,12 +254,12 @@ trait CombatAI{
 		if($dx * $dx + $dz * $dz > 0.0001){
 			$this->setRotation(rad2deg(atan2(-$dx, $dz)), 0.0);
 		}
-		if($distanceSq <= $reachSq && $this->attackTime <= 0 && abs($targetPos->y - $this->getPosition()->y) < 2.5){
+		if($distanceSq <= $reachSq && $this->meleeCooldown <= 0 && abs($targetPos->y - $this->getPosition()->y) < 2.5){
 			$damage = $this->meleeDamage();
 			if($damage <= 0){
 				return;
 			}
-			$this->attackTime = 20;
+			$this->meleeCooldown = 20;
 			$this->broadcastAnimation(new ArmSwingAnimation($this));
 			$event = new EntityDamageByEntityEvent($this, $target, EntityDamageEvent::CAUSE_ENTITY_ATTACK, $damage);
 			$target->attack($event);

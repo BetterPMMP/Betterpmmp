@@ -213,7 +213,7 @@ abstract class GenericHostileFlyingMob extends GenericFreeMotionMob{
 	}
 	protected function tickWandering(int $tickDiff) : void{ $target = $this->findTarget(); if($target === null){ parent::tickWandering($tickDiff); return; } $this->moveTowardTarget($target); }
 	protected function findTarget() : ?\pocketmine\player\Player{ $target = null; $closest = 14 * 14; foreach($this->getWorld()->getPlayers() as $player){ if(!$player->isAlive() || $player->isCreative() || $player->isSpectator()){ continue; } $distance = $this->getPosition()->distanceSquared($player->getPosition()); if($distance < $closest){ $target = $player; $closest = $distance; } } return $target; }
-	protected function moveTowardTarget(\pocketmine\player\Player $target) : void{ $dx = $target->getPosition()->x - $this->getPosition()->x; $dy = $target->getPosition()->y - $this->getPosition()->y; $dz = $target->getPosition()->z - $this->getPosition()->z; $length = sqrt(($dx * $dx) + ($dy * $dy) + ($dz * $dz)); if($length <= 1.5 && $this->attackTime <= 0){ $this->attackTime = 20; $target->attack(new \pocketmine\event\entity\EntityDamageByEntityEvent($this, $target, \pocketmine\event\entity\EntityDamageEvent::CAUSE_ENTITY_ATTACK, 3)); return; } if($length > 0.001){ $this->setMotion(new \pocketmine\math\Vector3($dx / $length * 0.15, $dy / $length * 0.12, $dz / $length * 0.15)); } }
+	protected function moveTowardTarget(\pocketmine\player\Player $target) : void{ $dx = $target->getPosition()->x - $this->getPosition()->x; $dy = $target->getPosition()->y - $this->getPosition()->y; $dz = $target->getPosition()->z - $this->getPosition()->z; $length = sqrt(($dx * $dx) + ($dy * $dy) + ($dz * $dz)); if($length <= 1.5 && $this->meleeCooldown <= 0){ $this->meleeCooldown = 20; $target->attack(new \pocketmine\event\entity\EntityDamageByEntityEvent($this, $target, \pocketmine\event\entity\EntityDamageEvent::CAUSE_ENTITY_ATTACK, 3)); return; } if($length > 0.001){ $this->setMotion(new \pocketmine\math\Vector3($dx / $length * 0.15, $dy / $length * 0.12, $dz / $length * 0.15)); } }
 }
 
 abstract class GenericHostileSwimmingMob extends GenericHostileFlyingMob{ protected function tickWandering(int $tickDiff) : void{ parent::tickWandering($tickDiff); $this->constrainToWater(); } public function canBreathe() : bool{ return $this->isUnderwater(); } }
@@ -271,6 +271,63 @@ abstract class GenericRangedHostileMob extends GenericHostileMob{
 	protected function heldWeapon() : Item{ return VanillaItems::BOW(); }
 	private int $strafeTicks = 0;
 	private int $strafeDirection = 1;
+	private int $drawTicks = 0;
+
+	/**
+	 * Vanilla RangedBowAttackGoal: with the target in sight and within 15 blocks the bow is drawn for a second
+	 * (the client shows the aiming pose while the mob has a target), then the arrow flies at 1.6 blocks per
+	 * tick towards a third of the target's height, aimed higher with distance (0.2 per block) against the
+	 * drop, a little inaccurate (less on Hard). Then it waits 2 seconds (1 on Hard) before drawing again.
+	 */
+	private function tickBowAttack(Living $target, bool $lineOfSight, float $horizontal, int $tickDiff) : void{
+		$inRange = $lineOfSight && $target->getPosition()->distanceSquared($this->getPosition()) <= 15 * 15;
+		$this->setTargetEntity($inRange ? $target : null);
+		if(!$inRange){
+			$this->drawTicks = 0;
+			return;
+		}
+		if($this->meleeCooldown > 0){
+			return;
+		}
+		if(($this->drawTicks += $tickDiff) < 20){
+			return;
+		}
+		$this->drawTicks = 0;
+		$hard = $this->getWorld()->getDifficulty() === \pocketmine\world\World::DIFFICULTY_HARD;
+		$this->meleeCooldown = $hard ? 20 : 40;
+
+		$origin = $this->getEyePos()->subtract(0, 0.1, 0);
+		$aimX = $target->getPosition()->x - $origin->x;
+		$aimZ = $target->getPosition()->z - $origin->z;
+		$distance = sqrt($aimX * $aimX + $aimZ * $aimZ);
+		$aimY = $target->getPosition()->y + $target->getSize()->getHeight() / 3 - $origin->y + $distance * 0.2;
+		$length = sqrt($aimX * $aimX + $aimY * $aimY + $aimZ * $aimZ);
+		if($length < 0.0001){
+			return;
+		}
+		$inaccuracy = (14 - $this->getWorld()->getDifficulty() * 4) * 0.0075;
+		$dir = new \pocketmine\math\Vector3(
+			$aimX / $length + self::gaussian() * $inaccuracy,
+			$aimY / $length + self::gaussian() * $inaccuracy,
+			$aimZ / $length + self::gaussian() * $inaccuracy
+		);
+		$yaw = rad2deg(atan2(-$dir->x, $dir->z));
+		$pitch = rad2deg(-atan2($dir->y, sqrt($dir->x * $dir->x + $dir->z * $dir->z)));
+		$arrow = new \pocketmine\entity\projectile\Arrow(new \pocketmine\entity\Location($origin->x, $origin->y, $origin->z, $this->getWorld(), $yaw, $pitch), $this, false);
+		$this->decorateArrow($arrow);
+		//vanilla base damage 2 (+ a little more on harder difficulties); the hit does about 2 hearts
+		$arrow->setBaseDamage(2.0 + $this->getWorld()->getDifficulty() * 0.11);
+		$arrow->setMotion($dir->normalize()->multiply(1.6));
+		$arrow->setPickupMode(\pocketmine\entity\projectile\Arrow::PICKUP_NONE);
+		$arrow->spawnToAll();
+		$this->getWorld()->addSound($this->getPosition(), new \pocketmine\world\sound\BowShootSound());
+	}
+
+	private static function gaussian() : float{
+		$u = max(1e-9, mt_rand() / mt_getrandmax());
+		$v = mt_rand() / mt_getrandmax();
+		return sqrt(-2 * log($u)) * cos(2 * M_PI * $v);
+	}
 	public function spawnTo(Player $player) : void{
 		if(!$player->isConnected()){
 			return;
@@ -297,10 +354,8 @@ abstract class GenericRangedHostileMob extends GenericHostileMob{
 		$navigator = $this->getNavigator();
 		if(!$lineOfSight || $horizontal > 12.0){ $navigator->moveTo($target->getPosition(), $this->getWalkSpeed(true), 2.0); $navigator->tick($tickDiff); }
 		else{ $navigator->stop(); if($horizontal < 5.0 && $this->isOnGround()){ $this->moveGroundToward(-$dx, -$dz, $this->getWalkSpeed(true)); } elseif($this->isOnGround()){ $this->strafeTicks += $tickDiff; if($this->strafeTicks >= 20){ $this->strafeTicks = 0; if(mt_rand(0, 9) < 3){ $this->strafeDirection = -$this->strafeDirection; } } $this->moveGroundToward(-$dz * $this->strafeDirection, $dx * $this->strafeDirection, $this->getWalkSpeed() * 0.6); } }
-		if($lineOfSight && $horizontal >= 5.0 && $horizontal <= 14.0 && $this->attackTime <= 0){
-			$origin = $this->getEyePos(); $targetEye = $target->getEyePos(); $aimX = $targetEye->x - $origin->x; $aimY = $targetEye->y - $origin->y + ($horizontal * 0.04); $aimZ = $targetEye->z - $origin->z; $yaw = rad2deg(atan2(-$aimX, $aimZ)); $pitch = rad2deg(-atan2($aimY, $horizontal));
-			$arrow = new \pocketmine\entity\projectile\Arrow(new \pocketmine\entity\Location($origin->x, $origin->y, $origin->z, $this->getWorld(), $yaw, $pitch), $this, false); $this->decorateArrow($arrow); $arrow->setBaseDamage(1.5); $arrow->setMotion((new \pocketmine\math\Vector3($aimX, $aimY, $aimZ))->normalize()->multiply(1.65)); $arrow->spawnToAll(); $this->attackTime = mt_rand(30, 45);
-		}
+		$this->tickBowAttack($target, $lineOfSight, $horizontal, $tickDiff);
+
 	}
 }
 
@@ -480,7 +535,7 @@ class AxolotlMob extends GenericSwimmingAnimalMob{
 		$target = $this->updateCombatTarget($tickDiff);
 		if($target === null || !\pocketmine\entity\ai\MobBehaviours::isInWater($target)){ parent::tickWandering($tickDiff); return; }
 		$distance = \pocketmine\entity\ai\MobBehaviours::flyToward($this, $target->getPosition()->add(0, $target->getSize()->getHeight() / 2, 0), min(0.35, max(0.15, $this->getMovementSpeed())));
-		if($distance < 1.8 && $this->attackTime <= 0){ $this->attackTime = 20; $this->broadcastAnimation(new \pocketmine\entity\animation\ArmSwingAnimation($this)); \pocketmine\entity\ai\MobBehaviours::hit($this, $target, $this->meleeDamage()); }
+		if($distance < 1.8 && $this->meleeCooldown <= 0){ $this->meleeCooldown = 20; $this->broadcastAnimation(new \pocketmine\entity\animation\ArmSwingAnimation($this)); \pocketmine\entity\ai\MobBehaviours::hit($this, $target, $this->meleeDamage()); }
 	}
 	protected function onSwimmerHurt() : void{
 		if($this->getHealth() < $this->getMaxHealth() / 3 && mt_rand(1, 3) === 1){ $this->getEffects()->add(new \pocketmine\entity\effect\EffectInstance(\pocketmine\entity\effect\VanillaEffects::REGENERATION(), 200, 0)); $this->setMotion(new \pocketmine\math\Vector3(0, 0, 0)); }
@@ -969,7 +1024,7 @@ class DolphinMob extends GenericSwimmingAnimalMob{
 		$target = $this->updateCombatTarget($tickDiff);
 		if($target === null || !\pocketmine\entity\ai\MobBehaviours::isInWater($target)){ parent::tickWandering($tickDiff); return; }
 		$distance = \pocketmine\entity\ai\MobBehaviours::flyToward($this, $target->getPosition()->add(0, $target->getSize()->getHeight() / 2, 0), min(0.35, max(0.15, $this->getMovementSpeed())));
-		if($distance < 1.8 && $this->attackTime <= 0){ $this->attackTime = 20; $this->broadcastAnimation(new \pocketmine\entity\animation\ArmSwingAnimation($this)); \pocketmine\entity\ai\MobBehaviours::hit($this, $target, $this->meleeDamage()); }
+		if($distance < 1.8 && $this->meleeCooldown <= 0){ $this->meleeCooldown = 20; $this->broadcastAnimation(new \pocketmine\entity\animation\ArmSwingAnimation($this)); \pocketmine\entity\ai\MobBehaviours::hit($this, $target, $this->meleeDamage()); }
 	}
 	protected function onSwimmerHurt() : void{
 		$target = $this->getCombatTarget();
@@ -2092,8 +2147,8 @@ class IronGolemMob extends GenericAnimalMob{
 		$navigator->moveTo($target->getPosition(), $this->getWalkSpeed(true), 1.0);
 		$navigator->tick($tickDiff);
 		$reach = \pocketmine\entity\ai\MobStats::reachSq($this->getSize()->getWidth(), $target->getSize()->getWidth());
-		if($this->getPosition()->distanceSquared($target->getPosition()) <= $reach && $this->attackTime <= 0){
-			$this->attackTime = 20;
+		if($this->getPosition()->distanceSquared($target->getPosition()) <= $reach && $this->meleeCooldown <= 0){
+			$this->meleeCooldown = 20;
 			$this->broadcastAnimation(new \pocketmine\entity\animation\ArmSwingAnimation($this));
 			$damage = 7 + mt_rand(0, 14);
 			if($target instanceof Player){
@@ -2432,7 +2487,7 @@ class PhantomMob extends GenericHostileFlyingMob{
 			$to = $tpos->add(0, 1.0, 0)->subtractVector($pos);
 			$len = $to->length();
 			if($len < 1.6){
-				if($this->attackTime <= 0){ $this->attackTime = 20; $target->attack(new \pocketmine\event\entity\EntityDamageByEntityEvent($this, $target, \pocketmine\event\entity\EntityDamageEvent::CAUSE_ENTITY_ATTACK, 6)); }
+				if($this->meleeCooldown <= 0){ $this->meleeCooldown = 20; $target->attack(new \pocketmine\event\entity\EntityDamageByEntityEvent($this, $target, \pocketmine\event\entity\EntityDamageEvent::CAUSE_ENTITY_ATTACK, 6)); }
 				$this->swooping = false; $this->swoopCooldown = mt_rand(100, 200);
 			}else{
 				$this->setMotion($to->multiply(0.55 / $len));

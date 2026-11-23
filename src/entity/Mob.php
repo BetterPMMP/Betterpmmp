@@ -105,8 +105,17 @@ abstract class Mob extends Living{
 
 	protected function burnsInDaylight() : bool{ return false; }
 
+	/**
+	 * BetterPMMP: ticks until the mob may hit or shoot again. Separate from Living::$attackTime, which is the
+	 * damage immunity after being hit - sharing it made mobs ignore weaker hits for a second after they attacked.
+	 */
+	protected int $meleeCooldown = 0;
+
 	protected function entityBaseTick(int $tickDiff = 1) : bool{
 		$hasUpdate = parent::entityBaseTick($tickDiff);
+		if($this->meleeCooldown > 0){
+			$this->meleeCooldown = max(0, $this->meleeCooldown - $tickDiff);
+		}
 		if($this->isAlive()){
 			$this->tickLeash();
 			$this->tickDaylightBurning($tickDiff);

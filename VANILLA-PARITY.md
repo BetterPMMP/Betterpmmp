@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.83-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.84-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -49,6 +49,13 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel), Lama mit Truhe |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.84
+
+| System | Stand |
+|---|---|
+| Fix: Skelette (und Eiswanderer, Sumpfskelette, Plünderer …) schießen wie in Vanilla | 🟡 ungetestet – Sie schossen nur auf 5–14 Blöcke (aus der Nähe gar nicht) und glichen das Absinken der Pfeile kaum aus (Pfeile landeten vor dem Ziel). Jetzt wie Vanilla: bis 15 Blöcke mit freier Sicht, eine Sekunde Bogen spannen (Zielhaltung im Client), Pfeil mit 1,6 Blöcken/Tick auf ein Drittel der Zielhöhe, 0,2 pro Block höher gezielt, leicht ungenau (auf Schwer weniger), danach 2 Sekunden Pause (Schwer: 1), Pfeile nicht aufsammelbar, Schuss-Geräusch |
+| Fix: Mobs nach eigenem Angriff halb unverwundbar | 🟡 ungetestet – Die Angriffspause der Mobs war derselbe Zähler wie ihre Schadensimmunität: Nach jedem eigenen Schlag oder Schuss wurden schwächere Treffer eine Sekunde lang ignoriert. Jetzt getrennt (alle Nahkampf-Mobs, Skelette, eigene Wesen) |
 
 ## Neu in 5.83
 
