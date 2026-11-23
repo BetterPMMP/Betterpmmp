@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.82-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.83-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -49,6 +49,13 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel), Lama mit Truhe |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
+
+## Neu in 5.83
+
+| System | Stand |
+|---|---|
+| Schmiedetisch für Bedrock-Spieler | 🟡 ungetestet – Der Server hat keine Schmiederezepte geladen und an den Client geschickt; der Schmiedetisch ging für Bedrock-Spieler nicht. Jetzt: alle 12 Netherit-Aufwertungen aus den offiziellen Daten (Verzauberungen, Name und Abnutzung bleiben) und Rüstungsbesätze (alle Vorlagen, 11 Materialien, gespeichert als `Trim` wie beim offiziellen Server) |
+| Schmiedetisch für Java-Spieler | 🟡 ungetestet – dieselben Rezepte, jetzt also auch Rüstungsbesätze; Shift-Klick sortiert Vorlagen, Materialien und Rüstung ein |
 
 ## Neu in 5.82
 

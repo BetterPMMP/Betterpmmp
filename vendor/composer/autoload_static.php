@@ -997,6 +997,8 @@ class ComposerStaticInit01c34b5648e4177bfa963b48f7da5526
         'pocketmine\\command\\defaults\\FillCommand' => __DIR__ . '/../..' . '/src/command/defaults/FillCommand.php',
         'pocketmine\\command\\defaults\\SetblockCommand' => __DIR__ . '/../..' . '/src/command/defaults/SetblockCommand.php',
         'pocketmine\\command\\defaults\\GameruleCommand' => __DIR__ . '/../..' . '/src/command/defaults/GameruleCommand.php',
+        'pocketmine\\inventory\\transaction\\SmithingTransaction' => __DIR__ . '/../..' . '/src/inventory/transaction/SmithingTransaction.php',
+        'pocketmine\\crafting\\SmithingRecipes' => __DIR__ . '/../..' . '/src/crafting/SmithingRecipes.php',
         'pocketmine\\block\\VanillaMossBlock' => __DIR__ . '/../..' . '/src/block/VanillaPlantBlocks.php',
         'pocketmine\\block\\VanillaDecayingLeaves' => __DIR__ . '/../..' . '/src/block/VanillaPlantBlocks.php',
         'pocketmine\\block\\VanillaPillarLog' => __DIR__ . '/../..' . '/src/block/VanillaPlantBlocks.php',

@@ -225,11 +225,11 @@ final class JavaInventoryClick{
 			return [[$container, BrewingStandInventory::SLOT_INGREDIENT]];
 		}
 		if($container instanceof SmithingTableInventory){
-			$id = $item->getTypeId();
+			$name = \pocketmine\crafting\SmithingRecipes::nameOf($item);
 			return match(true){
-				$id === \pocketmine\item\ItemTypeIds::NETHERITE_UPGRADE_SMITHING_TEMPLATE => [[$container, 2]],
-				$id === \pocketmine\item\ItemTypeIds::NETHERITE_INGOT => [[$container, 1]],
-				isset(self::netheriteUpgrades()[$id]) => [[$container, 0]],
+				str_ends_with($name, "_smithing_template") => [[$container, 2]],
+				isset(\pocketmine\crafting\SmithingRecipes::TRIM_MATERIALS[$name]) => [[$container, 1]],
+				isset(self::netheriteUpgrades()[$item->getTypeId()]) || $item instanceof \pocketmine\item\Armor => [[$container, 0]],
 				default => [],
 			};
 		}
@@ -740,23 +740,8 @@ final class JavaInventoryClick{
 	 * Netherite upgrade: template + diamond tool or armour + netherite ingot. Enchantments, name and damage stay.
 	 */
 	public static function smithingResult(SmithingTableInventory $table) : ?Item{
-		$base = $table->getItem(0);
-		$material = $table->getItem(1);
-		$template = $table->getItem(2);
-		$make = self::netheriteUpgrades()[$base->getTypeId()] ?? null;
-		if($make === null || $base->isNull() || $material->getTypeId() !== \pocketmine\item\ItemTypeIds::NETHERITE_INGOT || $template->getTypeId() !== \pocketmine\item\ItemTypeIds::NETHERITE_UPGRADE_SMITHING_TEMPLATE){
-			return null;
-		}
-		$result = $make();
-		try{
-			$result->setNamedTag(clone $base->getNamedTag());
-		}catch(\Throwable){
-			// keep the plain netherite item
-		}
-		if($result instanceof Durable && $base instanceof Durable){
-			$result->setDamage(min($base->getDamage(), $result->getMaxDurability() - 1));
-		}
-		return $result->setCount(1);
+		//the same recipes as for Bedrock players: netherite upgrades and armour trims
+		return \pocketmine\crafting\SmithingRecipes::resultFor($table);
 	}
 
 	/** Clicking the result takes one upgraded item (shift-click: into the inventory) and uses up one of each input. */

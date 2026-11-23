@@ -385,7 +385,18 @@ class ItemStackRequestExecutor{
 			$this->setNextCreatedItem($result);
 		}elseif($action instanceof CraftRecipeStackRequestAction){
 			$window = $this->player->getCurrentWindow();
-			if($window instanceof EnchantInventory){
+			if($window instanceof \pocketmine\block\inventory\SmithingTableInventory && \pocketmine\crafting\SmithingRecipes::isSmithingNetId($action->getRecipeId())){
+				//BetterPMMP: smithing table (netherite upgrade, armour trims)
+				if($this->specialTransaction !== null){
+					throw new ItemStackRequestProcessException("Another special transaction is already in progress");
+				}
+				$result = \pocketmine\crafting\SmithingRecipes::resultFor($window);
+				if($result === null){
+					throw new ItemStackRequestProcessException("Nothing can be made with these items at a smithing table");
+				}
+				$this->specialTransaction = new \pocketmine\inventory\transaction\SmithingTransaction($this->player, $window, $result);
+				$this->setNextCreatedItem($result);
+			}elseif($window instanceof EnchantInventory){
 				$optionId = $this->inventoryManager->getEnchantingTableOptionIndex($action->getRecipeId());
 				if($optionId !== null && ($option = $window->getOption($optionId)) !== null){
 					$this->specialTransaction = new EnchantingTransaction($this->player, $option, $optionId + 1);

@@ -863,6 +863,8 @@ return array(
     'pocketmine\\command\\defaults\\FillCommand' => $baseDir . '/src/command/defaults/FillCommand.php',
     'pocketmine\\command\\defaults\\SetblockCommand' => $baseDir . '/src/command/defaults/SetblockCommand.php',
     'pocketmine\\command\\defaults\\GameruleCommand' => $baseDir . '/src/command/defaults/GameruleCommand.php',
+    'pocketmine\\inventory\\transaction\\SmithingTransaction' => $baseDir . '/src/inventory/transaction/SmithingTransaction.php',
+    'pocketmine\\crafting\\SmithingRecipes' => $baseDir . '/src/crafting/SmithingRecipes.php',
     'pocketmine\\block\\VanillaMossBlock' => $baseDir . '/src/block/VanillaPlantBlocks.php',
     'pocketmine\\block\\VanillaDecayingLeaves' => $baseDir . '/src/block/VanillaPlantBlocks.php',
     'pocketmine\\block\\VanillaPillarLog' => $baseDir . '/src/block/VanillaPlantBlocks.php',

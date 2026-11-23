@@ -1,4 +1,4 @@
-# BetterPMMP – Prüfung aller Items und Blöcke (Stand 5.82)
+# BetterPMMP – Prüfung aller Items und Blöcke (Stand 5.83)
 
 Ermittelt aus dem Code: Welche Items und Blöcke der Bedrock-Palette 1.26.60 haben eigenes Verhalten,
 welche sind nur registriert (man kann sie halten, setzen, lagern, aber sie tun nichts Besonderes).
@@ -32,13 +32,16 @@ Glühwürmchenbusch, trockenes Gras, Goldlöwenzahn und hängendes Moos brauchen
 entrindbar, Pappellaub verrottet, Schallplatten „Tears“ und „Bounce“. Noch offen bei diesen Blöcken:
 Glühwürmchen-Partikel, Moosteppich braucht keinen Halt.
 
+## In 5.83 dazugekommen
+
+Schmiedetisch für Bedrock-Spieler (Netherit-Aufwertung und Rüstungsbesätze), Besätze auch für Java-Spieler.
+
 ## Items ohne eigenes Verhalten
 
 | Item | Was fehlt |
 |---|---|
 | Bündel (alle 17 Farben) | Gegenstände hineinlegen und herausnehmen |
 | Nautilus-Rüstungen (Kupfer bis Netherit) | anlegen am Nautilus (der Nautilus selbst hat nur Standard-KI) |
-| Rüstungsbesatz-Vorlagen | Besätze am Schmiedetisch (die Netherit-Aufwertung geht) |
 | Töpferscherben | Muster am verzierten Krug beim Herstellen |
 | Bannermuster | Muster am Webstuhl (ungeprüft) |
 | Schwefelwürfel-Eimer | den Schwefelwürfel (neues 26er-Wesen) fangen und aussetzen |
