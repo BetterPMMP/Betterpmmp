@@ -166,6 +166,8 @@ final class ExtraVanillaItems{
 			$name === "minecraft:kelp" => new PlacingBedrockItem($id, "Kelp", $name, 64, "minecraft:kelp"),
 			$name === "minecraft:straw_bed" => new PlacingBedrockItem($id, "Straw Bed", $name, 1, "minecraft:straw_bed"),
 			$name === "minecraft:copper_golem_spawn_egg" => new CopperGolemSpawnEgg($id, "Copper Golem Spawn Egg"),
+			$name === "minecraft:music_disc_tears" => new Record($id, \pocketmine\block\utils\RecordType::DISK_TEARS, "Music Disc"),
+			$name === "minecraft:music_disc_bounce" => new Record($id, \pocketmine\block\utils\RecordType::DISK_BOUNCE, "Music Disc"),
 			default => new GenericBedrockItem($id, $display, $name, self::stackSize($name)),
 		};
 	}

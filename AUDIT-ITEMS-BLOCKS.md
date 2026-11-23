@@ -1,4 +1,4 @@
-# BetterPMMP – Prüfung aller Items und Blöcke (Stand 5.81)
+# BetterPMMP – Prüfung aller Items und Blöcke (Stand 5.82)
 
 Ermittelt aus dem Code: Welche Items und Blöcke der Bedrock-Palette 1.26.60 haben eigenes Verhalten,
 welche sind nur registriert (man kann sie halten, setzen, lagern, aber sie tun nichts Besonderes).
@@ -25,13 +25,19 @@ Schweine, Schreiter, Kamele), Pferderüstungen, Wolfsrüstung, Geschirre (Glück
 und unheilvolle Prüfungsschlüssel (Tresor), Leitstein-Kompass, Lohenrute und Breeze-Rute (Brauen, Amboss),
 Gürteltier-Schuppe, Töpferscherben und Bannermuster (Beute in Strukturen).
 
+## In 5.82 dazugekommen
+
+Moos und Blasses Moos mit Knochenmehl, Laubstreu und Wildblumen (bis zu vier Stück, Knochenmehl), Busch,
+Glühwürmchenbusch, trockenes Gras, Goldlöwenzahn und hängendes Moos brauchen Halt, Pappelstämme quer und
+entrindbar, Pappellaub verrottet, Schallplatten „Tears“ und „Bounce“. Noch offen bei diesen Blöcken:
+Glühwürmchen-Partikel, Moosteppich braucht keinen Halt.
+
 ## Items ohne eigenes Verhalten
 
 | Item | Was fehlt |
 |---|---|
 | Bündel (alle 17 Farben) | Gegenstände hineinlegen und herausnehmen |
 | Nautilus-Rüstungen (Kupfer bis Netherit) | anlegen am Nautilus (der Nautilus selbst hat nur Standard-KI) |
-| Schallplatten „Bounce“ und „Tears“ | im Plattenspieler abspielen (die älteren Platten gehen) |
 | Rüstungsbesatz-Vorlagen | Besätze am Schmiedetisch (die Netherit-Aufwertung geht) |
 | Töpferscherben | Muster am verzierten Krug beim Herstellen |
 | Bannermuster | Muster am Webstuhl (ungeprüft) |
@@ -54,13 +60,8 @@ Diese Blöcke kann man setzen und abbauen, aber sie verhalten sich nicht wie in 
 
 | Block | Was fehlt |
 |---|---|
-| Moosblock, Moosteppich, Blasses Moos (Block, Teppich, hängend) | Knochenmehl lässt kein Moos wachsen, hängendes Moos braucht keinen Halt |
-| Laubstreu, Wildblumen | mehrere übereinander setzen, Knochenmehl |
-| Busch, Glühwürmchenbusch, kurzes und hohes trockenes Gras, Goldlöwenzahn | brauchen keinen Boden, Glühwürmchen-Partikel |
 | Sculk-Ader | breitet sich nicht aus (Katalysator setzt sie aber) |
 | Tropfsteinblock | (Tropfstein wächst nur an echtem Tropfstein) |
-| Pappelstamm, -holz, entrindet | lassen sich nicht quer setzen, Axt entrindet nicht |
-| Pappellaub (gelb, orange, rot), Pappelbretter | Laub verrottet nicht |
 | Pilzblöcke, Pilzstiel | Drops passen, Seiten-Zustände beim Setzen nicht |
 | Schwefelspitze, Eiskristall, Eiszapfen, Regalpilz, roter Strauch | neue Blöcke aus 26.x, Verhalten noch unbekannt |
 | Strukturblock, Puzzleblock, Kamera, Tafel, Erlauben/Verweigern/Grenzblock | Bildungs- und Technik-Blöcke, im normalen Spiel ohne Bedeutung |
