@@ -46,7 +46,7 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 |---|---|
 | Kern | Nautilus-Rüstung, Befehlsblöcke, Strukturblöcke |
 | Blöcke ohne Funktion | Sculk-Ader (eigene Ausbreitung), Regale mit Redstone (ganze Reihe tauschen) |
-| Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel), Lama mit Truhe, Panda-Aussehen je Gen |
+| Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel), Lama mit Truhe |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
 
@@ -58,6 +58,7 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Fix: Pappeltür, Pappelschild, Pappel-Hängeschild | 🟡 ungetestet – ließen sich nicht setzen |
 | Fix: Seetang und Strohbett | 🟡 ungetestet – aus dem Kreativinventar, aus Truhen oder nach einem Neustart nicht setzbar |
 | Fix: Kupfergolem-Spawn-Ei | 🟡 ungetestet – tat nichts, spawnt jetzt einen Kupfergolem |
+| Panda-Aussehen | ✅ (aus dem Hauptbranch übernommen) Der Client zeigt den Panda nach seiner Persönlichkeit (Hauptgen): normale, faule, ängstliche, verspielte, braune, schwache und aggressive Pandas sehen unterschiedlich aus (Variant/Mark-Variant). Das Gen wird beim Speichern behalten |
 
 ## Neu in 5.80
 
