@@ -91,10 +91,8 @@ class PreSpawnPacketHandler extends PacketHandler{
 			$levelSettings->rainLevel = 0; //TODO: implement these properly
 			$levelSettings->lightningLevel = 0;
 			$levelSettings->commandsEnabled = true;
-			$levelSettings->gameRules = [
-				"naturalregeneration" => new BoolGameRule(false, false), //Hack for client side regeneration
-				"locatorbar" => new BoolGameRule(false, false) //Disable client-side tracking of nearby players
-			];
+			//BetterPMMP: the world's game rules (natural regeneration and the locator bar stay off on the client)
+			$levelSettings->gameRules = \pocketmine\world\GameRules::network($world);
 			$levelSettings->experiments = new Experiments([], false);
 
 			$this->session->sendDataPacket(StartGamePacket::create(
@@ -122,15 +120,20 @@ class PreSpawnPacketHandler extends PacketHandler{
 				new NetworkPermissions(disableClientSounds: true),
 				null,
 				new ServerTelemetryData("", "", "", ""),
-				StaticPacketCache::getInstance()->getBlockPaletteEntries(),
+				[...StaticPacketCache::getInstance()->getBlockPaletteEntries(), ...\pocketmine\block\custom\CustomBlocks::paletteEntries()],
 				0,
 			));
 
 			$this->session->getLogger()->debug("Sending items");
 			$this->session->sendDataPacket(ItemRegistryPacket::create($typeConverter->getItemTypeDictionary()->getEntries()));
 
+			//BetterPMMP: camera presets for /camera set (camera.presets: false in betterpmmp.yml turns this off)
+			if(\pocketmine\BetterPMMPConfig::flag("camera", "presets", true)){
+				$this->session->sendDataPacket(\pocketmine\network\mcpe\camera\CameraPresets::packet());
+			}
+
 			$this->session->getLogger()->debug("Sending actor identifiers");
-			$this->session->sendDataPacket(StaticPacketCache::getInstance()->getAvailableActorIdentifiers());
+			$this->session->sendDataPacket(\pocketmine\entity\custom\CustomEntities::actorIdentifiers(StaticPacketCache::getInstance()->getAvailableActorIdentifiers()));
 
 			$this->session->getLogger()->debug("Sending biome definitions");
 			$this->session->sendDataPacket(StaticPacketCache::getInstance()->getBiomeDefs());

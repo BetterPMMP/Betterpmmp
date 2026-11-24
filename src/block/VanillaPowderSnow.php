@@ -68,7 +68,9 @@ class VanillaPowderSnow extends GenericBedrockBlock{
 		self::$frozen[$entity->getId()] = [$ticks, $now];
 		$entity->getNetworkProperties()->setFloat(EntityMetadataProperties::FREEZING_EFFECT_STRENGTH, $ticks / self::FREEZE_TICKS > 1 ? 1.0 : $ticks / self::FREEZE_TICKS);
 		if($ticks >= self::FREEZE_TICKS && $now % 40 === 0){
-			$entity->attack(new EntityDamageEvent($entity, EntityDamageEvent::CAUSE_MAGIC, 1));
+			if(!$entity instanceof \pocketmine\player\Player || \pocketmine\world\GameRules::bool($entity->getWorld(), "freezedamage")){ //game rule freezeDamage
+				$entity->attack(new EntityDamageEvent($entity, EntityDamageEvent::CAUSE_MAGIC, 1));
+			}
 		}
 		return true;
 	}

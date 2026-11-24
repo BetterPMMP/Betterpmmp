@@ -232,7 +232,9 @@ class VanillaCommandBlock extends GenericBedrockBlock{
 	/** Runs the command and then the chain block in front. */
 	public function execute(int $depth) : void{
 		$tile = $this->tile();
-		if($tile === null || $depth > self::MAX_CHAIN){
+		$world = $this->position->getWorld();
+		//BetterPMMP: game rules commandBlocksEnabled and maxCommandChainLength
+		if($tile === null || $depth > min(self::MAX_CHAIN, \pocketmine\world\GameRules::int($world, "maxcommandchainlength")) || !\pocketmine\world\GameRules::bool($world, "commandblocksenabled")){
 			return;
 		}
 		$command = $tile->command;
@@ -251,6 +253,14 @@ class VanillaCommandBlock extends GenericBedrockBlock{
 			}
 			$tile->successCount = $ok ? 1 : 0;
 			$tile->lastOutput = strlen($sender->output) > 512 ? substr($sender->output, 0, 512) : $sender->output;
+			//game rule commandBlockOutput: operators nearby see what the block did, like vanilla
+			if($tile->trackOutput && $sender->output !== "" && \pocketmine\world\GameRules::bool($world, "commandblockoutput")){
+				foreach($world->getPlayers() as $player){
+					if($player->hasPermission(\pocketmine\permission\DefaultPermissions::ROOT_OPERATOR)){
+						$player->sendMessage(TextFormat::GRAY . TextFormat::ITALIC . "[@: " . $tile->lastOutput . "]");
+					}
+				}
+			}
 		}
 		$tile->changed();
 		[$dx, $dy, $dz] = Facing::OFFSET[$this->getFacing()];

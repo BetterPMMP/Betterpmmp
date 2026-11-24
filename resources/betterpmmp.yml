@@ -12,6 +12,15 @@
 #   "*"        = in allen Welten
 #   "default"  = nur in der Hauptwelt (level-name aus server.properties)
 # Beispiel:  worlds: ["world", "survival"]
+# Grafik: Vibrant Visuals (neues Licht, Schatten, Wasser, Nebel) für Bedrock-Spieler erlauben.
+# Der Client entscheidet selbst (Gerät, Einstellung "Grafikmodus"); false schaltet es für alle ab.
+graphics:
+  vibrant-visuals: true
+
+# Kamera-Voreinstellungen beim Beitreten schicken (für /camera set). Bei Verbindungsproblemen auf false stellen.
+camera:
+  presets: true
+
 mob-spawning:
   worlds: ["default"]
   # Welten, in denen NIE Mobs spawnen (z. B. Lobby, Minispiele)

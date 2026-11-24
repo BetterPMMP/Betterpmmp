@@ -97,6 +97,11 @@ class Explosion{
 		if($this->radius < 0.1){
 			return false;
 		}
+		//BetterPMMP: game rule mobGriefing - creepers, ghast fireballs, withers ... do not break blocks
+		$cause = $this->what instanceof \pocketmine\entity\projectile\Projectile ? $this->what->getOwningEntity() : $this->what;
+		if($cause instanceof \pocketmine\entity\Living && !$cause instanceof \pocketmine\entity\Human && !GameRules::bool($this->world, "mobgriefing")){
+			return false;
+		}
 
 		$blockFactory = RuntimeBlockStateRegistry::getInstance();
 
@@ -170,6 +175,10 @@ class Explosion{
 	public function explodeB() : bool{
 		$source = (new Vector3($this->source->x, $this->source->y, $this->source->z))->floor();
 		$yield = min(100, (1 / $this->radius) * 100);
+		//BetterPMMP: game rule tntExplosionDropDecay (Bedrock default off: TNT drops every block it breaks)
+		if(($this->what instanceof \pocketmine\entity\object\PrimedTNT || $this->what instanceof \pocketmine\entity\object\TntMinecartEntity) && !GameRules::bool($this->world, "tntexplosiondropdecay")){
+			$yield = 100.0;
+		}
 
 		if($this->what instanceof Entity){
 			$ev = new EntityExplodeEvent($this->what, $this->source, $this->affectedBlocks, $yield, $this->fireIgnitions);

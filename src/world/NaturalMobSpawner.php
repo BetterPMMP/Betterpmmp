@@ -76,7 +76,8 @@ final class NaturalMobSpawner{
 	private array $nextPatrolTick = [];
 
 	public function tick(World $world) : void{
-		if(!\pocketmine\BetterPMMPConfig::mobSpawningEnabled($world)){
+		//BetterPMMP: game rule doMobSpawning
+		if(!\pocketmine\BetterPMMPConfig::mobSpawningEnabled($world) || !\pocketmine\world\GameRules::bool($world, "domobspawning")){
 			return;
 		}
 		$eligiblePlayers = [];
@@ -735,6 +736,12 @@ final class NaturalMobSpawner{
 				$mob->markNaturalSpawned();
 			}
 			$mob->spawnToAll();
+			//vanilla: 5 % of baby zombies spawn riding a chicken (chicken jockey)
+			if($mob instanceof \pocketmine\entity\Zombie && $mob->isBaby() && mt_rand(0, 99) < 5){
+				$chicken = new Chicken($location);
+				$chicken->spawnToAll();
+				\pocketmine\entity\riding\RidingManager::mount($mob, $chicken);
+			}
 		}
 	}
 }

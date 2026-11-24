@@ -53,16 +53,42 @@ class EffectCommand extends VanillaCommand{
 			throw new InvalidCommandSyntaxException();
 		}
 
-		$player = $this->fetchPermittedPlayerTarget($sender, $args[0], DefaultPermissionNames::COMMAND_EFFECT_SELF, DefaultPermissionNames::COMMAND_EFFECT_OTHER);
-		if($player === null){
-			return true;
+		//BetterPMMP: selectors work on mobs too (/effect @e[type=zombie] slowness 10)
+		if(\pocketmine\command\utils\TargetSelector::isSelector($args[0]) && $args[0] !== "@s"){
+			if(!$this->testPermission($sender, DefaultPermissionNames::COMMAND_EFFECT_OTHER)){
+				return true;
+			}
+			$targets = [];
+			foreach(\pocketmine\command\utils\TargetSelector::select($sender, $args[0]) as $entity){
+				if($entity instanceof \pocketmine\entity\Living && $entity->isAlive()){
+					$targets[] = $entity;
+				}
+			}
+			if($targets === []){
+				$sender->sendMessage(TextFormat::RED . "No targets matched selector");
+				return true;
+			}
+		}else{
+			$player = $this->fetchPermittedPlayerTarget($sender, $args[0], DefaultPermissionNames::COMMAND_EFFECT_SELF, DefaultPermissionNames::COMMAND_EFFECT_OTHER);
+			if($player === null){
+				return true;
+			}
+			$targets = [$player];
 		}
+		foreach($targets as $player){
+			$this->applyTo($sender, $player, $args);
+		}
+		return true;
+	}
+
+	/** @param string[] $args */
+	private function applyTo(CommandSender $sender, \pocketmine\entity\Living $player, array $args) : bool{
 		$effectManager = $player->getEffects();
 
 		if(strtolower($args[1]) === "clear"){
 			$effectManager->clear();
 
-			$sender->sendMessage(KnownTranslationFactory::commands_effect_success_removed_all($player->getDisplayName()));
+			$sender->sendMessage(KnownTranslationFactory::commands_effect_success_removed_all(($player instanceof \pocketmine\player\Player ? $player->getDisplayName() : $player->getName())));
 			return true;
 		}
 
@@ -107,23 +133,23 @@ class EffectCommand extends VanillaCommand{
 		if($duration === 0){
 			if(!$effectManager->has($effect)){
 				if(count($effectManager->all()) === 0){
-					$sender->sendMessage(KnownTranslationFactory::commands_effect_failure_notActive_all($player->getDisplayName()));
+					$sender->sendMessage(KnownTranslationFactory::commands_effect_failure_notActive_all(($player instanceof \pocketmine\player\Player ? $player->getDisplayName() : $player->getName())));
 				}else{
-					$sender->sendMessage(KnownTranslationFactory::commands_effect_failure_notActive($effect->getName(), $player->getDisplayName()));
+					$sender->sendMessage(KnownTranslationFactory::commands_effect_failure_notActive($effect->getName(), ($player instanceof \pocketmine\player\Player ? $player->getDisplayName() : $player->getName())));
 				}
 				return true;
 			}
 
 			$effectManager->remove($effect);
-			$sender->sendMessage(KnownTranslationFactory::commands_effect_success_removed($effect->getName(), $player->getDisplayName()));
+			$sender->sendMessage(KnownTranslationFactory::commands_effect_success_removed($effect->getName(), ($player instanceof \pocketmine\player\Player ? $player->getDisplayName() : $player->getName())));
 		}else{
 			$instance = new EffectInstance($effect, $duration, $amplification, $visible, infinite: $infinite);
 			$effectManager->add($instance);
 
 			if($infinite){
-				self::broadcastCommandMessage($sender, KnownTranslationFactory::commands_effect_success_infinite($effect->getName(), (string) $instance->getAmplifier(), $player->getDisplayName()));
+				self::broadcastCommandMessage($sender, KnownTranslationFactory::commands_effect_success_infinite($effect->getName(), (string) $instance->getAmplifier(), ($player instanceof \pocketmine\player\Player ? $player->getDisplayName() : $player->getName())));
 			}else{
-				self::broadcastCommandMessage($sender, KnownTranslationFactory::commands_effect_success($effect->getName(), (string) $instance->getAmplifier(), $player->getDisplayName(), (string) ($instance->getDuration() / 20)));
+				self::broadcastCommandMessage($sender, KnownTranslationFactory::commands_effect_success($effect->getName(), (string) $instance->getAmplifier(), ($player instanceof \pocketmine\player\Player ? $player->getDisplayName() : $player->getName()), (string) ($instance->getDuration() / 20)));
 			}
 		}
 

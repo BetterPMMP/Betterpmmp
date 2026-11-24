@@ -478,6 +478,30 @@ abstract class Entity{
 		$this->savedWithChunk = $value;
 	}
 
+	/** BetterPMMP: command tags (/tag, @e[tag=...]), saved as "Tags" like Bedrock */
+	private array $commandTags = [];
+
+	/** @return string[] */
+	public function getCommandTags() : array{ return array_map(strval(...), array_keys($this->commandTags)); }
+
+	public function hasCommandTag(string $tag) : bool{ return isset($this->commandTags[$tag]); }
+
+	public function addCommandTag(string $tag) : bool{
+		if(isset($this->commandTags[$tag])){
+			return false;
+		}
+		$this->commandTags[$tag] = true;
+		return true;
+	}
+
+	public function removeCommandTag(string $tag) : bool{
+		if(!isset($this->commandTags[$tag])){
+			return false;
+		}
+		unset($this->commandTags[$tag]);
+		return true;
+	}
+
 	public function saveNBT() : CompoundTag{
 		$nbt = CompoundTag::create()
 			->setTag(self::TAG_POS, new ListTag([
@@ -510,11 +534,19 @@ abstract class Entity{
 
 		$nbt->setLong(VersionInfo::TAG_WORLD_DATA_VERSION, VersionInfo::WORLD_DATA_VERSION);
 
+		if($this->commandTags !== []){
+			$nbt->setTag("Tags", new ListTag(array_map(fn(int|string $tag) => new StringTag((string) $tag), array_keys($this->commandTags))));
+		}
 		return $nbt;
 	}
 
 	protected function initEntity(CompoundTag $nbt) : void{
 		$this->fireTicks = $nbt->getShort(self::TAG_FIRE, 0);
+		foreach($nbt->getListTag("Tags") ?? [] as $tag){
+			if($tag instanceof StringTag){
+				$this->commandTags[$tag->getValue()] = true;
+			}
+		}
 
 		$this->onGround = $nbt->getByte(self::TAG_ON_GROUND, 0) !== 0;
 

@@ -196,14 +196,15 @@ class HungerManager{
 				$this->addFood(1.0);
 				$food = $this->getFood();
 			}
-			if($this->foodTickTimer % 20 === 0 && $health < $this->entity->getMaxHealth()){
+			if($this->foodTickTimer % 20 === 0 && $health < $this->entity->getMaxHealth() && \pocketmine\world\GameRules::bool($this->entity->getWorld(), "naturalregeneration")){
 				$this->entity->heal(new EntityRegainHealthEvent($this->entity, 1, EntityRegainHealthEvent::CAUSE_SATURATION));
 			}
 		}
 
 		if($this->foodTickTimer === 0){
 			if($food >= 18){
-				if($health < $this->entity->getMaxHealth()){
+				//BetterPMMP: game rule naturalRegeneration
+				if($health < $this->entity->getMaxHealth() && \pocketmine\world\GameRules::bool($this->entity->getWorld(), "naturalregeneration")){
 					$this->entity->heal(new EntityRegainHealthEvent($this->entity, 1, EntityRegainHealthEvent::CAUSE_SATURATION));
 					$this->exhaust(6.0, PlayerExhaustEvent::CAUSE_HEALTH_REGEN);
 				}

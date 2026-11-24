@@ -119,6 +119,11 @@ final class Weather{
 		if(!$this->hasWeather()){
 			return;
 		}
+		//BetterPMMP: game rule doWeatherCycle - the weather stays as it is (lightning and snow still happen)
+		if(!\pocketmine\world\GameRules::bool($this->world, "doweathercycle")){
+			$this->tickChunks();
+			return;
+		}
 		$wasRaining = $this->raining;
 		$wasThundering = $this->thundering;
 		if(--$this->thunderTime <= 0){
@@ -307,6 +312,18 @@ final class Weather{
 		$rod = $this->findLightningRod($pos);
 		if($rod !== null){
 			$pos = $rod;
+		}elseif($this->world->getDifficulty() !== World::DIFFICULTY_PEACEFUL && mt_rand(0, 9999) < match($this->world->getDifficulty()){
+			World::DIFFICULTY_EASY => 75,
+			World::DIFFICULTY_HARD => 150,
+			default => 100,
+		}){
+			//vanilla: about 1 % of natural strikes leave a skeleton trap horse instead of fire
+			$bolt = self::strike($this->world, $pos);
+			$bolt->setVisualOnly();
+			$horse = new \pocketmine\entity\SkeletonHorseMob(Location::fromObject($pos, $this->world, mt_rand(0, 359), 0));
+			$horse->makeTrap();
+			$horse->spawnToAll();
+			return;
 		}
 		self::strike($this->world, $pos);
 	}

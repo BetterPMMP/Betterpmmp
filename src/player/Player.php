@@ -1488,8 +1488,10 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 
 			$horizontalDistanceTravelled = sqrt((($from->x - $to->x) ** 2) + (($from->z - $to->z) ** 2));
 			if($horizontalDistanceTravelled > 0){
-				//TODO: check for swimming
-				if($this->isSprinting()){
+				//BetterPMMP: swimming costs hunger like sprinting (vanilla 0.01 per block)
+				if($this->isSwimming()){
+					$this->hungerManager->exhaust(0.01 * $horizontalDistanceTravelled, PlayerExhaustEvent::CAUSE_SWIMMING);
+				}elseif($this->isSprinting()){
 					$this->hungerManager->exhaust(0.01 * $horizontalDistanceTravelled, PlayerExhaustEvent::CAUSE_SPRINTING);
 				}else{
 					$this->hungerManager->exhaust(0.0, PlayerExhaustEvent::CAUSE_WALKING);
@@ -2778,6 +2780,14 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		$this->setDeathPosition($this->getPosition());
 
 		$ev = new PlayerDeathEvent($this, $this->getDrops(), $this->getXpDropAmount(), null);
+		//BetterPMMP: game rules keepInventory and showDeathMessages
+		if(\pocketmine\world\GameRules::bool($this->getWorld(), "keepinventory")){
+			$ev->setKeepInventory(true);
+			$ev->setKeepXp(true);
+		}
+		if(!\pocketmine\world\GameRules::bool($this->getWorld(), "showdeathmessages")){
+			$ev->setDeathMessage("");
+		}
 		$ev->call();
 
 		if(!$ev->getKeepInventory()){
@@ -2830,6 +2840,13 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 
 		$this->logger->debug("Waiting for safe respawn position to be located");
 		$spawn = $this->getSpawn();
+		//BetterPMMP: game rule spawnRadius - without a bed or anchor players respawn somewhere around the world spawn
+		if(!$this->hasValidCustomSpawn()){
+			$radius = \pocketmine\world\GameRules::int($spawn->getWorld(), "spawnradius");
+			if($radius > 0){
+				$spawn = new Position($spawn->x + mt_rand(-$radius, $radius), $spawn->y, $spawn->z + mt_rand(-$radius, $radius), $spawn->getWorld());
+			}
+		}
 		$spawn->getWorld()->requestSafeSpawn($spawn)->onCompletion(
 			function(Position $safeSpawn) : void{
 				if(!$this->isConnected()){

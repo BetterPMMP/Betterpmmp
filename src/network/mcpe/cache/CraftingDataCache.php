@@ -193,6 +193,33 @@ final class CraftingDataCache{
 		}
 
 		Timings::$craftingDataCacheRebuild->stopTiming();
+		//BetterPMMP: smithing table recipes (netherite upgrades and armour trims)
+		$smithingTransforms = [];
+		foreach(\pocketmine\crafting\SmithingRecipes::transforms() as $index => [$template, $input, $addition, $output]){
+			try{
+				$outputItem = \pocketmine\world\format\io\GlobalItemDataHandlers::getDeserializer()->deserializeType(new \pocketmine\data\bedrock\item\SavedItemData($output));
+				$smithingTransforms[] = new \pocketmine\network\mcpe\protocol\types\recipe\SmithingTransformRecipe(
+					Uuid::uuid4()->toString(),
+					$converter->coreRecipeIngredientToNet(new \pocketmine\crafting\MetaWildcardRecipeIngredient($template)),
+					$converter->coreRecipeIngredientToNet(new \pocketmine\crafting\MetaWildcardRecipeIngredient($input)),
+					$converter->coreRecipeIngredientToNet(new \pocketmine\crafting\MetaWildcardRecipeIngredient($addition)),
+					$converter->coreItemStackToNet($outputItem),
+					CraftingRecipeBlockName::SMITHING_TABLE,
+					\pocketmine\crafting\SmithingRecipes::NET_ID_BASE + $index
+				);
+			}catch(\Throwable){
+				//an item this server does not know: leave the recipe out
+			}
+		}
+		$smithingTrims = [new \pocketmine\network\mcpe\protocol\types\recipe\SmithingTrimRecipe(
+			Uuid::uuid4()->toString(),
+			$converter->coreRecipeIngredientToNet(new \pocketmine\crafting\TagWildcardRecipeIngredient("minecraft:trim_templates")),
+			$converter->coreRecipeIngredientToNet(new \pocketmine\crafting\TagWildcardRecipeIngredient("minecraft:trimmable_armors")),
+			$converter->coreRecipeIngredientToNet(new \pocketmine\crafting\TagWildcardRecipeIngredient("minecraft:trim_materials")),
+			CraftingRecipeBlockName::SMITHING_TABLE,
+			\pocketmine\crafting\SmithingRecipes::NET_ID_BASE + count(\pocketmine\crafting\SmithingRecipes::transforms())
+		)];
+
 		return CraftingDataPacket::create(
 			$shapedRecipes,
 			$shapelessRecipes,
@@ -200,8 +227,8 @@ final class CraftingDataCache{
 			[],
 			[],
 			[],
-			[],
-			[],
+			$smithingTransforms,
+			$smithingTrims,
 			$potionTypeRecipes,
 			$potionContainerChangeRecipes,
 			[],

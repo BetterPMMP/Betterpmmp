@@ -299,9 +299,9 @@ class WorldManager{
 			return false;
 		}
 		if(!($provider instanceof WritableWorldProvider)){
-			if(!$autoUpgrade){
-				throw new UnsupportedWorldFormatException("World \"$name\" is in an unsupported format and needs to be upgraded");
-			}
+			//BetterPMMP: old formats (Java Anvil, McRegion, PMAnvil) are always converted, also when a plugin
+			//(multiworld commands) loads the world without asking for it - otherwise the command just crashes
+			//with "unsupported format". A backup of the original is kept in backups/worlds.
 			$this->server->getLogger()->notice($this->server->getLanguage()->translate(KnownTranslationFactory::pocketmine_level_conversion_start($name)));
 
 			$providerClass = $this->providerManager->getDefault();
@@ -430,6 +430,12 @@ class WorldManager{
 				$this->server->getLogger()->logException($e);
 			}
 			foreach($this->worlds as $world){
+				try{
+					StructureInhabitants::tick($world); //BetterPMMP: shulkers, elder guardians, witches
+					\pocketmine\entity\custom\CustomEntities::tickSpawning($world); //BetterPMMP: custom_entities.yml
+				}catch(\Throwable $e){
+					$world->getLogger()->logException($e);
+				}
 				$this->naturalMobSpawner->tick($world);
 				if(EndDragonFight::isEndWorld($world)){
 					try{

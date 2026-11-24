@@ -73,6 +73,7 @@ use pocketmine\lang\KnownTranslationFactory;
 use pocketmine\math\AxisAlignedBB;
 use pocketmine\math\Facing;
 use pocketmine\math\Vector3;
+use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\nbt\tag\IntTag;
 use pocketmine\nbt\tag\StringTag;
 use pocketmine\network\mcpe\convert\TypeConverter;
@@ -319,6 +320,12 @@ class World implements ChunkManager{
 	 */
 	private array $scheduledBlockUpdateQueueIndex = [];
 	private int $nextScheduledBlockUpdateToken = 0;
+	/**
+	 * BetterPMMP: chunkHash => [blockHash => true] of pending scheduled ticks, so they can be saved with
+	 * their chunk and continue after it is loaded again (like Bedrock).
+	 * @phpstan-var array<ChunkPosHash, array<BlockPosHash, true>>
+	 */
+	private array $scheduledBlockUpdatesByChunk = [];
 
 	/** @phpstan-var \SplQueue<int> */
 	private \SplQueue $neighbourBlockUpdateQueue;
@@ -599,6 +606,7 @@ class World implements ChunkManager{
 		$this->initRandomTickBlocksFromConfig($cfg);
 
 		$this->timings = new WorldTimings($this);
+		GameRules::apply($this); //BetterPMMP: e.g. doDaylightCycle false keeps the time standing
 	}
 
 	private function initRandomTickBlocksFromConfig(ServerConfigGroup $cfg) : void{
@@ -666,6 +674,8 @@ class World implements ChunkManager{
 	 * @internal
 	 */
 	public function onUnload() : void{
+		GameRules::forget($this);
+		StructureInhabitants::forget($this);
 		\pocketmine\block\utils\RedstonePower::forgetWorld($this);
 		if($this->unloaded){
 			throw new \LogicException("Tried to close a world which is already closed");
@@ -1038,13 +1048,34 @@ class World implements ChunkManager{
 			if(($this->scheduledBlockUpdateQueueIndex[$hash]["token"] ?? null) !== $token){
 				continue; // superseded or removed: never fire a stale block tick
 			}
+			$tickX = (int) $vec->x;
+			$tickZ = (int) $vec->z;
+			if($this->isInLoadedTerrain($vec) && !(
+				isset($this->chunks[World::chunkHash(($tickX - 1) >> Chunk::COORD_BIT_SIZE, ($tickZ - 1) >> Chunk::COORD_BIT_SIZE)]) &&
+				isset($this->chunks[World::chunkHash(($tickX + 1) >> Chunk::COORD_BIT_SIZE, ($tickZ - 1) >> Chunk::COORD_BIT_SIZE)]) &&
+				isset($this->chunks[World::chunkHash(($tickX - 1) >> Chunk::COORD_BIT_SIZE, ($tickZ + 1) >> Chunk::COORD_BIT_SIZE)]) &&
+				isset($this->chunks[World::chunkHash(($tickX + 1) >> Chunk::COORD_BIT_SIZE, ($tickZ + 1) >> Chunk::COORD_BIT_SIZE)])
+			)){
+				//BetterPMMP: a block at the edge of the loaded area (water that would flow into a chunk that is not
+				//loaded or not generated yet) waits until its neighbours are there, like outside a ticking area in
+				//vanilla. The tick stays pending and is saved with its chunk.
+				$this->scheduledBlockUpdateQueueIndex[$hash]["due"] = $currentTick + 20;
+				$this->scheduledBlockUpdateQueue->insert([$vec, $token, $expectedType], $currentTick + 20);
+				continue;
+			}
 			unset($this->scheduledBlockUpdateQueueIndex[$hash]);
+			unset($this->scheduledBlockUpdatesByChunk[World::chunkHash($tickX >> Chunk::COORD_BIT_SIZE, $tickZ >> Chunk::COORD_BIT_SIZE)][$hash]);
 			if(!$this->isInLoadedTerrain($vec)){
 				continue;
 			}
 			$block = $this->getBlock($vec);
 			if($block->getTypeId() === $expectedType){
-				$block->onScheduledUpdate();
+				try{
+					$block->onScheduledUpdate();
+				}catch(WorldException $e){
+					//never crash the server because a block tick reached terrain that does not exist
+					$this->logger->debug("Block tick at $tickX, " . (int) $vec->y . ", $tickZ skipped: " . $e->getMessage());
+				}
 			}
 		}
 		$this->timings->scheduledBlockUpdates->stopTiming();
@@ -1146,13 +1177,20 @@ class World implements ChunkManager{
 			return;
 		}
 
-		$resetTime = true;
+		//BetterPMMP: game rule playersSleepingPercentage (spectators do not count)
+		$sleeping = 0;
+		$counted = 0;
 		foreach($this->getPlayers() as $p){
-			if(!$p->isSleeping()){
-				$resetTime = false;
-				break;
+			if($p->isSpectator()){
+				continue;
+			}
+			++$counted;
+			if($p->isSleeping()){
+				++$sleeping;
 			}
 		}
+		$needed = max(1, (int) ceil($counted * min(100, GameRules::int($this, "playerssleepingpercentage")) / 100));
+		$resetTime = $counted > 0 && $sleeping >= $needed;
 
 		if($resetTime){
 			$time = $this->getTimeOfDay();
@@ -1165,7 +1203,9 @@ class World implements ChunkManager{
 				$this->getWeather()->clearAfterSleep();
 
 				foreach($this->getPlayers() as $p){
-					PhantomSpawner::rested($p); //BetterPMMP: sleeping keeps phantoms away
+					if($p->isSleeping()){
+						PhantomSpawner::rested($p); //BetterPMMP: sleeping keeps phantoms away
+					}
 					$p->stopSleep();
 				}
 			}
@@ -1487,7 +1527,8 @@ class World implements ChunkManager{
 		foreach($chunk->getSubChunks() as $Y => $subChunk){
 			if(!$subChunk->isEmptyFast()){
 				$k = 0;
-				for($i = 0; $i < $this->tickedBlocksPerSubchunkPerTick; ++$i){
+				//BetterPMMP: game rule randomTickSpeed (Bedrock default 1 = the configured number of blocks)
+				for($i = 0, $ticked = $this->tickedBlocksPerSubchunkPerTick * GameRules::int($this, "randomtickspeed"); $i < $ticked; ++$i){
 					if(($i % 5) === 0){
 						//60 bits will be used by 5 blocks (12 bits each)
 						$k = mt_rand(0, (1 << 60) - 1);
@@ -1550,6 +1591,7 @@ class World implements ChunkManager{
 					array_map(fn(Tile $t) => $t->saveNBT(), array_values($chunk->getTiles())),
 				), $chunk->getTerrainDirtyFlags());
 				$chunk->clearTerrainDirtyFlags();
+				$this->savePendingTicks($chunkX, $chunkZ);
 			}
 		}finally{
 			$this->timings->syncChunkSave->stopTiming();
@@ -1574,9 +1616,83 @@ class World implements ChunkManager{
 		}
 		$token = ++$this->nextScheduledBlockUpdateToken;
 		$this->scheduledBlockUpdateQueueIndex[$index] = ["due" => $due, "token" => $token];
+		$this->scheduledBlockUpdatesByChunk[World::chunkHash($x >> Chunk::COORD_BIT_SIZE, $z >> Chunk::COORD_BIT_SIZE)][$index] = true;
 		// Tile creation schedules ticks inside setBlockAt(), before its cache is
 		// invalidated. Read the new terrain state instead of a cached old block.
 		$this->scheduledBlockUpdateQueue->insert([new Vector3($x, $y, $z), $token, $this->getBlockAt($x, $y, $z, false, false)->getTypeId()], $due);
+	}
+
+	/**
+	 * BetterPMMP: pending ticks of one chunk in the Bedrock format (currentTick + tickList).
+	 */
+	private function savePendingTicks(int $chunkX, int $chunkZ) : void{
+		if(!$this->provider instanceof \pocketmine\world\format\io\leveldb\LevelDB){
+			return;
+		}
+		$currentTick = $this->server->getTick();
+		$list = [];
+		$serializer = \pocketmine\world\format\io\GlobalBlockStateHandlers::getSerializer();
+		foreach($this->scheduledBlockUpdatesByChunk[World::chunkHash($chunkX, $chunkZ)] ?? [] as $hash => $_){
+			$entry = $this->scheduledBlockUpdateQueueIndex[$hash] ?? null;
+			if($entry === null){
+				continue;
+			}
+			World::getBlockXYZ($hash, $x, $y, $z);
+			try{
+				$state = $serializer->serialize($this->getBlockAt($x, $y, $z, false, false)->getStateId())->toVanillaNbt();
+			}catch(\Throwable){
+				continue;
+			}
+			$list[] = CompoundTag::create()
+				->setTag("blockState", $state)
+				->setLong("time", $entry["due"])
+				->setInt("x", $x)
+				->setInt("y", $y)
+				->setInt("z", $z);
+		}
+		try{
+			$this->provider->savePendingTicks($chunkX, $chunkZ, count($list) === 0 ? null : CompoundTag::create()
+				->setInt("currentTick", $currentTick)
+				->setTag("tickList", new \pocketmine\nbt\tag\ListTag($list, \pocketmine\nbt\NBT::TAG_Compound)));
+		}catch(\Throwable $e){
+			$this->logger->error("Could not save pending block ticks of chunk $chunkX $chunkZ: " . $e->getMessage());
+		}
+	}
+
+	private function forgetPendingTicks(int $chunkX, int $chunkZ) : void{
+		$chunkHash = World::chunkHash($chunkX, $chunkZ);
+		foreach($this->scheduledBlockUpdatesByChunk[$chunkHash] ?? [] as $hash => $_){
+			unset($this->scheduledBlockUpdateQueueIndex[$hash]);
+		}
+		unset($this->scheduledBlockUpdatesByChunk[$chunkHash]);
+	}
+
+	private function loadPendingTicks(int $chunkX, int $chunkZ) : void{
+		if(!$this->provider instanceof \pocketmine\world\format\io\leveldb\LevelDB){
+			return;
+		}
+		$tag = $this->provider->loadPendingTicks($chunkX, $chunkZ);
+		if($tag === null){
+			return;
+		}
+		$savedTick = $tag->getInt("currentTick", 0);
+		$list = $tag->getListTag("tickList");
+		if($list === null){
+			return;
+		}
+		foreach($list as $entry){
+			if(!$entry instanceof CompoundTag){
+				continue;
+			}
+			$x = $entry->getInt("x", 0);
+			$y = $entry->getInt("y", 0);
+			$z = $entry->getInt("z", 0);
+			if(($x >> Chunk::COORD_BIT_SIZE) !== $chunkX || ($z >> Chunk::COORD_BIT_SIZE) !== $chunkZ){
+				continue;
+			}
+			//time does not pass in unloaded chunks: the tick keeps the delay it had left
+			$this->scheduleDelayedBlockUpdate(new Vector3($x, $y, $z), max(0, $entry->getLong("time", $savedTick) - $savedTick));
+		}
 	}
 
 	private function tryAddToNeighbourUpdateQueue(int $x, int $y, int $z) : void{
@@ -2376,7 +2492,8 @@ class World implements ChunkManager{
 		}
 
 		$drops = [];
-		if($player === null || $player->hasFiniteResources()){
+		//BetterPMMP: game rule doTileDrops
+		if(($player === null || $player->hasFiniteResources()) && GameRules::bool($this, "dotiledrops")){
 			$drops = array_merge(...array_map(fn(Block $block) => $block->getDrops($item), $affectedBlocks));
 		}
 
@@ -3272,6 +3389,7 @@ class World implements ChunkManager{
 		unset($this->blockCollisionBoxCache[$chunkHash]);
 
 		$this->initChunk($x, $z, $chunkData, $chunk);
+		$this->loadPendingTicks($x, $z);
 
 		if(ChunkLoadEvent::hasHandlers()){
 			(new ChunkLoadEvent($this, $x, $z, $this->chunks[$chunkHash], false))->call();
@@ -3429,10 +3547,12 @@ class World implements ChunkManager{
 						array_map(fn(Entity $e) => $e->saveNBT(), array_values(array_filter($this->getChunkEntities($x, $z), fn(Entity $e) => $e->canSaveWithChunk()))),
 						array_map(fn(Tile $t) => $t->saveNBT(), array_values($chunk->getTiles())),
 					), $chunk->getTerrainDirtyFlags());
+					$this->savePendingTicks($x, $z);
 				}finally{
 					$this->timings->syncChunkSave->stopTiming();
 				}
 			}
+			$this->forgetPendingTicks($x, $z);
 
 			foreach($this->getChunkListeners($x, $z) as $listener){
 				$listener->onChunkUnloaded($x, $z, $chunk);

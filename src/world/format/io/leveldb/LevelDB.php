@@ -818,6 +818,33 @@ class LevelDB extends BaseWorldProvider implements WritableWorldProvider{
 		}
 	}
 
+	/**
+	 * BetterPMMP: pending scheduled block ticks of a chunk, stored like the Bedrock Dedicated Server
+	 * (key suffix 0x33, little-endian NBT: currentTick + tickList of {blockState, time, x, y, z}).
+	 */
+	public function loadPendingTicks(int $chunkX, int $chunkZ) : ?CompoundTag{
+		$raw = $this->db->get(LevelDB::chunkIndex($chunkX, $chunkZ) . ChunkDataKey::PENDING_SCHEDULED_TICKS);
+		if($raw === false || $raw === ""){
+			return null;
+		}
+		try{
+			$tag = (new LittleEndianNbtSerializer())->read($raw)->mustGetCompoundTag();
+		}catch(\Throwable $e){
+			$this->logger->error("Bad pending tick data in chunk $chunkX $chunkZ: " . $e->getMessage());
+			return null;
+		}
+		return $tag;
+	}
+
+	public function savePendingTicks(int $chunkX, int $chunkZ, ?CompoundTag $ticks) : void{
+		$key = LevelDB::chunkIndex($chunkX, $chunkZ) . ChunkDataKey::PENDING_SCHEDULED_TICKS;
+		if($ticks === null){
+			$this->db->delete($key);
+		}else{
+			$this->db->put($key, (new LittleEndianNbtSerializer())->write(new TreeRoot($ticks)));
+		}
+	}
+
 	public function getDatabase() : \LevelDB{
 		return $this->db;
 	}

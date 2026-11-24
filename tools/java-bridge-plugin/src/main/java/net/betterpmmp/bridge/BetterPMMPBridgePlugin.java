@@ -46,6 +46,7 @@ import java.util.logging.Level;
 /**
  * Fills gaps of ViaBedrock for BetterPMMP servers:
  * <ul>
+ *     <li>furnaces, hoppers, dispensers, droppers, brewing stands and smithing tables as Java screens,</li>
  *     <li>chest windows of every size (BetterPMMP announces 54-slot menus before opening them),</li>
  *     <li>no block check for chest menus (menu plugins open them without a real chest block),</li>
  *     <li>screen titles shown as the heading of an open chest window (Java hides titles behind open screens),</li>
@@ -84,6 +85,14 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
                 this.install();
             });
         }
+    }
+
+    private static void sendContainerData(final com.viaversion.viaversion.api.connection.UserConnection user, final byte containerId, final int property, final int value) {
+        final PacketWrapper setData = PacketWrapper.create(ClientboundPackets26_3.CONTAINER_SET_DATA, user);
+        setData.write(Types.VAR_INT, (int) containerId); // container id
+        setData.write(Types.SHORT, (short) property); // property
+        setData.write(Types.SHORT, (short) Math.max(0, Math.min(Short.MAX_VALUE, value))); // value
+        setData.send(BedrockProtocol.class);
     }
 
     private void install() {
@@ -178,8 +187,11 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
                     setSlot.write(Types.SHORT, (short) 0); // slot
                     setSlot.write(VersionedTypes.V26_3.item, inventoryTracker.getHudContainer().getJavaItem(BridgeWorkbenchContainer.RESULT_SLOT)); // item
                     setSlot.send(BedrockProtocol.class);
-                } else if (inventoryTracker.getCurrentContainer() instanceof BridgeWorkbenchContainer container && (container.containerId() & 0xFF) == windowId) {
-                    PacketFactory.sendJavaContainerSetContent(wrapper.user(), container);
+                } else {
+                    final Container container = inventoryTracker.getCurrentContainer();
+                    if ((container instanceof BridgeWorkbenchContainer || container instanceof BridgeSmithingContainer) && (container.containerId() & 0xFF) == windowId) {
+                        PacketFactory.sendJavaContainerSetContent(wrapper.user(), container);
+                    }
                 }
                 return;
             }
@@ -269,6 +281,26 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
                     wrapper.write(Types.TAG, TextUtil.textComponentToNbt(workbench.title())); // title
                     return;
                 }
+                case MINECART_CHEST, CHEST_BOAT -> container = new BridgeChestContainer(wrapper.user(), containerId, title, position, rows * 9);
+                case FURNACE, BLAST_FURNACE, SMOKER, HOPPER, MINECART_HOPPER, BREWING_STAND, DISPENSER, DROPPER -> {
+                    // a custom name of the block (anvil) wins, otherwise the title a vanilla Java server shows
+                    final boolean named = (announced != null && !announced.name().isEmpty()) || (blockEntity != null && blockEntity.tag().get("CustomName") instanceof StringTag);
+                    final TextComponent simpleTitle = named ? title : new TranslationComponent(BridgeSimpleContainer.titleKey(type));
+                    final BridgeSimpleContainer simple = new BridgeSimpleContainer(wrapper.user(), containerId, type, simpleTitle, position, BridgeSimpleContainer.sizeOf(type));
+                    inventoryTracker.setCurrentContainer(simple);
+                    wrapper.write(Types.VAR_INT, (int) containerId); // container id
+                    wrapper.write(Types.VAR_INT, BedrockProtocol.MAPPINGS.getBedrockToJavaContainers().get(type)); // type
+                    wrapper.write(Types.TAG, TextUtil.textComponentToNbt(simpleTitle)); // title
+                    return;
+                }
+                case SMITHING_TABLE -> {
+                    final BridgeSmithingContainer smithing = new BridgeSmithingContainer(wrapper.user(), containerId, new TranslationComponent("container.upgrade"), position);
+                    inventoryTracker.setCurrentContainer(smithing);
+                    wrapper.write(Types.VAR_INT, (int) containerId); // container id
+                    wrapper.write(Types.VAR_INT, BedrockProtocol.MAPPINGS.getBedrockToJavaContainers().get(ContainerType.SMITHING_TABLE)); // type: smithing
+                    wrapper.write(Types.TAG, TextUtil.textComponentToNbt(smithing.title())); // title
+                    return;
+                }
                 case NONE, CAULDRON, JUKEBOX, ARMOR, HAND, HUD, DECORATED_POT -> {
                     wrapper.cancel();
                     return;
@@ -285,6 +317,40 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
             wrapper.write(Types.VAR_INT, (int) containerId); // container id
             wrapper.write(Types.VAR_INT, rows - 1); // type: generic_9x1 ... generic_9x6
             wrapper.write(Types.TAG, TextUtil.textComponentToNbt(title)); // title
+        });
+
+        protocol.replaceClientbound(ClientboundBedrockPackets.CONTAINER_SET_DATA, wrapper -> {
+            // progress arrows and flames of furnaces and brewing stands (ViaBedrock drops this packet)
+            wrapper.cancel();
+            final byte containerId = wrapper.read(Types.BYTE); // container id
+            final int property = wrapper.read(BedrockTypes.VAR_INT); // property
+            final int value = wrapper.read(BedrockTypes.VAR_INT); // value
+            if (!(wrapper.user().get(InventoryTracker.class).getCurrentContainer() instanceof BridgeSimpleContainer container) || container.containerId() != containerId) {
+                return;
+            }
+            switch (container.type()) {
+                case FURNACE, BLAST_FURNACE, SMOKER -> {
+                    // Bedrock: 0 cook time, 1 fuel left, 2 fuel total - Java: 0 fuel left, 1 fuel total, 2 cook time, 3 cook time total
+                    switch (property) {
+                        case 0 -> {
+                            sendContainerData(wrapper.user(), containerId, 3, container.type() == ContainerType.FURNACE ? 200 : 100);
+                            sendContainerData(wrapper.user(), containerId, 2, value);
+                        }
+                        case 1 -> sendContainerData(wrapper.user(), containerId, 0, value);
+                        case 2 -> sendContainerData(wrapper.user(), containerId, 1, value);
+                        default -> {
+                        }
+                    }
+                }
+                case BREWING_STAND -> {
+                    // both: 0 brew time, 1 fuel
+                    if (property == 0 || property == 1) {
+                        sendContainerData(wrapper.user(), containerId, property, value);
+                    }
+                }
+                default -> {
+                }
+            }
         });
 
         protocol.replaceServerbound(ServerboundPackets26_3.SET_CREATIVE_MODE_SLOT, wrapper -> {

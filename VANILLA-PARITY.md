@@ -1,4 +1,4 @@
-# BetterPMMP – Vanilla-Parität (Stand 5.68-vanilla-beta.1)
+# BetterPMMP – Vanilla-Parität (Stand 5.84-vanilla-beta.1)
 
 Diese Datei listet ehrlich, welche Vanilla-Systeme wie weit umgesetzt sind.
 „Vanilla“ heißt hier: Verhalten wie der offizielle Bedrock Dedicated Server.
@@ -34,7 +34,7 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 | Dörfer | ✅/🟡 | **5.3**: Dörfer werden beim Näherkommen mit 3–10 Bewohnern auf Straßen gefüllt; **4.6**: verzweigte Straßen, 12 Berufsgebäude mit Arbeitsblock und Truhe, Häuser, Felder, Gehege, 5 Biomtypen |
 | Andere Strukturen | ✅/🟡 | **4.6**: Mine, Festung mit Endportal, Verlies, Wüsten-/Dschungeltempel, Iglu, Hexenhütte, Außenposten, Ruinenportal, Schiffswrack, Ozeanruinen, Monument, Waldanwesen, Antike Stadt, Pfadruinen, Schatz (nachgebaut) |
 | Nether | ✅/🟡 | 5 Nether-Biome; **4.6**: Netherfestungen, Bastionen, Ruinenportale |
-| End | ✅/🟡 | **4.6**: Vanilla-Inselform, Säulen, Außeninseln, Chorus, End-Städte und -Schiffe (ohne Shulker) |
+| End | ✅/🟡 | **4.6**: Vanilla-Inselform, Säulen, Außeninseln, Chorus, End-Städte und -Schiffe (ohne Shulker); **5.72**: End-Städte aus den Vanilla-Bauteilen |
 | Drachenkampf | ✅/🟡 | **neu in 4.9**: Kampf-Manager wie Vanilla (Zustand im Weltordner), 10 Kristalle einmalig, genau ein Drache, Bossbar für alle im Kampfgebiet, Flugphasen (Kreisen, Sturzflug, Feuerball-Wolke, Landung auf dem Portal mit Atem-Angriff, Abheben), Heilung durch Kristalle, Flügel-Rückstoß, 10 s Todesanimation mit 12000/500 EP, Ausgangsportal, Drachenei beim ersten Sieg, End-Gateways zu den Außeninseln (mit Rück-Gateway) |
 | Portale (Nether/End) | ✅/🟡 | Nether/End werden beim Serverstart angelegt; Ankunft im End auf der Obsidian-Plattform; **4.9/5.0**: Enderauge fliegt direkt zum Portalraum der nächsten Festung (jede Festung hat ein vollständiges Portal, geprüft) |
 
@@ -50,11 +50,162 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
 
+## Neu in 5.84
+
+| System | Stand |
+|---|---|
+| Fix: Skelette (und Eiswanderer, Sumpfskelette, Plünderer …) schießen wie in Vanilla | 🟡 ungetestet – Sie schossen nur auf 5–14 Blöcke (aus der Nähe gar nicht) und glichen das Absinken der Pfeile kaum aus (Pfeile landeten vor dem Ziel). Jetzt wie Vanilla: bis 15 Blöcke mit freier Sicht, eine Sekunde Bogen spannen (Zielhaltung im Client), Pfeil mit 1,6 Blöcken/Tick auf ein Drittel der Zielhöhe, 0,2 pro Block höher gezielt, leicht ungenau (auf Schwer weniger), danach 2 Sekunden Pause (Schwer: 1), Pfeile nicht aufsammelbar, Schuss-Geräusch |
+| Fix: Mobs nach eigenem Angriff halb unverwundbar | 🟡 ungetestet – Die Angriffspause der Mobs war derselbe Zähler wie ihre Schadensimmunität: Nach jedem eigenen Schlag oder Schuss wurden schwächere Treffer eine Sekunde lang ignoriert. Jetzt getrennt (alle Nahkampf-Mobs, Skelette, eigene Wesen) |
+
+## Neu in 5.83
+
+| System | Stand |
+|---|---|
+| Schmiedetisch für Bedrock-Spieler | 🟡 ungetestet – Der Server hat keine Schmiederezepte geladen und an den Client geschickt; der Schmiedetisch ging für Bedrock-Spieler nicht. Jetzt: alle 12 Netherit-Aufwertungen aus den offiziellen Daten (Verzauberungen, Name und Abnutzung bleiben) und Rüstungsbesätze (alle Vorlagen, 11 Materialien, gespeichert als `Trim` wie beim offiziellen Server) |
+| Schmiedetisch für Java-Spieler | 🟡 ungetestet – dieselben Rezepte, jetzt also auch Rüstungsbesätze; Shift-Klick sortiert Vorlagen, Materialien und Rüstung ein |
+
+## Neu in 5.82
+
+| System | Stand |
+|---|---|
+| Moos und Blasses Moos | 🟡 ungetestet – Knochenmehl macht Stein, Erde, Tiefenschiefer, Tuffstein … im Umkreis 3 zu Moos und lässt Moosteppich, Gras und Azaleen wachsen (Blasses Moos: Blasser Moosteppich) |
+| Laubstreu und Wildblumen | 🟡 ungetestet – bis zu vier Stück in einem Block (mit dem Item darauf klicken), Knochenmehl fügt eins hinzu oder lässt eins fallen, jedes Stück droppt, zeigen in Blickrichtung, brauchen Boden |
+| Pflanzen brauchen Boden | 🟡 ungetestet – Busch, Glühwürmchenbusch, kurzes und hohes trockenes Gras, Goldlöwenzahn (Erde, Gras, Moos, Schlamm; trockenes Gras auch Sand und Terrakotta), Blasses hängendes Moos (braucht etwas darüber); brechen ohne Halt, man kann durchlaufen, Gras lässt sich überbauen |
+| Pappelstämme und -holz | 🟡 ungetestet – werden in Klickrichtung gesetzt (quer), die Axt entrindet sie |
+| Pappellaub | 🟡 ungetestet – verrottet ohne Stamm in der Nähe (von Spielern gesetztes bleibt), droppt Setzlinge (5 %) und Stöcke (2 %) |
+| Schallplatten „Tears“ und „Bounce“ | 🟡 ungetestet – spielen im Plattenspieler |
+
+## Neu in 5.81
+
+| System | Stand |
+|---|---|
+| Prüfung aller Items und Blöcke | ✅ siehe `AUDIT-ITEMS-BLOCKS.md`: was eigenes Verhalten hat und was fehlt |
+| Fix: Pappeltür, Pappelschild, Pappel-Hängeschild | 🟡 ungetestet – ließen sich nicht setzen |
+| Fix: Seetang und Strohbett | 🟡 ungetestet – aus dem Kreativinventar, aus Truhen oder nach einem Neustart nicht setzbar |
+| Fix: Kupfergolem-Spawn-Ei | 🟡 ungetestet – tat nichts, spawnt jetzt einen Kupfergolem |
+| Panda-Aussehen | ✅ (aus dem Hauptbranch übernommen) Der Client zeigt den Panda nach seiner Persönlichkeit (Hauptgen): normale, faule, ängstliche, verspielte, braune, schwache und aggressive Pandas sehen unterschiedlich aus (Variant/Mark-Variant). Das Gen wird beim Speichern behalten |
+
+## Neu in 5.80
+
+| System | Stand |
+|---|---|
+| Selektoren mit Leerzeichen | 🟡 ungetestet – `@e[type=zombie, r=10]` wie in Vanilla, auch in `/execute … run` |
+| `/execute anchored eyes` | 🟡 ungetestet – `^` und `facing` gehen von den Augen aus |
+| Hühnerjockeys | 🟡 ungetestet – 5 % der Babyzombies spawnen auf einem Huhn; Mobs können allgemein auf Mobs reiten (der Reiter bleibt im Sattel und lenkt das Reittier zu seinem Ziel) |
+| Skelettpferd-Falle | 🟡 ungetestet – etwa 1 % der natürlichen Blitze (Leicht 0,75 %, Schwer 1,5 %) hinterlässt ein Fallen-Skelettpferd statt Feuer; kommt ein Spieler auf 10 Blöcke heran, schlägt ein Blitz ein und es werden vier Skelettreiter mit Eisenhelm und Bogen; ohne Auslösung verschwindet es nach 15 Minuten |
+| Bewohner von Strukturen | 🟡 ungetestet – Shulker an den Vanilla-Stellen der End-Städte, drei Großwächter im Ozeanmonument, eine Hexe in der Hexenhütte; erscheinen, sobald ein Spieler in die Nähe kommt, einmal pro Struktur (gemerkt in `betterpmmp_structure_mobs.json` im Weltordner) und nur, wo die Struktur auch steht |
+| Eigene Items: Werkzeuge und Rüstung | 🟡 offline geprüft – `tool:` (Spitzhacke, Axt, Schaufel, Hacke, Schwert; Stufe Holz bis Netherit, Haltbarkeit, Angriff) mit Abbautempo auch für den Client, `armor:` (Helm, Brustplatte, Hose, Stiefel; Schutz, Haltbarkeit, Härte, feuerfest). Rüstung wird nicht am Körper gezeichnet |
+| Eigene Wesen: Animationen und Spawnen | 🟡 offline geprüft – Blockbench-Animationen (Ruhe, Laufen, Angriff), natürliches Spawnen nach Biom, Dimension, Gruppe, Tageszeit und Höchstzahl in der Nähe; feindliche nur im Dunkeln |
+| Java: Sonderrezepte | 🟡 offline geprüft – Feuerwerksraketen (Flugdauer, Sterne), Feuerwerkssterne (Farben, Form, Schweif, Funkeln), Verblassfarben, Lederrüstung färben (Farbmischung wie Vanilla), Karten kopieren, Bücher kopieren (Original bleibt liegen) |
+| Papagei auf der Schulter | ✅ war schon vorhanden (Eintrag war veraltet) |
+
+## Neu in 5.79
+
+| System | Stand |
+|---|---|
+| Eigene Blöcke | 🟡 offline geprüft, im Spiel ungetestet – `custom_blocks.yml` und Texturen in `custom_blocks/` (eine für alle Seiten oder oben/unten/seitlich getrennt), Härte, passendes Werkzeug, Leuchtkraft, Explosionswiderstand. Die Blöcke stehen in jedem Thread im Block-Register (auch beim Senden und Erzeugen von Chunks), werden mit dem Weltformat des Spiels gespeichert, gehen mit `/give`, `/setblock`, `/fill`, stehen im Kreativinventar (Bauen). Der Client bekommt sie in der Blockpalette; ihre Netzwerk-IDs werden so einsortiert wie der Client sortiert (FNV-1a-64 des Namens), alle Vanilla-IDs bleiben in derselben Reihenfolge (geprüft). Ohne Einträge in der Datei ändert sich nichts |
+| Eigene Wesen | 🟡 offline geprüft, im Spiel ungetestet – `custom_entities.yml`, Skin und optional ein Blockbench-Modell (`.geo.json`) in `custom_entities/`, sonst ein Quader in Wesengröße. Friedlich (wandert, flieht) oder feindlich (jagt Spieler, Nahkampf wie ein Zombie), Leben, Tempo, Schaden, Folgereichweite, Größe, EP, Drops, feuerfest. `/summon`, Selektoren `@e[type=…]`, werden mit der Welt gespeichert. Fehlt: Animationen, Spawn-Eier, natürliches Spawnen |
+| Ein Resource-Pack für alles | eigene Items, Blöcke und Wesen landen zusammen in `betterpmmp_custom_items.mcpack` |
+
+## Neu in 5.78
+
+| System | Stand |
+|---|---|
+| Restliche Gamerules mit Wirkung | 🟡 ungetestet – **commandBlocksEnabled** (Befehlsblöcke laufen nicht), **maxCommandChainLength** (Kettenlänge), **commandBlockOutput** (Operatoren in der Welt sehen die Ausgabe), **doEntityDrops** (Boote, Loren, Rüstungsständer, Gemälde), **projectilesCanBreakBlocks** (Chorusblüten), **respawnBlocksExplode** (Seelenanker und Betten), **spawnRadius** (Bedrock-Standard 5: ohne Bett irgendwo im Umkreis des Weltspawns), **tntExplosionDropDecay** (Bedrock-Standard aus: TNT lässt jeden zerstörten Block fallen, vorher nur 25 %). showBorderEffect, showRecipeMessages und doLimitedCrafting wertet der Client aus |
+| Betten im Nether und End | 🟡 ungetestet – explodieren wie in Vanilla (Stärke 5, Feuer) |
+| `/camera set` | 🟡 ungetestet – Kamera-Voreinstellungen (`free`, `first_person`, `third_person`, `third_person_front`, `fixed_boom`, `follow_orbit`) werden beim Beitreten geschickt; `set <preset> [ease <Zeit> <Typ>] [pos x y z] [rot x y] [facing x y z|<Ziel>] [default]`. Abschaltbar mit `camera.presets: false`, falls Clients deswegen getrennt werden |
+
+## Neu in 5.77
+
+| System | Stand |
+|---|---|
+| Eigene Items | 🟡 offline geprüft, im Spiel ungetestet – `custom_items.yml` (wird beim ersten Start mit Beispiel angelegt) und Texturen als PNG in `custom_items/`. Jedes Item bekommt eine eigene ID, steht im Kreativinventar, geht mit `/give`, wird gespeichert; Einstellungen: Name, Textur, Stapelgröße, wie ein Werkzeug gehalten, Verzauberungsglanz, essbar (Nährwert, Sättigung, immer essbar). Die Texturen gehen als automatisch gebautes Resource-Pack (`betterpmmp_custom_items.mcpack`) an die Bedrock-Spieler; ID und Version ändern sich nur, wenn sich etwas ändert. Für Java-Spieler übersetzt ViaBedrock eigene Items nicht sicher |
+| Eigene Blöcke | ❌ noch nicht – sie ändern die Blockliste, die jeder Chunk und jeder Generator-Thread benutzt; ein Fehler trennt alle Spieler oder beschädigt Welten. Kommt nach einem Testlauf mit eigenen Items |
+
+## Neu in 5.76
+
+| System | Stand |
+|---|---|
+| `/effect` und `/tp` für Mobs | 🟡 ungetestet – `/effect @e[type=zombie] slowness 10`, `/tp @e[type=cow] @p`, `/tp @a ~ ~10 ~`; in `/execute` gilt `~` ab der Execute-Position |
+| `/spreadplayers` | 🟡 ungetestet – zufällige sichere Plätze (nicht in Wasser/Lava) mit Mindestabstand |
+| `/ride` | 🟡 ungetestet – `start_riding` (mit `teleport_rider`/`teleport_ride`), `stop_riding`, `evict_riders` |
+| `/fog` | 🟡 ungetestet – `push`/`pop`/`remove` mit Nebel-Einstellungen aus Resource-Packs, je Spieler ein Stapel |
+| `/hud` | 🟡 ungetestet – `hide`/`reset` für alle oder einzelne HUD-Teile |
+| `/camera` | 🟡 ungetestet – `fade` (Zeiten, Farbe 0–255) und `clear`. Fehlt: `set` (Kamera-Presets werden noch nicht an den Client geschickt) |
+| `/schedule` | 🟡 ungetestet – `delay add <Funktion> <Zeit>[t|s|d] [append|replace]`, `clear`, `on_area_loaded add` |
+| `/tickingarea` | 🟡 ungetestet – Rechteck oder Kreis (Radius 1–4), bleibt geladen und tickt ohne Spieler, max. 10 pro Welt und 100 Chunks pro Bereich, gespeichert in `betterpmmp_tickingareas.json` |
+| `/structure` | 🟡 ungetestet – `save`/`load`/`delete` im Format des Spiels (`.mcstructure`) in `structures/` (auch `behavior_packs/*/structures/`), mit Truheninhalten und Wesen, Drehung 0–270°, Spiegeln, Integrität und Seed. Max. 64 × 384 × 64 |
+
+## Neu in 5.75
+
+| System | Stand |
+|---|---|
+| `/tag` | 🟡 ungetestet – `add`, `remove`, `list`; Tags werden wie bei Bedrock als `Tags` gespeichert (auch bei Spielern); Selektoren filtern mit `tag=x`, `tag=!x`, `tag=` (keine Tags), `tag=!` (irgendein Tag), mehrere `tag=` gleichzeitig |
+| `/function` | 🟡 ungetestet – führt `.mcfunction`-Dateien aus `functions/` im Serverordner oder `behavior_packs/<Pack>/functions/` aus; Kommentare mit `#`, verschachtelte Funktionen, Grenze über `functionCommandLimit` |
+| `/daylock` (`/alwaysday`) | 🟡 ungetestet – Mittag festhalten bzw. Tageszyklus wieder starten (über doDaylightCycle) |
+| `/stopsound` | 🟡 ungetestet |
+| `/damage` | 🟡 ungetestet – Schaden mit Ursache und optional verursachendem Wesen |
+| `/locate structure` | 🟡 ungetestet – nächste Struktur der BetterPMMP-Generatoren (Dorf, Festung, Antike Stadt, End-Stadt, Bastion, Prüfungskammern …) |
+
+## Neu in 5.74
+
+| System | Stand |
+|---|---|
+| `/gamerule` | 🟡 ungetestet – alle 38 Bedrock-Regeln, gespeichert in `level.dat` unter denselben Namen wie beim offiziellen Server, je Welt. **Mit Wirkung:** keepInventory, showDeathMessages, doMobLoot, doTileDrops, fallDamage, fireDamage, drowningDamage, freezeDamage, pvp, naturalRegeneration, doDaylightCycle, doWeatherCycle, doMobSpawning, doInsomnia, doFireTick, tntExplodes, mobGriefing (Creeper/Ghast/Wither-Explosionen, Endermen, Zombies an Türen, Schneegolems, Dorfbauern), randomTickSpeed, playersSleepingPercentage, sendCommandFeedback; showCoordinates, doImmediateRespawn, showDaysPlayed, recipesUnlock, showTags u. a. werden an den Client geschickt. **Nur gespeichert:** commandBlockOutput, commandBlocksEnabled, doEntityDrops, doLimitedCrafting, functionCommandLimit, maxCommandChainLength, projectilesCanBreakBlocks, respawnBlocksExplode, spawnRadius, tntExplosionDropDecay, showBorderEffect, showRecipeMessages |
+| Mehrere Ziele | 🟡 ungetestet – Ein Selektor mit mehreren Spielern (`@a`, `@a[r=10]` …) führt jeden Befehl einmal pro Spieler aus, auch Befehle von Plugins. `/kill @e[type=zombie]` tötet Mobs, Gegenstände und andere Wesen |
+| `/clone` | 🟡 ungetestet – `replace`/`masked`, `normal`/`force`/`move`, kopiert Truheninhalte, Schilder usw., Vanilla-Limit 32768 |
+| `/scoreboard` | 🟡 ungetestet – `objectives add/remove/list/setdisplay` (sidebar, list, belowname, auf-/absteigend), `players list/set/add/remove/reset/random/test/operation` (`+= -= *= /= %= = < > ><`), Selektoren und freie Namen; gespeichert in `betterpmmp_scoreboard.json`; `/tellraw` kann Punkte anzeigen (`{"score":{"name":"@p","objective":"kills"}}`) |
+| `/execute` | 🟡 ungetestet – `as`, `at`, `positioned [as]`, `rotated [as]`, `facing [entity]`, `align`, `anchored`, `in`, `if/unless entity|block|score` (`matches 1..5`, Vergleiche), `run`; `@s` ist das ausführende Wesen, `~`/`^` beginnen an der neuen Position |
+| `/tellraw` mit Leerzeichen | 🟡 ungetestet – das JSON wird so gelesen, wie es eingegeben wurde |
+
+## Neu in 5.73
+
+| System | Stand |
+|---|---|
+| Vibrant Visuals | 🟡 ungetestet – Der Server hat Bedrock-Clients die neue Grafik (Vibrant Visuals: Licht, Schatten, Wasser, Nebel) bisher ausdrücklich verboten (`forceDisableVibrantVisuals`). Jetzt ist sie erlaubt; ob sie läuft, entscheidet der Client (Gerät, Einstellung „Grafikmodus“). Abschaltbar mit `graphics.vibrant-visuals: false` in `betterpmmp.yml` |
+| Schwimmen kostet Hunger | 🟡 ungetestet – wie Sprinten 0,01 Erschöpfung pro Block |
+| Zielauswahl | 🟡 ungetestet – `@a`, `@p`, `@r`, `@s`, `@e`, `@n` mit `x y z r rm dx dy dz c type name m l lm` (auch `!`); funktioniert in allen Befehlen mit Spielerziel (`/give @p`, `/tp @r`, `/gamemode 1 @a[r=10]` …) |
+| `/setblock` | 🟡 ungetestet – `replace`, `destroy`, `keep`, Koordinaten mit `~` und `^` |
+| `/fill` | 🟡 ungetestet – `replace [Filter]`, `destroy`, `keep`, `hollow`, `outline`, Vanilla-Limit 32768 Blöcke |
+| `/summon` | 🟡 ungetestet – alle Wesen, Position, Namensschild |
+| `/tellraw` | 🟡 ungetestet – Bedrock-rawtext mit `text`, `selector`, `translate`/`with` |
+| `/playsound` | 🟡 ungetestet – Ziel, Position, Lautstärke, Tonhöhe, Mindestlautstärke |
+
+## Neu in 5.72
+
+| System | Stand |
+|---|---|
+| End-Städte wie in Vanilla | 🟡 Aufbau offline geprüft, im Spiel ungetestet – Die End-Stadt war bisher ein eigener Nachbau (Würfeltürme). Sie wird jetzt aus den 20 Vanilla-Bauteilen (`resources/structures/end_city/`) nach dem Vanilla-Verfahren zusammengesetzt: Grundhaus mit zweitem/drittem Stock, schlanke Türme, Brücken mit flachen und steilen Treppen zu weiteren Häusern, dicke Türme, höchstens ein End-Schiff mit Drachenkopf, zwei Schatztruhen und den Elytren im Rahmen; Zweige, die in ältere Teile laufen würden, entfallen wie in Vanilla. Truhen haben die End-Stadt-Beute. Gilt für neu erzeugte Chunks. Fehlt: Shulker, Tränke im Braustand des Schiffs |
+
+## Neu in 5.71
+
+| System | Stand |
+|---|---|
+| Alte Weltformate über Plugins laden | 🟡 ungetestet – Welten im Java-Anvil-, McRegion- oder PMAnvil-Format wurden nur beim Serverstart umgewandelt; lud ein Plugin (z. B. `/mw tp`) so eine Welt, gab es den Fehler „unsupported format and needs to be upgraded“. Sie werden jetzt immer beim ersten Laden nach LevelDB umgewandelt (Sicherung in `backups/worlds/`) |
+
+## Neu in 5.70
+
+| System | Stand |
+|---|---|
+| Fix Absturz „Cannot set a block in un-generated terrain“ | 🟡 ungetestet – Wasser/Lava am Rand des geladenen Gebiets wollte in einen Chunk fließen, den es noch nicht gibt, und der Server stürzte ab (seit 5.68 häufiger, weil gespeicherte Blockticks beim Laden weiterlaufen). Ein Blocktick läuft jetzt erst, wenn auch die Nachbar-Chunks geladen sind, und wartet sonst (bleibt gespeichert). Zusätzlich bringt ein Blocktick, der trotzdem nicht vorhandenes Gelände erreicht, den Server nicht mehr zum Absturz |
+
+## Neu in 5.69
+
+| System | Stand |
+|---|---|
+| Java: Ofen, Schmelzofen, Räucherofen | 🟡 ungetestet – Java-Spieler konnten nur Truhen und Werkbänke öffnen; alle anderen Blöcke hat die Bridge sofort wieder geschlossen („unimplemented container“). Öfen öffnen jetzt als Java-Ofenfenster mit Flamme und Fortschrittspfeil (Bridge 1.8.0), das Ergebnisfeld nimmt nichts an, Shift-Klick sortiert Schmelzgut und Brennstoff wie in Vanilla |
+| Java: Braustand | 🟡 ungetestet – Java-Braufenster mit der Java-Slotreihenfolge (3 Flaschen, Zutat, Lohenstaub), Braufortschritt und Brennstoffanzeige |
+| Java: Trichter, Spender, Werfer, Truhen-/Trichterlore, Truhenboot | 🟡 ungetestet – öffnen als passende Java-Fenster |
+| Java: Schmiedetisch | 🟡 ungetestet – Netherit-Aufwertung (Vorlage + Diamantwerkzeug/-rüstung + Netheritbarren), Verzauberungen, Name und Abnutzung bleiben. Rüstungsbesätze fehlen |
+| Fix Java-Craften | 🟡 ungetestet – Bei der Rezeptsuche für Java wurden auch Steinsäge- und Kartentisch-Rezepte mit dem Werkbankraster verglichen: ein einzelner Block im Raster konnte ein Steinsägen-Ergebnis liefern statt des richtigen Rezepts (oder keins). Es zählen jetzt nur noch Werkbank-Rezepte |
+| Java: noch offen | ❌ Amboss, Zaubertisch, Schleifstein, Steinsäge, Webstuhl, Kartentisch, Crafter, Leuchtfeuer, Handel; Sonderrezepte ohne feste Zutatenliste (Feuerwerk, Rüstung färben, Karten/Bücher kopieren, Banner) |
+
 ## Neu in 5.68
 
 | System | Stand |
 |---|---|
-| Panda-Aussehen | ✅ Der Client zeigt den Panda jetzt nach seiner Persönlichkeit (Hauptgen): normale, faule, ängstliche, verspielte, braune, schwache und aggressive Pandas sehen unterschiedlich aus (Variant/Mark-Variant). Das Gen wird beim Speichern behalten |
+| Geplante Blockticks überleben Entladen und Neustart | 🟡 ungetestet – Bisher gingen geplante Blockticks (Redstone-Verzögerungen, fließendes Wasser/Lava, wachsende Blöcke) verloren, sobald ihr Chunk entladen oder der Server neu gestartet wurde. Sie werden jetzt mit dem Chunk gespeichert – im Format des offiziellen Bedrock-Servers (LevelDB-Schlüssel 0x33: `currentTick` + `tickList` mit `blockState`, `time`, `x`, `y`, `z`) – und laufen beim Laden mit der Restzeit weiter. Nur LevelDB-Welten |
+| Endermen tragen Blöcke | 🟡 ungetestet – Endermen ohne Ziel heben wie in Vanilla Blöcke in der Nähe auf (Erde, Gras, Sand, Kies, Ton, Pilze, Blumen, Kaktus, Kürbis, Melone, TNT, Nezel …, nur bei freier Sicht), zeigen den Block in den Händen, setzen ihn später auf einen festen Block ab, verschwinden mit Block nie und lassen ihn beim Tod fallen. Wird als `carriedBlock` gespeichert |
 
 ## Neu in 5.67
 
@@ -461,7 +612,7 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Übrige Mobs, Wächter-Boss | ❌/🟡 | |
 | Handel, Berufe, Level | ✅/🟡 | **5.3**: Arbeitsblock-Suche bis 32 Blöcke (vorher 8 → Dorfbewohner blieben arbeitslos), Handelsspieler-Metadaten für das Bedrock-Handelsfenster, Dorfbewohner bleiben beim Handeln stehen; **neu in 4.7**: 13 Berufe über Arbeitsblöcke, 5 Level (Novize–Meister) mit Vanilla-EP-Grenzen, Bedrock-Handelsfenster, Nachschub am Arbeitsblock, EP für Spieler |
 | Fahrender Händler | ✅ | **neu in 5.5**: Vanilla-Angebote (5 normale + 1 seltenes), Handelsfenster, spawnt alle 20 Minuten mit 25/50/75 % Chance mit zwei Händler-Lamas, verschwindet nach 40 Minuten |
-| Endermen | ✅/🟡 | **neu in 5.5**: Projektile treffen nicht (Teleport), teleportieren bei Schaden, im Wasser, und zum Ziel; Blickkontakt macht wütend. Fehlt: Blöcke tragen |
+| Endermen | ✅/🟡 | **neu in 5.5**: Projektile treffen nicht (Teleport), teleportieren bei Schaden, im Wasser, und zum Ziel; Blickkontakt macht wütend. **5.68**: Blöcke tragen |
 | Plünderer | ✅/🟡 | **4.7**: Außenposten (max. 6) und Patrouillen ab Tag 5; **5.0**: Außenposten haben von Anfang an 4–6 Wachen, Plünderer tragen Armbrüste. Fehlt: Überfälle (Raids) |
 | Zähmen | ✅ **neu in 5.11**: Wolf (Knochen, 1 : 3), Katze (roher Kabeljau/Lachs, 1 : 3), Papagei (Samen, 1 : 10; Keks vergiftet) – Herzen oder Rauch, sitzt nach dem Zähmen, Besitzer lässt sitzen/aufstehen, folgt ab 10 Blöcken, teleportiert ab 12 Blöcken, heilen mit Futter, Wolf-Halsband färben, gezähmte Wölfe (40 Leben) greifen an, was den Besitzer angreift oder von ihm angegriffen wird (außer Creeper), wilde Wölfe wehren sich, gezähmte Tiere verschwinden nie. Pferde, Esel, Maultiere: zähmen durch Reiten (5.4). Fehlt: Papagei auf der Schulter, Katzen verscheuchen Creeper, Ozelot-Vertrauen |
 | Warden | ✅/🟡 | **neu in 5.0**: Sculk-Kreischer im Tiefen Dunkel und in Antiken Städten warnen (Dunkelheit, Schrei), bei der 4. Warnung erscheint der Warden |
@@ -486,7 +637,7 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 1. ~~Fehlende Blöcke und Gegenstände registrieren~~ (4.7: 219 Blocktypen, 4.9: 152 Gegenstände – damit ist die ganze 1.26.60-Palette vorhanden). Mit Funktion: Elytren, Streitkolben, Schild, Armbrust, Pinsel, Angel, Fisch-Eimer, Boote, Loren, Karten (5.8). Ohne eigene Funktion bisher: Bündel.
 2. Wesen in Strukturen (Wächter, Shulker, Hexen).
 3. ~~Mob-KI und Spawning~~ (4.8). **5.10**: Babyzombies (5 %, halb so groß, 50 % schneller, 12 EP), Zombies schlagen auf Schwer Holztüren ein (12 s, Risse, Klopfen), geladene Creeper (5.9). Offen: Hexentränke, Hühnerjockeys.
-4. Speichern geplanter Blockticks über Neustarts.
+4. ~~Speichern geplanter Blockticks über Neustarts~~ (5.68).
 5. Verhalten der übrigen neuen Blöcke (Sculk-Sensor, Crafter, Tropfstein-Schaden …).
 
 Jeder Punkt ist ein eigenes, großes Paket. „100 % Vanilla“ erreicht man nur Schritt

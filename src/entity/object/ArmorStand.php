@@ -177,7 +177,7 @@ class ArmorStand extends Living{
 		}
 		$creative = $source instanceof EntityDamageByEntityEvent && ($damager = $source->getDamager()) instanceof Player && $damager->isCreative();
 		$world = $this->getWorld();
-		if(!$creative && ($stand = ExtraVanillaItems::get("minecraft:armor_stand")) !== null){
+		if(!$creative && \pocketmine\world\GameRules::bool($world, "doentitydrops") && ($stand = ExtraVanillaItems::get("minecraft:armor_stand")) !== null){
 			$world->dropItem($this->location, $stand);
 		}
 		foreach($this->armorInventory->getContents() as $item){

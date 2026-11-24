@@ -239,7 +239,8 @@ abstract class Command{
 		$result = KnownTranslationFactory::chat_type_admin($source->getName(), $message);
 		$colored = $result->prefix(TextFormat::GRAY . TextFormat::ITALIC);
 
-		if($sendToSource){
+		//BetterPMMP: game rule sendCommandFeedback
+		if($sendToSource && (!$source instanceof \pocketmine\player\Player || \pocketmine\world\GameRules::bool($source->getWorld(), "sendcommandfeedback"))){
 			$source->sendMessage($message instanceof Translatable ? $message->prefix(TextFormat::GREEN) : TextFormat::GREEN . $message);
 		}
 

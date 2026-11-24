@@ -30,6 +30,7 @@ final class SwampHut extends SimpleStructure{
 		$oz = $z - 4;
 		[$minX, $minZ, $maxX, $maxZ] = Transform::bounds($ox, $oz, $rot, 7, 9);
 		$y = max(64, self::averageLevel($ctx, $minX, $minZ, $maxX, $maxZ) + 2);
+		$start->markers["mob:witch:0"] = [intdiv($minX + $maxX, 2), $y + 2, intdiv($minZ + $maxZ, 2)];
 		$start->add(new StructurePiece($minX, $y - 8, $minZ, $maxX, $y + 7, $maxZ, function(StructureCanvas $c, Random $r) use ($ox, $y, $oz, $rot) : void{
 			$t = new Transform($c, $ox, $y, $oz, $rot);
 			$planks = VanillaBlocks::SPRUCE_PLANKS();

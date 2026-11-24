@@ -46,7 +46,7 @@ final class PhantomSpawner{
 	}
 
 	public static function tick(World $world) : void{
-		if($world->getDimensionId() !== DimensionIds::OVERWORLD || $world->getServer()->getTick() % 20 !== 0){
+		if($world->getDimensionId() !== DimensionIds::OVERWORLD || $world->getServer()->getTick() % 20 !== 0 || !GameRules::bool($world, "doinsomnia") || !GameRules::bool($world, "domobspawning")){
 			return;
 		}
 		foreach($world->getPlayers() as $player){

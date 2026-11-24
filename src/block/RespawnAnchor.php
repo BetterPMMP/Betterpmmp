@@ -103,6 +103,10 @@ final class RespawnAnchor extends Opaque{
 	}
 
 	private function explode(?Player $player) : void{
+		//BetterPMMP: game rule respawnBlocksExplode - the anchor just does nothing
+		if(!\pocketmine\world\GameRules::bool($this->position->getWorld(), "respawnblocksexplode")){
+			return;
+		}
 		$ev = new BlockPreExplodeEvent($this, 5, $player);
 		$ev->setIncendiary(true);
 

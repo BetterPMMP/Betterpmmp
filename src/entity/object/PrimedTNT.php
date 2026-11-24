@@ -117,6 +117,10 @@ class PrimedTNT extends Entity implements Explosive{
 	}
 
 	public function explode() : void{
+		//BetterPMMP: game rule tntExplodes
+		if(!\pocketmine\world\GameRules::bool($this->getWorld(), "tntexplodes")){
+			return;
+		}
 		$ev = new EntityPreExplodeEvent($this, 4);
 		$ev->call();
 		if(!$ev->isCancelled()){

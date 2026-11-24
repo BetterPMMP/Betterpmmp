@@ -1397,6 +1397,8 @@ class NetworkSession{
 			$this->syncWorldDifficulty($world->getDifficulty());
 			$this->syncWorldSpawnPoint($world->getSpawnLocation());
 			$world->getWeather()->sendTo($this->player);
+			\pocketmine\world\GameRules::sendTo($this->player); //BetterPMMP: each world has its own game rules
+			\pocketmine\scoreboard\Scoreboard::get()->sendTo($this->player); //BetterPMMP: sidebar, list, below name
 		}
 	}
 

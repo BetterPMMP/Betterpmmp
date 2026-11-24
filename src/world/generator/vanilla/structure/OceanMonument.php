@@ -36,6 +36,10 @@ final class OceanMonument extends SimpleStructure{
 			}
 		}
 		$y = 39;
+		//vanilla: three elder guardians, one in each wing and one in the top room
+		$start->markers["mob:elder_guardian:0"] = [$x0 + 10, $y + 4, $z0 + 28];
+		$start->markers["mob:elder_guardian:1"] = [$x0 + 46, $y + 4, $z0 + 28];
+		$start->markers["mob:elder_guardian:2"] = [$x0 + 28, $y + 16, $z0 + 28];
 		$start->add(new StructurePiece($x0, $y - 20, $z0, $x0 + 57, $y + 24, $z0 + 57, function(StructureCanvas $c, Random $r) use ($x0, $y, $z0) : void{
 			$this->draw($c, $r, $x0, $y, $z0);
 		}, $random->nextInt()));

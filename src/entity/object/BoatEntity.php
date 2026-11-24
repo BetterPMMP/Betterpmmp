@@ -138,7 +138,7 @@ class BoatEntity extends Entity implements Rideable{
 		$this->hitDamage += $source->getFinalDamage() * 10;
 		if($this->hitDamage > 40){
 			$item = $this->asItem();
-			if($item !== null){
+			if($item !== null && \pocketmine\world\GameRules::bool($this->getWorld(), "doentitydrops")){
 				$this->getWorld()->dropItem($this->location, $item);
 			}
 			$this->flagForDespawn();

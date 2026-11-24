@@ -77,6 +77,9 @@ class TntMinecartEntity extends MinecartEntity{
 			return;
 		}
 		$this->flagForDespawn();
+		if(!\pocketmine\world\GameRules::bool($this->getWorld(), "tntexplodes")){
+			return;
+		}
 		$m = $this->getMotion();
 		$speed = min(5.0, sqrt($m->x * $m->x + $m->z * $m->z) * 20);
 		$explosion = new Explosion(Position::fromObject($this->location->add(0, 0.5, 0), $this->getWorld()), 4 + mt_rand(0, 15) / 10 * $speed, $this);

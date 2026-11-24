@@ -120,6 +120,10 @@ class Fire extends BaseFire implements Ageable, HorizontalConnectable{
 	}
 
 	public function onRandomTick() : void{
+		//BetterPMMP: game rule doFireTick - fire neither spreads nor burns out
+		if(!\pocketmine\world\GameRules::bool($this->position->getWorld(), "dofiretick")){
+			return;
+		}
 		$down = $this->getSide(Facing::DOWN);
 
 		$result = null;

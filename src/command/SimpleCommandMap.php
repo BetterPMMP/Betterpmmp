@@ -140,6 +140,29 @@ class SimpleCommandMap implements CommandMap{
 			new VersionCommand(),
 			new WhitelistCommand(),
 			new XpCommand(),
+			new \pocketmine\command\defaults\SetblockCommand(),
+			new \pocketmine\command\defaults\GameruleCommand(),
+			new \pocketmine\command\defaults\CloneCommand(),
+			new \pocketmine\command\defaults\ScoreboardCommand(),
+			new \pocketmine\command\defaults\ExecuteCommand(),
+			new \pocketmine\command\defaults\SpreadplayersCommand(),
+			new \pocketmine\command\defaults\RideCommand(),
+			new \pocketmine\command\defaults\FogCommand(),
+			new \pocketmine\command\defaults\HudCommand(),
+			new \pocketmine\command\defaults\CameraCommand(),
+			new \pocketmine\command\defaults\ScheduleCommand(),
+			new \pocketmine\command\defaults\TickingareaCommand(),
+			new \pocketmine\command\defaults\StructureCommand(),
+			new \pocketmine\command\defaults\TagCommand(),
+			new \pocketmine\command\defaults\FunctionCommand(),
+			new \pocketmine\command\defaults\DaylockCommand(),
+			new \pocketmine\command\defaults\StopsoundCommand(),
+			new \pocketmine\command\defaults\DamageCommand(),
+			new \pocketmine\command\defaults\LocateCommand(),
+			new \pocketmine\command\defaults\FillCommand(),
+			new \pocketmine\command\defaults\SummonCommand(),
+			new \pocketmine\command\defaults\TellrawCommand(),
+			new \pocketmine\command\defaults\PlaysoundCommand(),
 		]);
 	}
 
@@ -210,8 +233,117 @@ class SimpleCommandMap implements CommandMap{
 		return true;
 	}
 
+	/**
+	 * BetterPMMP: like vanilla, a selector that matches several players (@a, @e, @r[c=3] ...) runs the command
+	 * once for every player - for all commands, plugin commands included. Commands that understand selectors
+	 * themselves (they can also target mobs) get the selector as it is.
+	 * @param string[] $args
+	 */
+	private function executeWithSelectors(CommandSender $sender, Command $command, string $label, array $args) : void{
+		static $selectorAware = ["kill", "tellraw", "playsound", "say", "me", "summon", "gamerule", "setblock", "fill", "clone", "execute", "scoreboard", "tag", "function", "stopsound", "damage", "tp", "effect", "spreadplayers", "ride", "fog", "hud", "camera", "schedule", "tickingarea", "structure"];
+		$index = null;
+		foreach($args as $i => $arg){
+			if(\pocketmine\command\utils\TargetSelector::isSelector($arg) && strtolower($arg) !== "@s"){
+				$index = $i;
+				break;
+			}
+		}
+		if($index === null || in_array($command->getLabel(), $selectorAware, true)){
+			$command->execute($sender, $label, $args);
+			return;
+		}
+		$players = \pocketmine\command\utils\TargetSelector::selectPlayers($sender, $args[$index]);
+		if($players === []){
+			$sender->sendMessage(TextFormat::RED . "No targets matched selector");
+			return;
+		}
+		if(count($players) === 1 && $command instanceof \pocketmine\command\defaults\VanillaCommand){
+			$args[$index] = $players[0]->getName(); //exact player, not a name prefix
+			$command->execute($sender, $label, $args);
+			return;
+		}
+		foreach($players as $player){
+			$args[$index] = $player->getName();
+			$command->execute($sender, $label, $args);
+		}
+	}
+
+	/** BetterPMMP: the command line of the running command after its label, unchanged (JSON, "run ..." of /execute) */
+	private static ?string $rawArguments = null;
+
+	/**
+	 * The raw text of the running command after its first $skip arguments (null outside of a command).
+	 * Lets commands read JSON or a nested command exactly as typed instead of split into words.
+	 */
+	public static function rawArgumentsAfter(int $skip) : ?string{
+		if(self::$rawArguments === null){
+			return null;
+		}
+		if(preg_match_all('/"((?:\\\\.|[^\\\\"])*)"|(\S+)/u', self::$rawArguments, $matches, PREG_OFFSET_CAPTURE) === false){
+			return null;
+		}
+		//count arguments like dispatch() does: a selector split by spaces is one argument
+		$starts = [];
+		$depth = 0;
+		foreach($matches[0] as [$token, $offset]){
+			if($depth === 0){
+				$starts[] = $offset;
+			}
+			if($depth > 0 || str_starts_with($token, "@")){
+				$depth += substr_count($token, "[") - substr_count($token, "]");
+				$depth = max(0, $depth);
+			}
+		}
+		if($skip >= count($starts)){
+			return "";
+		}
+		return substr(self::$rawArguments, $starts[$skip]);
+	}
+
 	public function dispatch(CommandSender $sender, string $commandLine) : bool{
 		$args = CommandStringHelper::parseQuoteAware($commandLine);
+		$previousRaw = self::$rawArguments;
+		self::$rawArguments = preg_match('/^\s*\S+\s*(.*)$/su', $commandLine, $rawMatch) === 1 ? $rawMatch[1] : "";
+		try{
+			return $this->dispatchParsed($sender, $args);
+		}finally{
+			self::$rawArguments = $previousRaw;
+		}
+	}
+
+	/**
+	 * Selectors may contain spaces inside their brackets like in vanilla ("@e[type=zombie, r=10]"): the words
+	 * split there are joined back into one argument.
+	 * @param string[] $args
+	 * @return string[]
+	 */
+	private static function joinSelectors(array $args) : array{
+		$joined = [];
+		$open = null;
+		foreach($args as $arg){
+			if($open !== null){
+				$open .= " " . $arg;
+				if(substr_count($open, "[") <= substr_count($open, "]")){
+					$joined[] = $open;
+					$open = null;
+				}
+				continue;
+			}
+			if(str_starts_with($arg, "@") && substr_count($arg, "[") > substr_count($arg, "]")){
+				$open = $arg;
+				continue;
+			}
+			$joined[] = $arg;
+		}
+		if($open !== null){
+			$joined[] = $open;
+		}
+		return $joined;
+	}
+
+	/** @param string[] $args */
+	private function dispatchParsed(CommandSender $sender, array $args) : bool{
+		$args = self::joinSelectors($args);
 
 		$sentCommandLabel = array_shift($args);
 		if($sentCommandLabel !== null && ($target = $this->getCommand($sentCommandLabel)) !== null){
@@ -220,7 +352,7 @@ class SimpleCommandMap implements CommandMap{
 
 			try{
 				if($target->testPermission($sender)){
-					$target->execute($sender, $sentCommandLabel, $args);
+					$this->executeWithSelectors($sender, $target, $sentCommandLabel, $args);
 				}
 			}catch(InvalidCommandSyntaxException $e){
 				$sender->sendMessage($sender->getLanguage()->translate(KnownTranslationFactory::commands_generic_usage($target->getUsage())));
