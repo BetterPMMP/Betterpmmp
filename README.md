@@ -4,6 +4,7 @@
 
 <p align="center">
   <b>A vanilla game engine for PocketMine-MP 5.</b><br>
+  Developed by <b>Leon Development</b><br>
   Minecraft: Bedrock Edition 1.26.60 · Java Edition players through the built-in bridge · PocketMine plugins keep working
 </p>
 
@@ -241,6 +242,6 @@ More background on the bigger systems: [`BETTERPMMP-WORLDGEN.md`](BETTERPMMP-WOR
 
 ## License
 
-BetterPMMP is licensed under the LGPL-3.0-or-later, like PocketMine-MP, which it is based on.
+BetterPMMP is developed by **Leon Development** and licensed under the LGPL-3.0-or-later, like PocketMine-MP, which it is based on.
 
 BetterPMMP is not affiliated with Mojang Studios or Microsoft. Minecraft is a trademark of Mojang Studios.
