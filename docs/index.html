@@ -57,11 +57,21 @@ pre{background:var(--card);border:1px solid var(--line);border-radius:8px;paddin
 ol li{margin-bottom:6px}
 a{color:var(--link)}
 footer{margin:48px 0 32px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:.9rem}
+.lang{display:flex;justify-content:flex-end;gap:8px;padding-top:16px}
+.lang button{font-size:1.5rem;line-height:1;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;opacity:.55}
+.lang button[aria-pressed="true"]{opacity:1;border-color:var(--green)}
+[data-lang-block]{display:none}
+html[lang="en"] [data-lang-block="en"],html[lang="de"] [data-lang-block="de"]{display:block}
 </style>
 </head>
 <body>
 <div class="wrap">
+<nav class="lang" aria-label="Language">
+  <button type="button" data-set-lang="de" title="Deutsch" aria-label="Deutsch">🇩🇪</button>
+  <button type="button" data-set-lang="en" title="English" aria-label="English">🇬🇧</button>
+</nav>
 <header><img src="banner.png" alt="BetterPMMP – vanilla server software for Minecraft Bedrock Edition" width="2560" height="1280"></header>
+<div data-lang-block="en">
 
 <h1>Better<span>PMMP</span></h1>
 <p class="by">Vanilla server software for Minecraft: Bedrock Edition 1.26.60, developed by <strong>Leon Development</strong>.</p>
@@ -69,7 +79,7 @@ footer{margin:48px 0 32px;padding-top:16px;border-top:1px solid var(--line);colo
 <div class="btns">
   <a class="btn main" href="https://github.com/BetterPMMP/Betterpmmp/releases">Download</a>
   <a class="btn" href="https://github.com/BetterPMMP/Betterpmmp">Source on GitHub</a>
-  <a class="btn" href="https://github.com/BetterPMMP/Betterpmmp/blob/claude/pmmp-vanilla-engine-mrd55d/VANILLA-PARITY.md">Feature status</a>
+  <a class="btn" href="https://github.com/BetterPMMP/Betterpmmp/blob/HEAD/VANILLA-PARITY.md">Feature status</a>
 </div>
 
 <p>BetterPMMP is based on PocketMine-MP 5 and keeps its plugin API, so existing plugins keep working.
@@ -96,10 +106,63 @@ mob AI, the Nether and the End with their bosses, and Java Edition players on th
 bin\php\php.exe BetterPMMP-5.84.phar           # Windows</pre>
 <p>Bedrock players join on port 19132 (UDP), Java players on port 25565 (TCP).</p>
 
+</div>
+<div data-lang-block="de">
+<h1>Better<span>PMMP</span></h1>
+<p class="by">Vanilla-Serversoftware für Minecraft: Bedrock Edition 1.26.60, entwickelt von <strong>Leon Development</strong>.</p>
+
+<div class="btns">
+  <a class="btn main" href="https://github.com/BetterPMMP/Betterpmmp/releases">Herunterladen</a>
+  <a class="btn" href="https://github.com/BetterPMMP/Betterpmmp">Quellcode auf GitHub</a>
+  <a class="btn" href="https://github.com/BetterPMMP/Betterpmmp/blob/HEAD/VANILLA-PARITY.md">Stand der Features</a>
+</div>
+
+<p>BetterPMMP basiert auf PocketMine-MP 5 und behält dessen Plugin-API, vorhandene Plugins laufen also weiter.
+Dazu kommt alles, was PocketMine für Survival fehlt: Vanilla-Welten, Strukturen, Redstone, Mob-KI,
+Nether und End mit ihren Bossen und Java-Edition-Spieler auf demselben Server.</p>
+
+<h2>Features</h2>
+<div class="grid">
+  <div class="card"><h3>Weltgenerierung</h3><p>Terrain wie ab 1.18 von −64 bis 319, über 50 Biome, Höhlen, Dörfer, Festungen, antike Städte, Prüfungskammern, End-Städte.</p></div>
+  <div class="card"><h3>Redstone</h3><p>Redstone-Staub, Verstärker, Komparatoren, Kolben, Beobachter, Trichter, Schienen mit Loren-Physik, Crafter, Sculk-Sensoren.</p></div>
+  <div class="card"><h3>Mobs</h3><p>Wegfindung, Vanilla-Spawning, Kampf, Züchten, Zähmen, Reiten, Dorfbewohner-Handel, Enderdrache und Wither.</p></div>
+  <div class="card"><h3>Java-Crossplay</h3><p>Über die eingebaute Bridge spielen Java-Spieler in derselben Welt. Java und der Proxy werden automatisch geladen.</p></div>
+  <div class="card"><h3>Vanilla-Befehle</h3><p>Zielauswahl, /execute, /scoreboard, alle 38 Spielregeln, /fill, /clone, /summon, /structure und mehr.</p></div>
+  <div class="card"><h3>Eigene Inhalte</h3><p>Items, Blöcke und Wesen per YAML-Datei. Das Resource-Pack wird automatisch gebaut und verschickt.</p></div>
+</div>
+
+<h2>Installation</h2>
+<ol>
+  <li>Die PHP-Binary für dein System von <a href="https://github.com/pmmp/PHP-Binaries/releases">pmmp/PHP-Binaries</a> herunterladen und in einen leeren Ordner entpacken.</li>
+  <li><code>BetterPMMP-5.84.phar</code> aus den <a href="https://github.com/BetterPMMP/Betterpmmp/releases">Releases</a> herunterladen und neben den Ordner <code>bin</code> legen.</li>
+  <li>Den Server starten:</li>
+</ol>
+<pre>./bin/php7/bin/php BetterPMMP-5.84.phar        # Linux / macOS
+bin\php\php.exe BetterPMMP-5.84.phar           # Windows</pre>
+<p>Bedrock-Spieler verbinden sich über Port 19132 (UDP), Java-Spieler über Port 25565 (TCP).</p>
+</div>
+
 <footer>
-  BetterPMMP © Leon Development · Licensed under the LGPL-3.0-or-later, based on PocketMine-MP.<br>
-  Not affiliated with Mojang Studios or Microsoft. Minecraft is a trademark of Mojang Studios.
+  <div data-lang-block="en">BetterPMMP © Leon Development · Licensed under the LGPL-3.0-or-later, based on PocketMine-MP.<br>
+  Not affiliated with Mojang Studios or Microsoft. Minecraft is a trademark of Mojang Studios.</div>
+  <div data-lang-block="de">BetterPMMP © Leon Development · Lizenz LGPL-3.0-or-later, basiert auf PocketMine-MP.<br>
+  Nicht verbunden mit Mojang Studios oder Microsoft. Minecraft ist eine Marke von Mojang Studios.</div>
 </footer>
 </div>
+
+<script>
+(function(){
+  var saved=null;
+  try{saved=localStorage.getItem("lang");}catch(e){}
+  var lang=saved||((navigator.language||"en").toLowerCase().indexOf("de")===0?"de":"en");
+  function set(l){
+    document.documentElement.lang=l;
+    document.querySelectorAll("[data-set-lang]").forEach(function(b){b.setAttribute("aria-pressed",b.dataset.setLang===l?"true":"false");});
+    try{localStorage.setItem("lang",l);}catch(e){}
+  }
+  document.querySelectorAll("[data-set-lang]").forEach(function(b){b.addEventListener("click",function(){set(b.dataset.setLang);});});
+  set(lang);
+})();
+</script>
 </body>
 </html>
