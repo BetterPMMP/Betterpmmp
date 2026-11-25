@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://betterpmmp.github.io/Betterpmmp/sitemap.xml
