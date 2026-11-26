@@ -1,0 +1,84 @@
+{
+  "plugins": [
+    {
+      "id": "killboard",
+      "name": "KillBoard",
+      "author": "Leon Development",
+      "version": "1.0.0",
+      "api": "5.0.0",
+      "categories": ["minigame", "scoreboard"],
+      "betterpmmp_only": true,
+      "updated": "2026-11-26",
+      "summary": {
+        "en": "Counts player kills and shows the top players in the sidebar.",
+        "de": "Zählt Spieler-Kills und zeigt die Besten in der Sidebar."
+      },
+      "description": {
+        "en": "KillBoard counts every kill a player makes against another player and shows the ranking in the sidebar, sorted from the highest score. It uses the BetterPMMP scoreboard, so the kills are the same scores that /scoreboard shows and changes, and they are saved over restarts.",
+        "de": "KillBoard zählt jeden Kill eines Spielers gegen einen anderen Spieler und zeigt die Rangliste in der Sidebar, die meisten Kills oben. Es nutzt das BetterPMMP-Scoreboard: Die Kills sind dieselben Punkte, die /scoreboard anzeigt und ändert, und sie bleiben nach einem Neustart erhalten."
+      },
+      "commands": [
+        ["/killboard", "Top 10 players", "Die 10 besten Spieler"],
+        ["/killboard reset <player>", "Reset the kills of a player (OP)", "Kills eines Spielers zurücksetzen (OP)"]
+      ],
+      "download": "files/KillBoard.phar",
+      "source": "https://github.com/BetterPMMP/Betterpmmp/tree/HEAD/examples/plugins/KillBoard"
+    },
+    {
+      "id": "helloworld",
+      "name": "HelloWorld",
+      "author": "Leon Development",
+      "version": "1.0.0",
+      "api": "5.0.0",
+      "categories": ["example"],
+      "betterpmmp_only": false,
+      "updated": "2026-11-26",
+      "summary": {
+        "en": "Greets players and adds /hello. The example from the plugin guide.",
+        "de": "Begrüßt Spieler und fügt /hello hinzu. Das Beispiel aus der Plugin-Anleitung."
+      },
+      "description": {
+        "en": "The plugin from the BetterPMMP plugin guide, ready to download. It welcomes every player who joins and adds the command /hello. A good starting point for your own plugin: download the source, change the names and build on it.",
+        "de": "Das Plugin aus der BetterPMMP-Plugin-Anleitung, fertig zum Herunterladen. Es begrüßt jeden Spieler beim Beitreten und fügt den Befehl /hello hinzu. Ein guter Start für dein eigenes Plugin: Quellcode holen, Namen ändern und darauf aufbauen."
+      },
+      "commands": [
+        ["/hello [player]", "Says hello", "Sagt Hallo"]
+      ],
+      "download": "files/HelloWorld.phar",
+      "source": "https://github.com/BetterPMMP/Betterpmmp/tree/HEAD/examples/plugins/HelloWorld"
+    },
+    {
+      "id": "devtools",
+      "name": "DevTools",
+      "author": "PMMP",
+      "version": "Poggit",
+      "api": "5.0.0",
+      "categories": ["developer"],
+      "betterpmmp_only": false,
+      "updated": "2026-11-26",
+      "summary": {
+        "en": "Load plugins from folders and build .phar files while you develop.",
+        "de": "Plugins aus Ordnern laden und .phar-Dateien bauen, während du entwickelst."
+      },
+      "description": {
+        "en": "The official development tool of PocketMine-MP. With DevTools the server loads plugins from folders, so you can edit a plugin and restart without packing it first. /makeplugin builds a .phar from a folder plugin. Works on BetterPMMP because BetterPMMP keeps the PocketMine-MP 5 plugin API.",
+        "de": "Das offizielle Entwickler-Werkzeug von PocketMine-MP. Mit DevTools lädt der Server Plugins aus Ordnern, du kannst also ein Plugin ändern und neu starten, ohne es vorher zu packen. /makeplugin baut aus einem Ordner-Plugin eine .phar. Läuft auf BetterPMMP, weil BetterPMMP die Plugin-API von PocketMine-MP 5 behält."
+      },
+      "commands": [
+        ["/makeplugin <name>", "Build a .phar from a folder plugin", "Aus einem Ordner-Plugin eine .phar bauen"]
+      ],
+      "download": "https://poggit.pmmp.io/p/DevTools",
+      "source": "https://github.com/pmmp/DevTools"
+    }
+  ],
+  "categories": {
+    "minigame": ["Minigames", "Minispiele"],
+    "scoreboard": ["Scoreboards", "Scoreboards"],
+    "example": ["Examples", "Beispiele"],
+    "developer": ["Developer tools", "Entwickler-Werkzeuge"],
+    "admin": ["Administration", "Verwaltung"],
+    "economy": ["Economy", "Wirtschaft"],
+    "world": ["World and building", "Welt und Bauen"],
+    "fun": ["Fun", "Spaß"]
+  }
+}

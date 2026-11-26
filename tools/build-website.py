@@ -33,9 +33,10 @@ def t(en, de):
 
 
 def page(name, title_en, title_de, desc, body, current=None):
-    menu = [("index.html", "Home", "Start"), ("install.html", "Install", "Installation"), ("java.html", "Java", "Java"),
-            ("custom-content.html", "Content", "Inhalte"), ("commands.html", "Commands", "Befehle"), ("plugins.html", "Plugins", "Plugins")]
-    links = "".join(f'<a href="{h}"{" aria-current=\"page\"" if h == name else ""}>{t(en, de)}</a>' for h, en, de in menu)
+    menu = [("index.html", "Home", "Start"), ("hub.html", "Plugins", "Plugins"), ("install.html", "Install", "Installation"), ("java.html", "Java", "Java"),
+            ("custom-content.html", "Content", "Inhalte"), ("commands.html", "Commands", "Befehle"), ("plugins.html", "Develop", "Entwickeln")]
+    active = "hub.html" if name.startswith("plugin-") or name == "submit.html" else name
+    links = "".join(f'<a href="{h}"{" aria-current=\"page\"" if h == active else ""}>{t(en, de)}</a>' for h, en, de in menu)
     canonical = BASE + ("" if name == "index.html" else name)
     return f'''<!doctype html>
 <html lang="en">
@@ -81,6 +82,7 @@ def page(name, title_en, title_de, desc, body, current=None):
   {t("Not affiliated with Mojang Studios or Microsoft.", "Nicht verbunden mit Mojang Studios oder Microsoft.")}</div>
   <nav>
     <a href="install.html">{t("Installation", "Installation")}</a>
+    <a href="hub.html">Plugins</a>
     <a href="plugins.html">{t("Plugin development", "Plugins entwickeln")}</a>
     <a href="{REPO}/releases">{t("Download", "Download")}</a>
     <a href="{REPO}">GitHub</a>
@@ -821,6 +823,144 @@ def plugins(lang):
 pages["plugins.html"] = doc_page("plugins.html", "Plugin development", "Plugins entwickeln",
     "Write plugins for BetterPMMP and PocketMine-MP 5: plugin.yml, events, commands and the BetterPMMP APIs for game rules, scoreboards, selectors and structures.",
     plugins("en"), plugins("de"))
+
+
+# ---------------------------------------------------------------- plugin hub
+import json
+with open(os.path.join(OUT, "hub", "plugins.json"), encoding="utf-8") as f:
+    HUB = json.load(f)
+CATS = HUB["categories"]
+SUBMIT_URL = f"{REPO}/issues/new?template=plugin-submission.yml"
+
+
+def dl_url(p):
+    return p["download"] if p["download"].startswith("http") else "hub/" + p["download"]
+
+
+def badges(p):
+    out = "".join(f'<span class="tag">{t(CATS[c][0], CATS[c][1])}</span>' for c in p["categories"] if c in CATS)
+    if p["betterpmmp_only"]:
+        out += f'<span class="tag green">{t("BetterPMMP only", "Nur BetterPMMP")}</span>'
+    return out
+
+
+def initials(name):
+    return html.escape(name[:2])
+
+
+def hub_card(p):
+    cats = " ".join(p["categories"])
+    catnames = " ".join(CATS[c][0] + " " + CATS[c][1] for c in p["categories"] if c in CATS)
+    search = html.escape((p["name"] + " " + p["author"] + " " + p["summary"]["en"] + " " + p["summary"]["de"] + " " + catnames).lower())
+    return (f'<a class="card plugin" href="plugin-{p["id"]}.html" data-cats="{cats}" data-search="{search}">'
+            f'<div class="pl-head"><div class="pl-icon">{initials(p["name"])}</div><div><h3>{html.escape(p["name"])}</h3>'
+            f'<small>{t("by", "von")} {html.escape(p["author"])} · {("v" if p["version"][:1].isdigit() else "") + html.escape(p["version"])}</small></div></div>'
+            f'<p>{t(html.escape(p["summary"]["en"]), html.escape(p["summary"]["de"]))}</p><div class="tags">{badges(p)}</div></a>')
+
+
+used = sorted({c for p in HUB["plugins"] for c in p["categories"]}, key=lambda c: list(CATS).index(c))
+chips = f'<button type="button" class="chip" data-cat="" aria-pressed="true">{t("All", "Alle")}</button>' + "".join(
+    f'<button type="button" class="chip" data-cat="{c}" aria-pressed="false">{t(CATS[c][0], CATS[c][1])}</button>' for c in used)
+cards = "".join(hub_card(p) for p in HUB["plugins"])
+n = len(HUB["plugins"])
+HUB_BODY = (
+    '<section class="hero small"><div class="wrap">'
+    f'<span class="badge">{t(f"{n} plugins", f"{n} Plugins")}</span>'
+    f'<h1>{t("Plugins for <b>BetterPMMP</b>", "Plugins für <b>BetterPMMP</b>")}</h1>'
+    f'<p class="lead">{t("Download plugins for your server, or share your own. Every plugin for PocketMine-MP 5 also runs on BetterPMMP.", "Lade Plugins für deinen Server herunter oder teile deine eigenen. Jedes Plugin für PocketMine-MP 5 läuft auch auf BetterPMMP.")}</p>'
+    f'<div class="btns"><a class="btn main" href="submit.html">{t("Submit a plugin", "Plugin einreichen")}</a><a class="btn" href="plugins.html">{t("Write a plugin", "Plugin schreiben")}</a></div>'
+    '</div></section>'
+    '<section style="padding-top:8px"><div class="wrap">'
+    f'<div class="hub-bar"><input id="hub-search" type="search" placeholder="Search plugins …" data-ph-de="Plugins suchen …" data-ph-en="Search plugins …" aria-label="Search"><div class="chips">{chips}</div></div>'
+    f'<div class="grid" id="hub-grid">{cards}</div>'
+    f'<p id="hub-empty" class="sub" hidden>{t("No plugin matches your search.", "Kein Plugin passt zu deiner Suche.")}</p>'
+    '</div></section>'
+)
+pages["hub.html"] = page("hub.html", "Plugins – BetterPMMP", "Plugins – BetterPMMP",
+    "Plugins for BetterPMMP and PocketMine-MP 5: download, search by category and submit your own.", HUB_BODY)
+
+for p in HUB["plugins"]:
+    is_ext = p["download"].startswith("http")
+    dl_label = t("Download on Poggit", "Auf Poggit herunterladen") if "poggit" in p["download"] else t("Download .phar", ".phar herunterladen")
+    cmd_rows = "".join(f'<tr><td><code>{html.escape(c)}</code></td><td>{t(html.escape(e), html.escape(d))}</td></tr>' for c, e, d in p.get("commands", []))
+    cmds = ""
+    if cmd_rows:
+        cmds = (f'<h2>{t("Commands", "Befehle")}</h2><div class="scroll"><table class="table"><thead><tr><th>{t("Command", "Befehl")}</th>'
+                f'<th>{t("What it does", "Was er macht")}</th></tr></thead><tbody>{cmd_rows}</tbody></table></div>')
+    fname = html.escape(p["download"].rsplit("/", 1)[-1])
+    what_en = "the plugin" if is_ext else f"<code>{fname}</code>"
+    what_de = "Das Plugin" if is_ext else f"<code>{fname}</code>"
+    install = t(
+        f'<ol><li>Download {what_en}.</li><li>Put the <code>.phar</code> into the <code>plugins</code> folder of your server.</li><li>Restart the server.</li></ol>',
+        f'<ol><li>{what_de} herunterladen.</li><li>Die <code>.phar</code> in den Ordner <code>plugins</code> deines Servers legen.</li><li>Server neu starten.</li></ol>')
+    req = t("BetterPMMP" if p["betterpmmp_only"] else "BetterPMMP or PocketMine-MP 5", "BetterPMMP" if p["betterpmmp_only"] else "BetterPMMP oder PocketMine-MP 5")
+    dl_attr = "" if is_ext else " download"
+    body = (
+        '<main class="wrap plugin-page">'
+        f'<p class="crumb"><a href="hub.html">{t("Plugins", "Plugins")}</a> / {html.escape(p["name"])}</p>'
+        f'<div class="pl-top"><div class="pl-icon big">{initials(p["name"])}</div>'
+        f'<div style="flex:1;min-width:0"><h1>{html.escape(p["name"])}</h1>'
+        f'<p class="sub" style="margin:0">{t(html.escape(p["summary"]["en"]), html.escape(p["summary"]["de"]))}</p>'
+        f'<div class="tags" style="margin-top:10px">{badges(p)}</div></div></div>'
+        '<div class="pl-layout"><article class="doc">'
+        f'<h2 style="margin-top:0">{t("About", "Über das Plugin")}</h2>'
+        f'<p>{t(html.escape(p["description"]["en"]), html.escape(p["description"]["de"]))}</p>'
+        f'{cmds}<h2>{t("Installation", "Installation")}</h2>{install}'
+        '</article><aside class="card pl-side">'
+        f'<a class="btn main wide" href="{dl_url(p)}"{dl_attr}>{dl_label}</a>'
+        f'<a class="btn wide" href="{p["source"]}">{t("Source code", "Quellcode")}</a>'
+        '<dl>'
+        f'<dt>{t("Author", "Autor")}</dt><dd>{html.escape(p["author"])}</dd>'
+        f'<dt>{t("Version", "Version")}</dt><dd>{html.escape(p["version"])}</dd>'
+        f'<dt>{t("Plugin API", "Plugin-API")}</dt><dd>{html.escape(p["api"])}</dd>'
+        f'<dt>{t("Runs on", "Läuft auf")}</dt><dd>{req}</dd>'
+        f'<dt>{t("Updated", "Aktualisiert")}</dt><dd>{html.escape(p["updated"])}</dd>'
+        '</dl></aside></div></main>'
+    )
+    pages[f'plugin-{p["id"]}.html'] = page(f'plugin-{p["id"]}.html', f'{p["name"]} – BetterPMMP Plugins', f'{p["name"]} – BetterPMMP-Plugins', p["summary"]["en"], body)
+
+SUBMIT_EN = f'''<h1>Submit a plugin</h1>
+<p class="intro">Made a plugin for BetterPMMP or PocketMine-MP 5? Share it here. Every submission is checked by hand before it appears in the list.</p>
+<h2>Requirements</h2>
+<ul>
+<li>The plugin runs on BetterPMMP (API 5).</li>
+<li>The source code is public, for example on GitHub.</li>
+<li>There is a <code>.phar</code> to download, for example as a GitHub release or on Poggit.</li>
+<li>No malware, no hidden tracking, no copied plugins under a new name.</li>
+</ul>
+<h2>How to submit</h2>
+<ol>
+<li>Open the submission form on GitHub (you need a free GitHub account).</li>
+<li>Fill in name, description, link to the source and the download.</li>
+<li>After the check the plugin gets its own page in the list.</li>
+</ol>
+<p><a class="btn main" href="{SUBMIT_URL}">Open the submission form</a></p>
+<h2>For developers</h2>
+<p>The plugin list is also available as JSON, for tools and launchers: <a href="hub/plugins.json"><code>hub/plugins.json</code></a>.</p>
+'''
+SUBMIT_DE = f'''<h1>Plugin einreichen</h1>
+<p class="intro">Du hast ein Plugin für BetterPMMP oder PocketMine-MP 5 gebaut? Teile es hier. Jede Einreichung wird von Hand geprüft, bevor sie in der Liste erscheint.</p>
+<h2>Voraussetzungen</h2>
+<ul>
+<li>Das Plugin läuft auf BetterPMMP (API 5).</li>
+<li>Der Quellcode ist öffentlich, zum Beispiel auf GitHub.</li>
+<li>Es gibt eine <code>.phar</code> zum Herunterladen, zum Beispiel als GitHub-Release oder auf Poggit.</li>
+<li>Keine Schadsoftware, kein heimliches Tracking, keine kopierten Plugins unter neuem Namen.</li>
+</ul>
+<h2>So reichst du ein</h2>
+<ol>
+<li>Das Formular auf GitHub öffnen (du brauchst ein kostenloses GitHub-Konto).</li>
+<li>Name, Beschreibung, Link zum Quellcode und zum Download eintragen.</li>
+<li>Nach der Prüfung bekommt das Plugin eine eigene Seite in der Liste.</li>
+</ol>
+<p><a class="btn main" href="{SUBMIT_URL}">Formular öffnen</a></p>
+<h2>Für Entwickler</h2>
+<p>Die Plugin-Liste gibt es auch als JSON, für Tools und Launcher: <a href="hub/plugins.json"><code>hub/plugins.json</code></a>.</p>
+'''
+pages["submit.html"] = page("submit.html", "Submit a plugin – BetterPMMP", "Plugin einreichen – BetterPMMP",
+    "Submit your plugin to the BetterPMMP plugin list.",
+    f'<main class="wrap" style="max-width:820px;padding-top:34px"><article class="doc">{both(SUBMIT_EN, SUBMIT_DE)}</article></main>')
+
 
 for name, content in pages.items():
     with open(os.path.join(OUT, name), "w", encoding="utf-8") as f:
