@@ -143,3 +143,33 @@ footer nav{display:flex;flex-wrap:wrap;gap:6px 18px}
   .hero{padding-top:32px}
   .pager{flex-direction:column}
 }
+
+/* plugin hub */
+.hero.small{padding:40px 0 18px}
+.hero.small h1{font-size:clamp(2rem,4.5vw,2.8rem);margin:14px 0 10px}
+.hub-bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:0 0 18px}
+#hub-search{flex:1 1 260px;min-width:0;background:var(--card);border:1px solid var(--line);border-radius:10px;color:var(--text);font:inherit;padding:11px 14px;outline:none}
+#hub-search:focus{border-color:var(--green)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:600 .85rem/1 Inter,system-ui,sans-serif;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 12px;cursor:pointer}
+.chip[aria-pressed="true"]{color:var(--text);border-color:var(--green);background:var(--greenbg)}
+.plugin .pl-head{display:flex;gap:12px;align-items:center;margin-bottom:10px}
+.plugin h3{margin:0}
+.plugin small{color:var(--muted)}
+.pl-icon{width:44px;height:44px;flex:none;border-radius:11px;display:grid;place-items:center;font-weight:800;color:#06210c;background:linear-gradient(135deg,#6ee07f,#2f9e44)}
+.pl-icon.big{width:72px;height:72px;border-radius:16px;font-size:1.6rem}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.tag{font-size:.75rem;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 9px}
+.tag.green{color:var(--green);border-color:rgba(70,195,90,.4);background:var(--greenbg)}
+.plugin-page{padding-top:26px}
+.crumb{color:var(--muted);font-size:.9rem;margin:0 0 18px}
+.pl-top{display:flex;gap:18px;align-items:center;margin-bottom:26px}
+.pl-top h1{margin:0 0 4px;font-size:clamp(1.8rem,4vw,2.4rem)}
+.pl-layout{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:34px;align-items:start}
+.pl-side{position:sticky;top:80px}
+.btn.wide{width:100%;justify-content:center;margin-bottom:8px}
+.pl-side dl{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;margin:14px 0 0;font-size:.92rem}
+.pl-side dt{color:var(--muted)}
+.pl-side dd{margin:0;text-align:right}
+@media (max-width:900px){.pl-layout{grid-template-columns:minmax(0,1fr)}.pl-side{position:static;order:-1}}
+.plugin[hidden],#hub-empty[hidden]{display:none}

@@ -1,0 +1,17 @@
+name: HelloWorld
+main: leondev\helloworld\Main
+src-namespace-prefix: leondev\helloworld
+version: 1.0.0
+api: 5.0.0
+author: Leon Development
+description: Greets players and adds /hello. The example from the BetterPMMP plugin guide.
+
+commands:
+  hello:
+    description: Says hello
+    usage: "/hello [player]"
+    permission: helloworld.command.hello
+
+permissions:
+  helloworld.command.hello:
+    default: true

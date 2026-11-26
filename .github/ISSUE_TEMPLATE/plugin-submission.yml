@@ -1,0 +1,80 @@
+name: Submit a plugin
+description: Add your plugin to the BetterPMMP plugin list on the website
+title: "[Plugin] "
+labels: ["plugin submission"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing your plugin! Every submission is checked by hand before it appears on https://betterpmmp.github.io/Betterpmmp/hub.html
+  - type: input
+    id: name
+    attributes:
+      label: Plugin name
+      placeholder: KillBoard
+    validations:
+      required: true
+  - type: input
+    id: author
+    attributes:
+      label: Author
+    validations:
+      required: true
+  - type: input
+    id: summary
+    attributes:
+      label: Short description (one sentence)
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Full description
+      description: What does the plugin do? Commands and permissions are welcome too.
+    validations:
+      required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Minigames
+        - Scoreboards
+        - Administration
+        - Economy
+        - World and building
+        - Fun
+        - Developer tools
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Link to the source code
+      placeholder: https://github.com/you/YourPlugin
+    validations:
+      required: true
+  - type: input
+    id: download
+    attributes:
+      label: Link to the .phar download
+      placeholder: https://github.com/you/YourPlugin/releases
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: The plugin runs on BetterPMMP (PocketMine-MP API 5).
+          required: true
+        - label: The plugin contains no malware, no hidden tracking and is not a copy of someone else's plugin.
+          required: true

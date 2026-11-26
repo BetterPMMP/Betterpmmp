@@ -1,0 +1,19 @@
+name: KillBoard
+main: leondev\killboard\Main
+src-namespace-prefix: leondev\killboard
+version: 1.0.0
+api: 5.0.0
+author: Leon Development
+description: Counts player kills and shows the top players in the sidebar. Uses the BetterPMMP scoreboard.
+
+commands:
+  killboard:
+    description: Shows or resets the kill board
+    usage: "/killboard [reset <player>]"
+    permission: killboard.command
+
+permissions:
+  killboard.command:
+    default: true
+  killboard.command.reset:
+    default: op
