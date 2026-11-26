@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Configuration – BetterPMMP</title>
+<meta name="title-en" content="Configuration – BetterPMMP">
+<meta name="title-de" content="Konfiguration – BetterPMMP">
+<meta name="description" content="The BetterPMMP configuration file betterpmmp.yml explained.">
+<meta name="author" content="Leon Development">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#0b0f14">
+<link rel="canonical" href="https://betterpmmp.github.io/Betterpmmp/configuration.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="BetterPMMP">
+<meta property="og:title" content="Configuration – BetterPMMP">
+<meta property="og:description" content="The BetterPMMP configuration file betterpmmp.yml explained.">
+<meta property="og:url" content="https://betterpmmp.github.io/Betterpmmp/configuration.html">
+<meta property="og:image" content="https://betterpmmp.github.io/Betterpmmp/banner.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="logo" href="index.html"><i></i><span>Better<b>PMMP</b></span></a>
+  <nav class="menu" aria-label="Main"><a href="index.html"><span data-lang-block="en">Home</span><span data-lang-block="de">Start</span></a><a href="install.html"><span data-lang-block="en">Install</span><span data-lang-block="de">Installation</span></a><a href="java.html"><span data-lang-block="en">Java</span><span data-lang-block="de">Java</span></a><a href="custom-content.html"><span data-lang-block="en">Content</span><span data-lang-block="de">Inhalte</span></a><a href="commands.html"><span data-lang-block="en">Commands</span><span data-lang-block="de">Befehle</span></a><a href="plugins.html"><span data-lang-block="en">Plugins</span><span data-lang-block="de">Plugins</span></a></nav>
+  <div class="lang" role="group" aria-label="Language">
+    <button type="button" data-set-lang="de" title="Deutsch" aria-label="Deutsch">🇩🇪</button>
+    <button type="button" data-set-lang="en" title="English" aria-label="English">🇬🇧</button>
+  </div>
+  <a class="gh" href="https://github.com/BetterPMMP/Betterpmmp" title="GitHub" aria-label="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
+</div></header>
+<main class="wrap docs"><nav class="side" aria-label="Documentation"><p><span data-lang-block="en">Documentation</span><span data-lang-block="de">Dokumentation</span></p><a href="install.html"><span data-lang-block="en">Installation</span><span data-lang-block="de">Installation</span></a><a href="configuration.html" aria-current="page"><span data-lang-block="en">Configuration</span><span data-lang-block="de">Konfiguration</span></a><a href="java.html"><span data-lang-block="en">Java players</span><span data-lang-block="de">Java-Spieler</span></a><a href="custom-content.html"><span data-lang-block="en">Custom content</span><span data-lang-block="de">Eigene Inhalte</span></a><a href="commands.html"><span data-lang-block="en">Commands</span><span data-lang-block="de">Befehle</span></a><a href="plugins.html"><span data-lang-block="en">Plugin development</span><span data-lang-block="de">Plugins entwickeln</span></a></nav><article class="doc"><div data-lang-block="en"><h1>Configuration</h1>
+<p class="intro">Everything BetterPMMP adds is set in <code>betterpmmp.yml</code> in the server folder. The file is created on the first start and explains every option in its comments. Changes apply after a restart.</p>
+<h2>The most important options</h2>
+<pre><code class="lang-yaml">graphics:
+  vibrant-visuals: true        # allow Vibrant Visuals for Bedrock players
+
+camera:
+  presets: true                # camera presets for /camera set
+
+mob-spawning:
+  worlds: [&quot;default&quot;]          # &quot;*&quot; = all worlds, &quot;default&quot; = main world
+  disabled-worlds: []          # never spawn here, e.g. [&quot;lobby&quot;]
+  monsters: true
+  animals: true
+  max-monsters-per-player: 70
+
+mob-ai:
+  pathfinding-ms-per-tick: 6   # main-thread budget for pathfinding
+  async-pathfinding: true      # pathfinding in worker threads
+
+hand-swap:
+  double-sneak: true           # sneak twice to swap hands</code></pre>
+<h2>Mob spawning</h2>
+<p>By default mobs spawn naturally only in the main world, so lobbies and minigame worlds stay empty. Nether and End worlds always behave like vanilla. Every mob category can be switched off on its own.</p>
+<h2>Game rules</h2>
+<p>Game rules are not in the config file. Set them in game with <code>/gamerule</code>, per world, like on the official server. They are saved in the world's <code>level.dat</code> under the vanilla names, so a world keeps its rules when you move it.</p>
+<pre><code>/gamerule keepInventory true
+/gamerule randomTickSpeed 3
+/gamerule playersSleepingPercentage 50</code></pre>
+<h2>Java bridge</h2>
+<p>The <code>java-bridge</code> section is explained on the <a href="java.html">Java players</a> page.</p>
+</div><div data-lang-block="de"><h1>Konfiguration</h1>
+<p class="intro">Alles, was BetterPMMP hinzufügt, stellst du in <code>betterpmmp.yml</code> im Serverordner ein. Die Datei wird beim ersten Start angelegt und erklärt jede Einstellung in Kommentaren. Änderungen gelten nach einem Neustart.</p>
+<h2>Die wichtigsten Einstellungen</h2>
+<pre><code class="lang-yaml">graphics:
+  vibrant-visuals: true        # Vibrant Visuals für Bedrock-Spieler erlauben
+
+camera:
+  presets: true                # Kamera-Voreinstellungen für /camera set
+
+mob-spawning:
+  worlds: [&quot;default&quot;]          # &quot;*&quot; = alle Welten, &quot;default&quot; = Hauptwelt
+  disabled-worlds: []          # hier nie, z. B. [&quot;lobby&quot;]
+  monsters: true
+  animals: true
+  max-monsters-per-player: 70
+
+mob-ai:
+  pathfinding-ms-per-tick: 6   # Zeitbudget im Hauptthread für Wegfindung
+  async-pathfinding: true      # Wegfindung in eigenen Threads
+
+hand-swap:
+  double-sneak: true           # zweimal schleichen tauscht die Hände</code></pre>
+<h2>Mob-Spawning</h2>
+<p>Standardmäßig spawnen Mobs nur in der Hauptwelt natürlich, Lobbys und Minispiel-Welten bleiben leer. Nether- und End-Welten verhalten sich immer wie Vanilla. Jede Mob-Gruppe lässt sich einzeln abschalten.</p>
+<h2>Spielregeln</h2>
+<p>Spielregeln stehen nicht in der Config. Du setzt sie im Spiel mit <code>/gamerule</code>, pro Welt, wie auf dem offiziellen Server. Sie werden unter den Vanilla-Namen in der <code>level.dat</code> der Welt gespeichert und bleiben erhalten, wenn du die Welt verschiebst.</p>
+<pre><code>/gamerule keepInventory true
+/gamerule randomTickSpeed 3
+/gamerule playersSleepingPercentage 50</code></pre>
+<h2>Java-Bridge</h2>
+<p>Den Abschnitt <code>java-bridge</code> erklärt die Seite <a href="java.html">Java-Spieler</a>.</p>
+</div><div class="pager"><a href="install.html"><small><span data-lang-block="en">Previous</span><span data-lang-block="de">Zurück</span></small><span data-lang-block="en">Installation</span><span data-lang-block="de">Installation</span></a><a class="next" href="java.html"><small><span data-lang-block="en">Next</span><span data-lang-block="de">Weiter</span></small><span data-lang-block="en">Java players</span><span data-lang-block="de">Java-Spieler</span></a></div></article></main>
+<footer><div class="wrap cols">
+  <div><b style="color:var(--text)">BetterPMMP</b> © Leon Development<br>
+  <span data-lang-block="en">Licensed under the LGPL-3.0-or-later, based on PocketMine-MP.</span><span data-lang-block="de">Lizenz LGPL-3.0-or-later, basiert auf PocketMine-MP.</span><br>
+  <span data-lang-block="en">Not affiliated with Mojang Studios or Microsoft.</span><span data-lang-block="de">Nicht verbunden mit Mojang Studios oder Microsoft.</span></div>
+  <nav>
+    <a href="install.html"><span data-lang-block="en">Installation</span><span data-lang-block="de">Installation</span></a>
+    <a href="plugins.html"><span data-lang-block="en">Plugin development</span><span data-lang-block="de">Plugins entwickeln</span></a>
+    <a href="https://github.com/BetterPMMP/Betterpmmp/releases"><span data-lang-block="en">Download</span><span data-lang-block="de">Download</span></a>
+    <a href="https://github.com/BetterPMMP/Betterpmmp">GitHub</a>
+    <a href="https://github.com/BetterPMMP/Betterpmmp/issues"><span data-lang-block="en">Report a bug</span><span data-lang-block="de">Fehler melden</span></a>
+  </nav>
+</div></footer>
+<script src="assets/site.js"></script>
+</body>
+</html>

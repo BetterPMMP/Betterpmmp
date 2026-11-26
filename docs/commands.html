@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Commands – BetterPMMP</title>
+<meta name="title-en" content="Commands – BetterPMMP">
+<meta name="title-de" content="Befehle – BetterPMMP">
+<meta name="description" content="Vanilla commands, target selectors and game rules in BetterPMMP.">
+<meta name="author" content="Leon Development">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#0b0f14">
+<link rel="canonical" href="https://betterpmmp.github.io/Betterpmmp/commands.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="BetterPMMP">
+<meta property="og:title" content="Commands – BetterPMMP">
+<meta property="og:description" content="Vanilla commands, target selectors and game rules in BetterPMMP.">
+<meta property="og:url" content="https://betterpmmp.github.io/Betterpmmp/commands.html">
+<meta property="og:image" content="https://betterpmmp.github.io/Betterpmmp/banner.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="logo" href="index.html"><i></i><span>Better<b>PMMP</b></span></a>
+  <nav class="menu" aria-label="Main"><a href="index.html"><span data-lang-block="en">Home</span><span data-lang-block="de">Start</span></a><a href="install.html"><span data-lang-block="en">Install</span><span data-lang-block="de">Installation</span></a><a href="java.html"><span data-lang-block="en">Java</span><span data-lang-block="de">Java</span></a><a href="custom-content.html"><span data-lang-block="en">Content</span><span data-lang-block="de">Inhalte</span></a><a href="commands.html" aria-current="page"><span data-lang-block="en">Commands</span><span data-lang-block="de">Befehle</span></a><a href="plugins.html"><span data-lang-block="en">Plugins</span><span data-lang-block="de">Plugins</span></a></nav>
+  <div class="lang" role="group" aria-label="Language">
+    <button type="button" data-set-lang="de" title="Deutsch" aria-label="Deutsch">🇩🇪</button>
+    <button type="button" data-set-lang="en" title="English" aria-label="English">🇬🇧</button>
+  </div>
+  <a class="gh" href="https://github.com/BetterPMMP/Betterpmmp" title="GitHub" aria-label="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
+</div></header>
+<main class="wrap docs"><nav class="side" aria-label="Documentation"><p><span data-lang-block="en">Documentation</span><span data-lang-block="de">Dokumentation</span></p><a href="install.html"><span data-lang-block="en">Installation</span><span data-lang-block="de">Installation</span></a><a href="configuration.html"><span data-lang-block="en">Configuration</span><span data-lang-block="de">Konfiguration</span></a><a href="java.html"><span data-lang-block="en">Java players</span><span data-lang-block="de">Java-Spieler</span></a><a href="custom-content.html"><span data-lang-block="en">Custom content</span><span data-lang-block="de">Eigene Inhalte</span></a><a href="commands.html" aria-current="page"><span data-lang-block="en">Commands</span><span data-lang-block="de">Befehle</span></a><a href="plugins.html"><span data-lang-block="en">Plugin development</span><span data-lang-block="de">Plugins entwickeln</span></a></nav><article class="doc"><div data-lang-block="en"><h1>Commands</h1>
+<p class="intro">BetterPMMP adds the vanilla Bedrock commands that PocketMine-MP is missing, with target selectors that also work in plugin commands.</p>
+<h2>Target selectors</h2>
+<pre><code>@a          all players
+@p          nearest player
+@r          random player
+@s          the one running the command
+@e          all entities
+@n          nearest entity
+
+@e[type=zombie,r=10]          zombies within 10 blocks
+@a[m=survival,tag=red]        survival players with the tag &quot;red&quot;
+@p[x=0,y=64,z=0,rm=5,r=20]    nearest player 5 to 20 blocks from 0 64 0</code></pre>
+<p>Filters: <code>x y z r rm dx dy dz c type name tag m l lm</code>, negation with <code>!</code>. When a command gets <code>@a</code>, it runs once per player, so plugin commands like <code>/money @a 100</code> work too.</p>
+<h2>Vanilla commands</h2>
+<div class="scroll"><table class="table"><thead><tr><th>Command</th><th>What it does</th></tr></thead><tbody><tr><td><code>/execute</code></td><td>as, at, positioned, anchored, facing, rotated, in, align, if/unless entity, block, score, run</td></tr><tr><td><code>/scoreboard</code></td><td>objectives, players, sidebar, list and below-name displays</td></tr><tr><td><code>/gamerule</code></td><td>all 38 Bedrock game rules, per world</td></tr><tr><td><code>/setblock /fill /clone</code></td><td>edit the world: replace, hollow, outline, keep, destroy; clone with masked and move</td></tr><tr><td><code>/summon</code></td><td>every vanilla and custom creature</td></tr><tr><td><code>/tellraw /title</code></td><td>JSON text with scores and selectors</td></tr><tr><td><code>/function /schedule</code></td><td>.mcfunction files, delayed functions</td></tr><tr><td><code>/structure</code></td><td>save and load .mcstructure files, rotate and mirror</td></tr><tr><td><code>/camera /fog /hud</code></td><td>camera presets and fades, fog, hide HUD elements</td></tr><tr><td><code>/tag /damage /ride</code></td><td>entity tags, damage with cause, mount mobs</td></tr><tr><td><code>/locate /spreadplayers</code></td><td>find structures, spread players</td></tr><tr><td><code>/playsound /stopsound</code></td><td>vanilla sounds</td></tr><tr><td><code>/tickingarea /daylock</code></td><td>keep areas loaded, stop the day cycle</td></tr></tbody></table></div>
+<h2>Examples</h2>
+<pre><code>/execute as @a at @s if block ~ ~-1 ~ gold_block run effect @s speed 2 1
+/scoreboard objectives add kills dummy &quot;Kills&quot;
+/scoreboard objectives setdisplay sidebar kills
+/tellraw @a {&quot;rawtext&quot;:[{&quot;text&quot;:&quot;Top: &quot;},{&quot;score&quot;:{&quot;name&quot;:&quot;@p&quot;,&quot;objective&quot;:&quot;kills&quot;}}]}</code></pre>
+<h2>Game rules</h2>
+<p><code>/gamerule</code> knows all 38 Bedrock rules, for example <code>keepInventory</code>, <code>doDaylightCycle</code>, <code>doMobSpawning</code>, <code>mobGriefing</code>, <code>randomTickSpeed</code>, <code>playersSleepingPercentage</code>, <code>pvp</code>, <code>showCoordinates</code>.</p>
+</div><div data-lang-block="de"><h1>Befehle</h1>
+<p class="intro">BetterPMMP bringt die Vanilla-Befehle von Bedrock mit, die PocketMine-MP fehlen, dazu eine Zielauswahl, die auch in Plugin-Befehlen funktioniert.</p>
+<h2>Zielauswahl</h2>
+<pre><code>@a          alle Spieler
+@p          nächster Spieler
+@r          zufälliger Spieler
+@s          wer den Befehl ausführt
+@e          alle Wesen
+@n          nächstes Wesen
+
+@e[type=zombie,r=10]          Zombies im Umkreis von 10 Blöcken
+@a[m=survival,tag=rot]        Survival-Spieler mit dem Tag &quot;rot&quot;
+@p[x=0,y=64,z=0,rm=5,r=20]    nächster Spieler 5 bis 20 Blöcke von 0 64 0</code></pre>
+<p>Filter: <code>x y z r rm dx dy dz c type name tag m l lm</code>, Verneinung mit <code>!</code>. Bekommt ein Befehl <code>@a</code>, läuft er einmal pro Spieler, deshalb funktionieren auch Plugin-Befehle wie <code>/money @a 100</code>.</p>
+<h2>Vanilla-Befehle</h2>
+<div class="scroll"><table class="table"><thead><tr><th>Befehl</th><th>Was er macht</th></tr></thead><tbody><tr><td><code>/execute</code></td><td>as, at, positioned, anchored, facing, rotated, in, align, if/unless entity, block, score, run</td></tr><tr><td><code>/scoreboard</code></td><td>Ziele, Spieler, Anzeige in Sidebar, Liste und unter dem Namen</td></tr><tr><td><code>/gamerule</code></td><td>alle 38 Bedrock-Spielregeln, pro Welt</td></tr><tr><td><code>/setblock /fill /clone</code></td><td>Welt bearbeiten: replace, hollow, outline, keep, destroy; clone mit masked und move</td></tr><tr><td><code>/summon</code></td><td>alle Vanilla- und eigenen Wesen</td></tr><tr><td><code>/tellraw /title</code></td><td>JSON-Text mit Punkten und Zielauswahl</td></tr><tr><td><code>/function /schedule</code></td><td>.mcfunction-Dateien, verzögerte Funktionen</td></tr><tr><td><code>/structure</code></td><td>.mcstructure speichern und laden, drehen und spiegeln</td></tr><tr><td><code>/camera /fog /hud</code></td><td>Kamera-Presets und Blenden, Nebel, HUD-Elemente ausblenden</td></tr><tr><td><code>/tag /damage /ride</code></td><td>Wesen-Tags, Schaden mit Ursache, Mobs reiten</td></tr><tr><td><code>/locate /spreadplayers</code></td><td>Strukturen finden, Spieler verteilen</td></tr><tr><td><code>/playsound /stopsound</code></td><td>Vanilla-Sounds</td></tr><tr><td><code>/tickingarea /daylock</code></td><td>Bereiche geladen halten, Tageszeit anhalten</td></tr></tbody></table></div>
+<h2>Beispiele</h2>
+<pre><code>/execute as @a at @s if block ~ ~-1 ~ gold_block run effect @s speed 2 1
+/scoreboard objectives add kills dummy &quot;Kills&quot;
+/scoreboard objectives setdisplay sidebar kills
+/tellraw @a {&quot;rawtext&quot;:[{&quot;text&quot;:&quot;Top: &quot;},{&quot;score&quot;:{&quot;name&quot;:&quot;@p&quot;,&quot;objective&quot;:&quot;kills&quot;}}]}</code></pre>
+<h2>Spielregeln</h2>
+<p><code>/gamerule</code> kennt alle 38 Bedrock-Regeln, zum Beispiel <code>keepInventory</code>, <code>doDaylightCycle</code>, <code>doMobSpawning</code>, <code>mobGriefing</code>, <code>randomTickSpeed</code>, <code>playersSleepingPercentage</code>, <code>pvp</code>, <code>showCoordinates</code>.</p>
+</div><div class="pager"><a href="custom-content.html"><small><span data-lang-block="en">Previous</span><span data-lang-block="de">Zurück</span></small><span data-lang-block="en">Custom content</span><span data-lang-block="de">Eigene Inhalte</span></a><a class="next" href="plugins.html"><small><span data-lang-block="en">Next</span><span data-lang-block="de">Weiter</span></small><span data-lang-block="en">Plugin development</span><span data-lang-block="de">Plugins entwickeln</span></a></div></article></main>
+<footer><div class="wrap cols">
+  <div><b style="color:var(--text)">BetterPMMP</b> © Leon Development<br>
+  <span data-lang-block="en">Licensed under the LGPL-3.0-or-later, based on PocketMine-MP.</span><span data-lang-block="de">Lizenz LGPL-3.0-or-later, basiert auf PocketMine-MP.</span><br>
+  <span data-lang-block="en">Not affiliated with Mojang Studios or Microsoft.</span><span data-lang-block="de">Nicht verbunden mit Mojang Studios oder Microsoft.</span></div>
+  <nav>
+    <a href="install.html"><span data-lang-block="en">Installation</span><span data-lang-block="de">Installation</span></a>
+    <a href="plugins.html"><span data-lang-block="en">Plugin development</span><span data-lang-block="de">Plugins entwickeln</span></a>
+    <a href="https://github.com/BetterPMMP/Betterpmmp/releases"><span data-lang-block="en">Download</span><span data-lang-block="de">Download</span></a>
+    <a href="https://github.com/BetterPMMP/Betterpmmp">GitHub</a>
+    <a href="https://github.com/BetterPMMP/Betterpmmp/issues"><span data-lang-block="en">Report a bug</span><span data-lang-block="de">Fehler melden</span></a>
+  </nav>
+</div></footer>
+<script src="assets/site.js"></script>
+</body>
+</html>

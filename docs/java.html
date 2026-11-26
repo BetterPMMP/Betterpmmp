@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Java players – BetterPMMP</title>
+<meta name="title-en" content="Java players – BetterPMMP">
+<meta name="title-de" content="Java-Spieler – BetterPMMP">
+<meta name="description" content="Let Minecraft Java Edition players join your BetterPMMP Bedrock server through the built-in bridge.">
+<meta name="author" content="Leon Development">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#0b0f14">
+<link rel="canonical" href="https://betterpmmp.github.io/Betterpmmp/java.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="BetterPMMP">
+<meta property="og:title" content="Java players – BetterPMMP">
+<meta property="og:description" content="Let Minecraft Java Edition players join your BetterPMMP Bedrock server through the built-in bridge.">
+<meta property="og:url" content="https://betterpmmp.github.io/Betterpmmp/java.html">
+<meta property="og:image" content="https://betterpmmp.github.io/Betterpmmp/banner.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="logo" href="index.html"><i></i><span>Better<b>PMMP</b></span></a>
+  <nav class="menu" aria-label="Main"><a href="index.html"><span data-lang-block="en">Home</span><span data-lang-block="de">Start</span></a><a href="install.html"><span data-lang-block="en">Install</span><span data-lang-block="de">Installation</span></a><a href="java.html" aria-current="page"><span data-lang-block="en">Java</span><span data-lang-block="de">Java</span></a><a href="custom-content.html"><span data-lang-block="en">Content</span><span data-lang-block="de">Inhalte</span></a><a href="commands.html"><span data-lang-block="en">Commands</span><span data-lang-block="de">Befehle</span></a><a href="plugins.html"><span data-lang-block="en">Plugins</span><span data-lang-block="de">Plugins</span></a></nav>
+  <div class="lang" role="group" aria-label="Language">
+    <button type="button" data-set-lang="de" title="Deutsch" aria-label="Deutsch">🇩🇪</button>
+    <button type="button" data-set-lang="en" title="English" aria-label="English">🇬🇧</button>
+  </div>
+  <a class="gh" href="https://github.com/BetterPMMP/Betterpmmp" title="GitHub" aria-label="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
+</div></header>
+<main class="wrap docs"><nav class="side" aria-label="Documentation"><p><span data-lang-block="en">Documentation</span><span data-lang-block="de">Dokumentation</span></p><a href="install.html"><span data-lang-block="en">Installation</span><span data-lang-block="de">Installation</span></a><a href="configuration.html"><span data-lang-block="en">Configuration</span><span data-lang-block="de">Konfiguration</span></a><a href="java.html" aria-current="page"><span data-lang-block="en">Java players</span><span data-lang-block="de">Java-Spieler</span></a><a href="custom-content.html"><span data-lang-block="en">Custom content</span><span data-lang-block="de">Eigene Inhalte</span></a><a href="commands.html"><span data-lang-block="en">Commands</span><span data-lang-block="de">Befehle</span></a><a href="plugins.html"><span data-lang-block="en">Plugin development</span><span data-lang-block="de">Plugins entwickeln</span></a></nav><article class="doc"><div data-lang-block="en"><h1>Java players</h1>
+<p class="intro">BetterPMMP has a built-in bridge for Minecraft: Java Edition, based on <a href="https://github.com/ViaVersion/ViaProxy">ViaProxy</a> and ViaBedrock. Java and Bedrock players play on the same world at the same time.</p>
+<h2>How it works</h2>
+<ol>
+<li>On the first start BetterPMMP downloads Java 21 (if none is installed) and ViaProxy into the folder <code>java-bridge</code>.</li>
+<li>ViaProxy starts together with the server, restarts after a crash and stops with the server.</li>
+<li>Java players connect to your address on port <b>25565</b>. The bridge translates between Java and Bedrock.</li>
+</ol>
+<h2>Ports</h2>
+<ul>
+<li><b>25565 TCP</b>: the game.</li>
+<li><b>25566 TCP</b>: resource packs for Java players (textures of custom content and the server's packs).</li>
+</ul>
+<h2>Settings</h2>
+<pre><code class="lang-yaml">java-bridge:
+  enabled: true              # false = no Java players
+  port: 25565                # Java port (TCP)
+  auto-download: true        # download Java and ViaProxy automatically
+  online-mode: true          # only bought Java accounts
+  name-prefix: &quot;J_&quot;          # Java players appear as J_Steve
+  memory: &quot;512M&quot;             # memory for ViaProxy
+  resource-pack-port: 25566  # resource packs for Java, 0 = off
+  public-address: &quot;&quot;         # empty = detect the public IP
+  chat-forms: false          # true = forms as a chat menu
+  real-light: true           # send real light (good for shaders)</code></pre>
+<h2>What Java players can do</h2>
+<p>Building, fighting, crafting, furnaces, brewing stands, hoppers, chests, dispensers and droppers, minecarts and boats with chests, the smithing table, fireworks and dyed armour. Names above mobs and holograms are shown, forms open as windows or as a chat menu.</p>
+<div class="note warn"><p>Not yet available for Java players: anvil, enchanting table, grindstone, stonecutter, loom, cartography table, crafter, beacon and villager trading.</p></div>
+</div><div data-lang-block="de"><h1>Java-Spieler</h1>
+<p class="intro">BetterPMMP hat eine eingebaute Bridge für Minecraft: Java Edition, auf Basis von <a href="https://github.com/ViaVersion/ViaProxy">ViaProxy</a> und ViaBedrock. Java- und Bedrock-Spieler spielen gleichzeitig in derselben Welt.</p>
+<h2>So funktioniert es</h2>
+<ol>
+<li>Beim ersten Start lädt BetterPMMP Java 21 (falls keins installiert ist) und ViaProxy in den Ordner <code>java-bridge</code>.</li>
+<li>ViaProxy startet mit dem Server, startet nach einem Absturz neu und stoppt mit dem Server.</li>
+<li>Java-Spieler verbinden sich mit deiner Adresse auf Port <b>25565</b>. Die Bridge übersetzt zwischen Java und Bedrock.</li>
+</ol>
+<h2>Ports</h2>
+<ul>
+<li><b>25565 TCP</b>: das Spiel.</li>
+<li><b>25566 TCP</b>: Resource-Packs für Java-Spieler (Texturen eigener Inhalte und die Packs des Servers).</li>
+</ul>
+<h2>Einstellungen</h2>
+<pre><code class="lang-yaml">java-bridge:
+  enabled: true              # false = keine Java-Spieler
+  port: 25565                # Java-Port (TCP)
+  auto-download: true        # Java und ViaProxy automatisch laden
+  online-mode: true          # nur gekaufte Java-Konten
+  name-prefix: &quot;J_&quot;          # Java-Spieler heißen z. B. J_Steve
+  memory: &quot;512M&quot;             # Arbeitsspeicher für ViaProxy
+  resource-pack-port: 25566  # Resource-Packs für Java, 0 = aus
+  public-address: &quot;&quot;         # leer = öffentliche IP automatisch
+  chat-forms: false          # true = Formulare als Chat-Menü
+  real-light: true           # echtes Licht schicken (gut für Shader)</code></pre>
+<h2>Was Java-Spieler können</h2>
+<p>Bauen, Kämpfen, Craften, Öfen, Braustände, Trichter, Truhen, Spender und Werfer, Loren und Boote mit Truhe, der Schmiedetisch, Feuerwerk und gefärbte Rüstung. Namen über Mobs und Hologramme werden angezeigt, Formulare öffnen sich als Fenster oder als Chat-Menü.</p>
+<div class="note warn"><p>Für Java-Spieler noch nicht verfügbar: Amboss, Zaubertisch, Schleifstein, Steinsäge, Webstuhl, Kartentisch, Crafter, Leuchtfeuer und Handel mit Dorfbewohnern.</p></div>
+</div><div class="pager"><a href="configuration.html"><small><span data-lang-block="en">Previous</span><span data-lang-block="de">Zurück</span></small><span data-lang-block="en">Configuration</span><span data-lang-block="de">Konfiguration</span></a><a class="next" href="custom-content.html"><small><span data-lang-block="en">Next</span><span data-lang-block="de">Weiter</span></small><span data-lang-block="en">Custom content</span><span data-lang-block="de">Eigene Inhalte</span></a></div></article></main>
+<footer><div class="wrap cols">
+  <div><b style="color:var(--text)">BetterPMMP</b> © Leon Development<br>
+  <span data-lang-block="en">Licensed under the LGPL-3.0-or-later, based on PocketMine-MP.</span><span data-lang-block="de">Lizenz LGPL-3.0-or-later, basiert auf PocketMine-MP.</span><br>
+  <span data-lang-block="en">Not affiliated with Mojang Studios or Microsoft.</span><span data-lang-block="de">Nicht verbunden mit Mojang Studios oder Microsoft.</span></div>
+  <nav>
+    <a href="install.html"><span data-lang-block="en">Installation</span><span data-lang-block="de">Installation</span></a>
+    <a href="plugins.html"><span data-lang-block="en">Plugin development</span><span data-lang-block="de">Plugins entwickeln</span></a>
+    <a href="https://github.com/BetterPMMP/Betterpmmp/releases"><span data-lang-block="en">Download</span><span data-lang-block="de">Download</span></a>
+    <a href="https://github.com/BetterPMMP/Betterpmmp">GitHub</a>
+    <a href="https://github.com/BetterPMMP/Betterpmmp/issues"><span data-lang-block="en">Report a bug</span><span data-lang-block="de">Fehler melden</span></a>
+  </nav>
+</div></footer>
+<script src="assets/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Installation – BetterPMMP</title>
+<meta name="title-en" content="Installation – BetterPMMP">
+<meta name="title-de" content="Installation – BetterPMMP">
+<meta name="description" content="How to install and start BetterPMMP, the vanilla server software for Minecraft Bedrock Edition.">
+<meta name="author" content="Leon Development">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#0b0f14">
+<link rel="canonical" href="https://betterpmmp.github.io/Betterpmmp/install.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="BetterPMMP">
+<meta property="og:title" content="Installation – BetterPMMP">
+<meta property="og:description" content="How to install and start BetterPMMP, the vanilla server software for Minecraft Bedrock Edition.">
+<meta property="og:url" content="https://betterpmmp.github.io/Betterpmmp/install.html">
+<meta property="og:image" content="https://betterpmmp.github.io/Betterpmmp/banner.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="logo" href="index.html"><i></i><span>Better<b>PMMP</b></span></a>
+  <nav class="menu" aria-label="Main"><a href="index.html"><span data-lang-block="en">Home</span><span data-lang-block="de">Start</span></a><a href="install.html" aria-current="page"><span data-lang-block="en">Install</span><span data-lang-block="de">Installation</span></a><a href="java.html"><span data-lang-block="en">Java</span><span data-lang-block="de">Java</span></a><a href="custom-content.html"><span data-lang-block="en">Content</span><span data-lang-block="de">Inhalte</span></a><a href="commands.html"><span data-lang-block="en">Commands</span><span data-lang-block="de">Befehle</span></a><a href="plugins.html"><span data-lang-block="en">Plugins</span><span data-lang-block="de">Plugins</span></a></nav>
+  <div class="lang" role="group" aria-label="Language">
+    <button type="button" data-set-lang="de" title="Deutsch" aria-label="Deutsch">🇩🇪</button>
+    <button type="button" data-set-lang="en" title="English" aria-label="English">🇬🇧</button>
+  </div>
+  <a class="gh" href="https://github.com/BetterPMMP/Betterpmmp" title="GitHub" aria-label="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
+</div></header>
+<main class="wrap docs"><nav class="side" aria-label="Documentation"><p><span data-lang-block="en">Documentation</span><span data-lang-block="de">Dokumentation</span></p><a href="install.html" aria-current="page"><span data-lang-block="en">Installation</span><span data-lang-block="de">Installation</span></a><a href="configuration.html"><span data-lang-block="en">Configuration</span><span data-lang-block="de">Konfiguration</span></a><a href="java.html"><span data-lang-block="en">Java players</span><span data-lang-block="de">Java-Spieler</span></a><a href="custom-content.html"><span data-lang-block="en">Custom content</span><span data-lang-block="de">Eigene Inhalte</span></a><a href="commands.html"><span data-lang-block="en">Commands</span><span data-lang-block="de">Befehle</span></a><a href="plugins.html"><span data-lang-block="en">Plugin development</span><span data-lang-block="de">Plugins entwickeln</span></a></nav><article class="doc"><div data-lang-block="en"><h1>Installation</h1>
+<p class="intro">BetterPMMP runs wherever PocketMine-MP runs: 64-bit Windows, Linux and macOS. You need the PocketMine PHP binary and the BetterPMMP phar, nothing else.</p>
+<h2>1. Get the PHP binary</h2>
+<p>BetterPMMP uses the same PHP build as PocketMine-MP, with the pmmp extensions compiled in. Download the archive for your system from <a href="https://github.com/pmmp/PHP-Binaries/releases">pmmp/PHP-Binaries</a> and unpack it into an empty folder. You should get a folder called <code>bin</code>.</p>
+<h2>2. Download BetterPMMP</h2>
+<p>Download <code>BetterPMMP-5.85.phar</code> from the <a href="https://github.com/BetterPMMP/Betterpmmp/releases">latest release</a> and put it next to the <code>bin</code> folder:</p>
+<pre><code>my-server/
+├── bin/
+└── BetterPMMP-5.85.phar</code></pre>
+<h2>3. Start the server</h2>
+<p>Linux and macOS:</p>
+<pre><code class="lang-bash">./bin/php7/bin/php BetterPMMP-5.85.phar</code></pre>
+<p>Windows (Command Prompt in the server folder):</p>
+<pre><code>bin\php\php.exe BetterPMMP-5.85.phar</code></pre>
+<p>On the first start a setup wizard asks for the language, the server name and the port. Then the server creates <code>server.properties</code>, <code>pocketmine.yml</code>, <code>betterpmmp.yml</code> and the folders <code>worlds</code> and <code>plugins</code>.</p>
+<h2>4. Join</h2>
+<ul>
+<li><b>Bedrock Edition:</b> your IP or domain, port <b>19132</b> (UDP).</li>
+<li><b>Java Edition:</b> your IP or domain, port <b>25565</b> (TCP). See <a href="java.html">Java players</a>.</li>
+</ul>
+<p>On a home connection, forward these ports in your router. On a VPS, open them in the firewall.</p>
+<h2>Moving from PocketMine-MP</h2>
+<ol>
+<li>Stop the server and back up the <code>worlds</code> folder.</li>
+<li>Replace the PocketMine phar with <code>BetterPMMP-5.85.phar</code>.</li>
+<li>Start the server. Plugins and worlds stay where they are.</li>
+</ol>
+<div class="note"><p>For the new terrain, biomes and structures, create a new world. Java (Anvil) worlds are converted the first time they are loaded.</p></div>
+<h2>Running from source</h2>
+<pre><code class="lang-bash">git clone https://github.com/BetterPMMP/Betterpmmp.git
+cd Betterpmmp
+php src/PocketMine.php</code></pre>
+<p>Use the PocketMine PHP binary for <code>php</code>. The <code>vendor</code> folder is part of the repository, you do not need Composer.</p>
+</div><div data-lang-block="de"><h1>Installation</h1>
+<p class="intro">BetterPMMP läuft überall, wo PocketMine-MP läuft: 64-Bit-Windows, Linux und macOS. Du brauchst nur die PocketMine-PHP-Binary und die BetterPMMP-Phar.</p>
+<h2>1. PHP-Binary holen</h2>
+<p>BetterPMMP nutzt dasselbe PHP wie PocketMine-MP, mit den pmmp-Erweiterungen. Lade das Archiv für dein System von <a href="https://github.com/pmmp/PHP-Binaries/releases">pmmp/PHP-Binaries</a> herunter und entpacke es in einen leeren Ordner. Danach gibt es dort einen Ordner <code>bin</code>.</p>
+<h2>2. BetterPMMP herunterladen</h2>
+<p>Lade <code>BetterPMMP-5.85.phar</code> aus dem <a href="https://github.com/BetterPMMP/Betterpmmp/releases">neuesten Release</a> herunter und lege sie neben den Ordner <code>bin</code>:</p>
+<pre><code>mein-server/
+├── bin/
+└── BetterPMMP-5.85.phar</code></pre>
+<h2>3. Server starten</h2>
+<p>Linux und macOS:</p>
+<pre><code class="lang-bash">./bin/php7/bin/php BetterPMMP-5.85.phar</code></pre>
+<p>Windows (Eingabeaufforderung im Serverordner):</p>
+<pre><code>bin\php\php.exe BetterPMMP-5.85.phar</code></pre>
+<p>Beim ersten Start fragt ein Einrichtungsassistent nach Sprache, Servername und Port. Danach legt der Server <code>server.properties</code>, <code>pocketmine.yml</code>, <code>betterpmmp.yml</code> und die Ordner <code>worlds</code> und <code>plugins</code> an.</p>
+<h2>4. Beitreten</h2>
+<ul>
+<li><b>Bedrock Edition:</b> deine IP oder Domain, Port <b>19132</b> (UDP).</li>
+<li><b>Java Edition:</b> deine IP oder Domain, Port <b>25565</b> (TCP). Siehe <a href="java.html">Java-Spieler</a>.</li>
+</ul>
+<p>Zu Hause gibst du die Ports im Router frei, auf einem VPS in der Firewall.</p>
+<h2>Umstieg von PocketMine-MP</h2>
+<ol>
+<li>Server stoppen und den Ordner <code>worlds</code> sichern.</li>
+<li>Die PocketMine-Phar durch <code>BetterPMMP-5.85.phar</code> ersetzen.</li>
+<li>Server starten. Plugins und Welten bleiben, wo sie sind.</li>
+</ol>
+<div class="note"><p>Für das neue Terrain, die Biome und Strukturen eine neue Welt anlegen. Java-Welten (Anvil) werden beim ersten Laden umgewandelt.</p></div>
+<h2>Aus dem Quellcode starten</h2>
+<pre><code class="lang-bash">git clone https://github.com/BetterPMMP/Betterpmmp.git
+cd Betterpmmp
+php src/PocketMine.php</code></pre>
+<p>Als <code>php</code> die PocketMine-PHP-Binary verwenden. Der Ordner <code>vendor</code> ist im Repository enthalten, Composer brauchst du nicht.</p>
+</div><div class="pager"><a class="next" href="configuration.html"><small><span data-lang-block="en">Next</span><span data-lang-block="de">Weiter</span></small><span data-lang-block="en">Configuration</span><span data-lang-block="de">Konfiguration</span></a></div></article></main>
+<footer><div class="wrap cols">
+  <div><b style="color:var(--text)">BetterPMMP</b> © Leon Development<br>
+  <span data-lang-block="en">Licensed under the LGPL-3.0-or-later, based on PocketMine-MP.</span><span data-lang-block="de">Lizenz LGPL-3.0-or-later, basiert auf PocketMine-MP.</span><br>
+  <span data-lang-block="en">Not affiliated with Mojang Studios or Microsoft.</span><span data-lang-block="de">Nicht verbunden mit Mojang Studios oder Microsoft.</span></div>
+  <nav>
+    <a href="install.html"><span data-lang-block="en">Installation</span><span data-lang-block="de">Installation</span></a>
+    <a href="plugins.html"><span data-lang-block="en">Plugin development</span><span data-lang-block="de">Plugins entwickeln</span></a>
+    <a href="https://github.com/BetterPMMP/Betterpmmp/releases"><span data-lang-block="en">Download</span><span data-lang-block="de">Download</span></a>
+    <a href="https://github.com/BetterPMMP/Betterpmmp">GitHub</a>
+    <a href="https://github.com/BetterPMMP/Betterpmmp/issues"><span data-lang-block="en">Report a bug</span><span data-lang-block="de">Fehler melden</span></a>
+  </nav>
+</div></footer>
+<script src="assets/site.js"></script>
+</body>
+</html>

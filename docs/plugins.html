@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plugin development – BetterPMMP</title>
+<meta name="title-en" content="Plugin development – BetterPMMP">
+<meta name="title-de" content="Plugins entwickeln – BetterPMMP">
+<meta name="description" content="Write plugins for BetterPMMP and PocketMine-MP 5: plugin.yml, events, commands and the BetterPMMP APIs for game rules, scoreboards, selectors and structures.">
+<meta name="author" content="Leon Development">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#0b0f14">
+<link rel="canonical" href="https://betterpmmp.github.io/Betterpmmp/plugins.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="BetterPMMP">
+<meta property="og:title" content="Plugin development – BetterPMMP">
+<meta property="og:description" content="Write plugins for BetterPMMP and PocketMine-MP 5: plugin.yml, events, commands and the BetterPMMP APIs for game rules, scoreboards, selectors and structures.">
+<meta property="og:url" content="https://betterpmmp.github.io/Betterpmmp/plugins.html">
+<meta property="og:image" content="https://betterpmmp.github.io/Betterpmmp/banner.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="logo" href="index.html"><i></i><span>Better<b>PMMP</b></span></a>
+  <nav class="menu" aria-label="Main"><a href="index.html"><span data-lang-block="en">Home</span><span data-lang-block="de">Start</span></a><a href="install.html"><span data-lang-block="en">Install</span><span data-lang-block="de">Installation</span></a><a href="java.html"><span data-lang-block="en">Java</span><span data-lang-block="de">Java</span></a><a href="custom-content.html"><span data-lang-block="en">Content</span><span data-lang-block="de">Inhalte</span></a><a href="commands.html"><span data-lang-block="en">Commands</span><span data-lang-block="de">Befehle</span></a><a href="plugins.html" aria-current="page"><span data-lang-block="en">Plugins</span><span data-lang-block="de">Plugins</span></a></nav>
+  <div class="lang" role="group" aria-label="Language">
+    <button type="button" data-set-lang="de" title="Deutsch" aria-label="Deutsch">🇩🇪</button>
+    <button type="button" data-set-lang="en" title="English" aria-label="English">🇬🇧</button>
+  </div>
+  <a class="gh" href="https://github.com/BetterPMMP/Betterpmmp" title="GitHub" aria-label="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
+</div></header>
+<main class="wrap docs"><nav class="side" aria-label="Documentation"><p><span data-lang-block="en">Documentation</span><span data-lang-block="de">Dokumentation</span></p><a href="install.html"><span data-lang-block="en">Installation</span><span data-lang-block="de">Installation</span></a><a href="configuration.html"><span data-lang-block="en">Configuration</span><span data-lang-block="de">Konfiguration</span></a><a href="java.html"><span data-lang-block="en">Java players</span><span data-lang-block="de">Java-Spieler</span></a><a href="custom-content.html"><span data-lang-block="en">Custom content</span><span data-lang-block="de">Eigene Inhalte</span></a><a href="commands.html"><span data-lang-block="en">Commands</span><span data-lang-block="de">Befehle</span></a><a href="plugins.html" aria-current="page"><span data-lang-block="en">Plugin development</span><span data-lang-block="de">Plugins entwickeln</span></a></nav><article class="doc"><div data-lang-block="en"><h1>Plugin development</h1>
+<p class="intro">BetterPMMP keeps the plugin API of PocketMine-MP 5 (API 5.51.0). Every plugin written for PocketMine-MP 5 runs on BetterPMMP, and everything you learn here also works there. On top of that, BetterPMMP gives plugins access to game rules, scoreboards, target selectors and structures.</p>
+<h2>What you need</h2>
+<ul>
+<li>A BetterPMMP server for testing (see <a href="install.html">Installation</a>).</li>
+<li>An editor with PHP support, for example <a href="https://code.visualstudio.com/">VS Code</a> with the PHP Intelephense extension or PhpStorm.</li>
+<li>The <a href="https://poggit.pmmp.io/p/DevTools">DevTools</a> plugin, so the server loads plugins from folders while you develop.</li>
+</ul>
+<h2>Your first plugin</h2>
+<p>A plugin is a folder with a <code>plugin.yml</code> and PHP classes. Put it into the <code>plugins</code> folder of your server:</p>
+<pre><code>HelloWorld/
+├── plugin.yml
+└── src/
+    └── Main.php</code></pre>
+<h3>plugin.yml</h3>
+<pre><code class="lang-yaml">name: HelloWorld
+main: leondev\helloworld\Main
+src-namespace-prefix: leondev\helloworld
+version: 1.0.0
+api: 5.0.0
+author: YourName
+description: My first BetterPMMP plugin
+
+commands:
+  hello:
+    description: Says hello
+    usage: &quot;/hello [player]&quot;
+    permission: helloworld.command.hello
+
+permissions:
+  helloworld.command.hello:
+    default: true</code></pre>
+<p><code>api: 5.0.0</code> means: works with every PocketMine-MP 5 API version, so also with BetterPMMP. With <code>src-namespace-prefix</code> the classes sit directly in <code>src/</code>.</p>
+<h3>src/Main.php</h3>
+<pre><code class="lang-php">&lt;?php
+
+declare(strict_types=1);
+
+namespace leondev\helloworld;
+
+use pocketmine\command\Command;
+use pocketmine\command\CommandSender;
+use pocketmine\event\Listener;
+use pocketmine\event\player\PlayerJoinEvent;
+use pocketmine\plugin\PluginBase;
+use pocketmine\utils\TextFormat;
+
+final class Main extends PluginBase implements Listener{
+
+	protected function onEnable() : void{
+		$this-&gt;getServer()-&gt;getPluginManager()-&gt;registerEvents($this, $this);
+		$this-&gt;getLogger()-&gt;info(&quot;Running on &quot; . $this-&gt;getServer()-&gt;getName());
+	}
+
+	public function onJoin(PlayerJoinEvent $event) : void{
+		$event-&gt;getPlayer()-&gt;sendMessage(TextFormat::GREEN . &quot;Welcome to the server!&quot;);
+	}
+
+	public function onCommand(CommandSender $sender, Command $command, string $label, array $args) : bool{
+		if($command-&gt;getName() === &quot;hello&quot;){
+			$sender-&gt;sendMessage(&quot;Hello, &quot; . ($args[0] ?? $sender-&gt;getName()) . &quot;!&quot;);
+			return true;
+		}
+		return false;
+	}
+}</code></pre>
+<p>Restart the server, join and type <code>/hello</code>. To share the plugin, build a <code>.phar</code> with DevTools (<code>/makeplugin HelloWorld</code>) and give others the file from <code>plugin_data/DevTools</code>.</p>
+<h2>Events</h2>
+<p>Mobs, items and blocks of BetterPMMP use the normal PocketMine classes, so the usual events work for them: damage, death, block break and place, interact, item use and so on.</p>
+<pre><code class="lang-php">use pocketmine\event\entity\EntityDamageByEntityEvent;
+use pocketmine\event\entity\EntityDeathEvent;
+use pocketmine\entity\Living;
+use pocketmine\player\Player;
+
+public function onDamage(EntityDamageByEntityEvent $event) : void{
+	// BetterPMMP mobs are normal PocketMine entities
+	if($event-&gt;getDamager() instanceof Living &amp;&amp; $event-&gt;getEntity() instanceof Player){
+		$event-&gt;setBaseDamage($event-&gt;getBaseDamage() * 0.5); // mobs hit half as hard
+	}
+}
+
+public function onDeath(EntityDeathEvent $event) : void{
+	$this-&gt;getLogger()-&gt;info($event-&gt;getEntity()-&gt;getName() . &quot; died&quot;);
+}</code></pre>
+<h2>BetterPMMP APIs</h2>
+<p>These classes only exist on BetterPMMP. If your plugin should also run on plain PocketMine-MP, check first:</p>
+<pre><code class="lang-php">use pocketmine\VersionInfo;
+
+$isBetterPMMP = $this-&gt;getServer()-&gt;getName() === &quot;BetterPMMP&quot;;
+if($isBetterPMMP){
+	$this-&gt;getLogger()-&gt;info(&quot;BetterPMMP &quot; . VersionInfo::BETTERPMMP_BUILD);
+}</code></pre>
+<h3>Game rules</h3>
+<p><code>pocketmine\world\GameRules</code> reads and changes the 38 Bedrock game rules of a world, exactly like <code>/gamerule</code>.</p>
+<pre><code class="lang-php">use pocketmine\world\GameRules;
+
+$world = $this-&gt;getServer()-&gt;getWorldManager()-&gt;getDefaultWorld();
+
+// read (keys are the lowercase vanilla names)
+if(GameRules::bool($world, &quot;keepinventory&quot;)){
+	// ...
+}
+$speed = GameRules::int($world, &quot;randomtickspeed&quot;);
+
+// write: saved in level.dat and sent to the players of the world
+GameRules::set($world, &quot;dodaylightcycle&quot;, false);
+GameRules::set($world, &quot;playerssleepingpercentage&quot;, 50);</code></pre>
+<h3>Scoreboard</h3>
+<p><code>pocketmine\scoreboard\Scoreboard</code> is the same scoreboard that <code>/scoreboard</code> uses. It is saved automatically and shown to all players. Display slots are <code>sidebar</code>, <code>list</code> and <code>belowname</code>.</p>
+<pre><code class="lang-php">use pocketmine\scoreboard\Scoreboard;
+
+$board = Scoreboard::get();
+if(!$board-&gt;hasObjective(&quot;kills&quot;)){
+	$board-&gt;addObjective(&quot;kills&quot;, &quot;dummy&quot;, &quot;§cKills&quot;);
+	$board-&gt;setDisplay(&quot;sidebar&quot;, &quot;kills&quot;, 1); // 1 = highest first, 0 = lowest first
+}
+
+$name = $player-&gt;getName();
+$board-&gt;setScore(&quot;kills&quot;, $name, ($board-&gt;getScore(&quot;kills&quot;, $name) ?? 0) + 1);</code></pre>
+<h3>Target selectors</h3>
+<p><code>pocketmine\command\utils\TargetSelector</code> resolves <code>@a</code>, <code>@p</code>, <code>@e[type=zombie,r=10]</code> and player names to entities.</p>
+<pre><code class="lang-php">use pocketmine\command\utils\TargetSelector;
+use pocketmine\player\Player;
+
+// in onCommand(): accepts a player name or a selector like @a[r=10]
+foreach(TargetSelector::select($sender, $args[0] ?? &quot;@s&quot;) as $entity){
+	if($entity instanceof Player){
+		$entity-&gt;sendMessage(&quot;You were selected!&quot;);
+	}
+}</code></pre>
+<h3>Structures</h3>
+<p><code>pocketmine\world\structure\McStructure</code> reads, writes and places <code>.mcstructure</code> files, the format of the structure block and of Bedrock add-ons.</p>
+<pre><code class="lang-php">use pocketmine\world\structure\McStructure;
+use pocketmine\math\Vector3;
+
+// load a .mcstructure file and place it, rotated by 90 degrees
+$structure = McStructure::read(file_get_contents($this-&gt;getDataFolder() . &quot;house.mcstructure&quot;));
+$structure-&gt;place($world, new Vector3(100, 64, 100), 1, &quot;none&quot;, true, true, 1.0, 0);
+
+// save an area as .mcstructure
+$data = McStructure::capture($world, new Vector3(0, 60, 0), new Vector3(15, 80, 15), true, true)
+	-&gt;write(new Vector3(0, 60, 0));
+file_put_contents($this-&gt;getDataFolder() . &quot;area.mcstructure&quot;, $data);</code></pre>
+<h2>Learn more</h2>
+<ul>
+<li><a href="https://doc.pmmp.io/">PocketMine-MP documentation</a>: plugin basics, events, forms, tasks.</li>
+<li><a href="https://github.com/pmmp/PocketMine-MP/tree/stable/src">PocketMine-MP source</a>: the API itself.</li>
+<li><a href="https://github.com/BetterPMMP/Betterpmmp">BetterPMMP source</a>: the classes shown above live in <code>src/</code>.</li>
+</ul>
+<div class="note"><p>Questions or ideas for new APIs? Open an <a href="https://github.com/BetterPMMP/Betterpmmp/issues">issue on GitHub</a>.</p></div>
+</div><div data-lang-block="de"><h1>Plugins entwickeln</h1>
+<p class="intro">BetterPMMP behält die Plugin-API von PocketMine-MP 5 (API 5.51.0). Jedes Plugin für PocketMine-MP 5 läuft auf BetterPMMP, und alles, was du hier lernst, funktioniert auch dort. Zusätzlich gibt BetterPMMP Plugins Zugriff auf Spielregeln, Scoreboards, Zielauswahl und Strukturen.</p>
+<h2>Was du brauchst</h2>
+<ul>
+<li>Einen BetterPMMP-Server zum Testen (siehe <a href="install.html">Installation</a>).</li>
+<li>Einen Editor mit PHP-Unterstützung, zum Beispiel <a href="https://code.visualstudio.com/">VS Code</a> mit der Erweiterung PHP Intelephense oder PhpStorm.</li>
+<li>Das Plugin <a href="https://poggit.pmmp.io/p/DevTools">DevTools</a>, damit der Server beim Entwickeln Plugins aus Ordnern lädt.</li>
+</ul>
+<h2>Dein erstes Plugin</h2>
+<p>Ein Plugin ist ein Ordner mit einer <code>plugin.yml</code> und PHP-Klassen. Er kommt in den Ordner <code>plugins</code> deines Servers:</p>
+<pre><code>HelloWorld/
+├── plugin.yml
+└── src/
+    └── Main.php</code></pre>
+<h3>plugin.yml</h3>
+<pre><code class="lang-yaml">name: HelloWorld
+main: leondev\helloworld\Main
+src-namespace-prefix: leondev\helloworld
+version: 1.0.0
+api: 5.0.0
+author: YourName
+description: My first BetterPMMP plugin
+
+commands:
+  hello:
+    description: Says hello
+    usage: &quot;/hello [player]&quot;
+    permission: helloworld.command.hello
+
+permissions:
+  helloworld.command.hello:
+    default: true</code></pre>
+<p><code>api: 5.0.0</code> heißt: läuft mit jeder API-Version von PocketMine-MP 5, also auch mit BetterPMMP. Mit <code>src-namespace-prefix</code> liegen die Klassen direkt in <code>src/</code>.</p>
+<h3>src/Main.php</h3>
+<pre><code class="lang-php">&lt;?php
+
+declare(strict_types=1);
+
+namespace leondev\helloworld;
+
+use pocketmine\command\Command;
+use pocketmine\command\CommandSender;
+use pocketmine\event\Listener;
+use pocketmine\event\player\PlayerJoinEvent;
+use pocketmine\plugin\PluginBase;
+use pocketmine\utils\TextFormat;
+
+final class Main extends PluginBase implements Listener{
+
+	protected function onEnable() : void{
+		$this-&gt;getServer()-&gt;getPluginManager()-&gt;registerEvents($this, $this);
+		$this-&gt;getLogger()-&gt;info(&quot;Running on &quot; . $this-&gt;getServer()-&gt;getName());
+	}
+
+	public function onJoin(PlayerJoinEvent $event) : void{
+		$event-&gt;getPlayer()-&gt;sendMessage(TextFormat::GREEN . &quot;Welcome to the server!&quot;);
+	}
+
+	public function onCommand(CommandSender $sender, Command $command, string $label, array $args) : bool{
+		if($command-&gt;getName() === &quot;hello&quot;){
+			$sender-&gt;sendMessage(&quot;Hello, &quot; . ($args[0] ?? $sender-&gt;getName()) . &quot;!&quot;);
+			return true;
+		}
+		return false;
+	}
+}</code></pre>
+<p>Server neu starten, beitreten und <code>/hello</code> eingeben. Zum Weitergeben baust du mit DevTools eine <code>.phar</code> (<code>/makeplugin HelloWorld</code>) und gibst die Datei aus <code>plugin_data/DevTools</code> weiter.</p>
+<h2>Events</h2>
+<p>Mobs, Items und Blöcke von BetterPMMP nutzen die normalen PocketMine-Klassen, deshalb funktionieren die üblichen Events auch für sie: Schaden, Tod, Blöcke abbauen und setzen, Interagieren, Items benutzen und so weiter.</p>
+<pre><code class="lang-php">use pocketmine\event\entity\EntityDamageByEntityEvent;
+use pocketmine\event\entity\EntityDeathEvent;
+use pocketmine\entity\Living;
+use pocketmine\player\Player;
+
+public function onDamage(EntityDamageByEntityEvent $event) : void{
+	// BetterPMMP mobs are normal PocketMine entities
+	if($event-&gt;getDamager() instanceof Living &amp;&amp; $event-&gt;getEntity() instanceof Player){
+		$event-&gt;setBaseDamage($event-&gt;getBaseDamage() * 0.5); // mobs hit half as hard
+	}
+}
+
+public function onDeath(EntityDeathEvent $event) : void{
+	$this-&gt;getLogger()-&gt;info($event-&gt;getEntity()-&gt;getName() . &quot; died&quot;);
+}</code></pre>
+<h2>BetterPMMP-Schnittstellen</h2>
+<p>Diese Klassen gibt es nur in BetterPMMP. Soll dein Plugin auch auf normalem PocketMine-MP laufen, prüfe vorher:</p>
+<pre><code class="lang-php">use pocketmine\VersionInfo;
+
+$isBetterPMMP = $this-&gt;getServer()-&gt;getName() === &quot;BetterPMMP&quot;;
+if($isBetterPMMP){
+	$this-&gt;getLogger()-&gt;info(&quot;BetterPMMP &quot; . VersionInfo::BETTERPMMP_BUILD);
+}</code></pre>
+<h3>Spielregeln</h3>
+<p><code>pocketmine\world\GameRules</code> liest und ändert die 38 Bedrock-Spielregeln einer Welt, genau wie <code>/gamerule</code>.</p>
+<pre><code class="lang-php">use pocketmine\world\GameRules;
+
+$world = $this-&gt;getServer()-&gt;getWorldManager()-&gt;getDefaultWorld();
+
+// read (keys are the lowercase vanilla names)
+if(GameRules::bool($world, &quot;keepinventory&quot;)){
+	// ...
+}
+$speed = GameRules::int($world, &quot;randomtickspeed&quot;);
+
+// write: saved in level.dat and sent to the players of the world
+GameRules::set($world, &quot;dodaylightcycle&quot;, false);
+GameRules::set($world, &quot;playerssleepingpercentage&quot;, 50);</code></pre>
+<h3>Scoreboard</h3>
+<p><code>pocketmine\scoreboard\Scoreboard</code> ist dasselbe Scoreboard, das <code>/scoreboard</code> benutzt. Es wird automatisch gespeichert und allen Spielern angezeigt. Anzeigeplätze sind <code>sidebar</code>, <code>list</code> und <code>belowname</code>.</p>
+<pre><code class="lang-php">use pocketmine\scoreboard\Scoreboard;
+
+$board = Scoreboard::get();
+if(!$board-&gt;hasObjective(&quot;kills&quot;)){
+	$board-&gt;addObjective(&quot;kills&quot;, &quot;dummy&quot;, &quot;§cKills&quot;);
+	$board-&gt;setDisplay(&quot;sidebar&quot;, &quot;kills&quot;, 1); // 1 = highest first, 0 = lowest first
+}
+
+$name = $player-&gt;getName();
+$board-&gt;setScore(&quot;kills&quot;, $name, ($board-&gt;getScore(&quot;kills&quot;, $name) ?? 0) + 1);</code></pre>
+<h3>Zielauswahl</h3>
+<p><code>pocketmine\command\utils\TargetSelector</code> wandelt <code>@a</code>, <code>@p</code>, <code>@e[type=zombie,r=10]</code> und Spielernamen in Wesen um.</p>
+<pre><code class="lang-php">use pocketmine\command\utils\TargetSelector;
+use pocketmine\player\Player;
+
+// in onCommand(): accepts a player name or a selector like @a[r=10]
+foreach(TargetSelector::select($sender, $args[0] ?? &quot;@s&quot;) as $entity){
+	if($entity instanceof Player){
+		$entity-&gt;sendMessage(&quot;You were selected!&quot;);
+	}
+}</code></pre>
+<h3>Strukturen</h3>
+<p><code>pocketmine\world\structure\McStructure</code> liest, schreibt und setzt <code>.mcstructure</code>-Dateien, das Format des Strukturblocks und der Bedrock-Add-ons.</p>
+<pre><code class="lang-php">use pocketmine\world\structure\McStructure;
+use pocketmine\math\Vector3;
+
+// load a .mcstructure file and place it, rotated by 90 degrees
+$structure = McStructure::read(file_get_contents($this-&gt;getDataFolder() . &quot;house.mcstructure&quot;));
+$structure-&gt;place($world, new Vector3(100, 64, 100), 1, &quot;none&quot;, true, true, 1.0, 0);
+
+// save an area as .mcstructure
+$data = McStructure::capture($world, new Vector3(0, 60, 0), new Vector3(15, 80, 15), true, true)
+	-&gt;write(new Vector3(0, 60, 0));
+file_put_contents($this-&gt;getDataFolder() . &quot;area.mcstructure&quot;, $data);</code></pre>
+<h2>Weiterlernen</h2>
+<ul>
+<li><a href="https://doc.pmmp.io/">PocketMine-MP-Dokumentation</a>: Plugin-Grundlagen, Events, Formulare, Tasks.</li>
+<li><a href="https://github.com/pmmp/PocketMine-MP/tree/stable/src">PocketMine-MP-Quellcode</a>: die API selbst.</li>
+<li><a href="https://github.com/BetterPMMP/Betterpmmp">BetterPMMP-Quellcode</a>: die Klassen von oben liegen in <code>src/</code>.</li>
+</ul>
+<div class="note"><p>Fragen oder Ideen für neue Schnittstellen? Öffne ein <a href="https://github.com/BetterPMMP/Betterpmmp/issues">Issue auf GitHub</a>.</p></div>
+</div><div class="pager"><a href="commands.html"><small><span data-lang-block="en">Previous</span><span data-lang-block="de">Zurück</span></small><span data-lang-block="en">Commands</span><span data-lang-block="de">Befehle</span></a></div></article></main>
+<footer><div class="wrap cols">
+  <div><b style="color:var(--text)">BetterPMMP</b> © Leon Development<br>
+  <span data-lang-block="en">Licensed under the LGPL-3.0-or-later, based on PocketMine-MP.</span><span data-lang-block="de">Lizenz LGPL-3.0-or-later, basiert auf PocketMine-MP.</span><br>
+  <span data-lang-block="en">Not affiliated with Mojang Studios or Microsoft.</span><span data-lang-block="de">Nicht verbunden mit Mojang Studios oder Microsoft.</span></div>
+  <nav>
+    <a href="install.html"><span data-lang-block="en">Installation</span><span data-lang-block="de">Installation</span></a>
+    <a href="plugins.html"><span data-lang-block="en">Plugin development</span><span data-lang-block="de">Plugins entwickeln</span></a>
+    <a href="https://github.com/BetterPMMP/Betterpmmp/releases"><span data-lang-block="en">Download</span><span data-lang-block="de">Download</span></a>
+    <a href="https://github.com/BetterPMMP/Betterpmmp">GitHub</a>
+    <a href="https://github.com/BetterPMMP/Betterpmmp/issues"><span data-lang-block="en">Report a bug</span><span data-lang-block="de">Fehler melden</span></a>
+  </nav>
+</div></footer>
+<script src="assets/site.js"></script>
+</body>
+</html>
