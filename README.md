@@ -32,6 +32,7 @@ the Nether and the End with their bosses, and Java Edition players can join the 
 
 ## Contents
 
+- [Why BetterPMMP](#why-betterpmmp)
 - [Features](#features)
 - [Installation](#installation)
 - [Java Edition players](#java-edition-players)
@@ -41,6 +42,17 @@ the Nether and the End with their bosses, and Java Edition players can join the 
 - [Known issues](#known-issues)
 - [Building from source](#building-from-source)
 - [License](#license)
+
+## Why BetterPMMP
+
+- **Vanilla gameplay.** Most PocketMine-based servers are an empty shell. BetterPMMP plays like vanilla:
+  mob AI with pathfinding, the Nether and the End with their bosses, 1.18+ world generation with cave
+  biomes, redstone and the vanilla commands.
+- **Smooth performance.** Chunk generation and chunk sending run in worker threads, so the main thread stays
+  free for the game. Even with many players the server stays stable.
+- **Java and Bedrock together.** Java Edition players join the same world through the built-in bridge,
+  no extra setup.
+- **Your plugins keep working.** BetterPMMP keeps the PocketMine-MP 5 API (5.51.0).
 
 ## Features
 
