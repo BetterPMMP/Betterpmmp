@@ -22,6 +22,7 @@ use pocketmine\block\Thin;
 use pocketmine\block\Trapdoor;
 use pocketmine\block\Wall;
 use pocketmine\block\Water;
+use pocketmine\world\ChunkManager;
 use pocketmine\world\World;
 use SplPriorityQueue;
 use function abs;
@@ -69,7 +70,7 @@ final class PathFinder{
 	private array $cache = [];
 
 	public function __construct(
-		private World $world,
+		private ChunkManager $world,
 		private int $height = 2,
 		private bool $canSwim = true,
 		private bool $avoidWater = false,

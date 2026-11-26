@@ -44,6 +44,9 @@ mob-spawning:
 mob-ai:
   # Millisekunden Wegfindung pro Server-Tick für alle Mobs zusammen
   pathfinding-ms-per-tick: 6
+  # Wegfindung in eigenen Threads (Async-Worker) statt im Haupt-Tick: mehr Mobs, flüssigere Ticks.
+  # false = wie früher alles im Hauptthread
+  async-pathfinding: true
 
 # ---------------------------------------------------------------
 # Karten (Fehlersuche)

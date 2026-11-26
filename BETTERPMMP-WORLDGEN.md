@@ -78,7 +78,7 @@ Er ersetzt den alten PocketMine-Generator **nur für neue Welten**.
   (keine Schmiede, Kirche usw., da deren Vorlagen fehlen).
 - Keine Schluchten, Seen, Amethystgeoden; wassergefüllte Höhlen (Aquifere)
   vereinfacht.
-- Nether-Biome sind 2D (in Vanilla 3D).
+- Nether-Biome sind seit 5.85 3D wie in Vanilla (vorher 2D).
 - Getestet mit einem Testaufbau ohne PocketMine-PHP-Erweiterungen:
   1.200 Chunks über 6 Seeds fehlerfrei, ca. 15–20 ms je Chunk für Erzeugung und
   Bevölkerung. Kein Test mit einem echten Minecraft-Client.

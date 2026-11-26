@@ -40,6 +40,8 @@ class VanillaNether extends Generator{
 	public const HEIGHT = 128;
 	public const LAVA_LEVEL = 31;
 	private const CELL = 4;
+	/** How much faster the biome climate changes vertically than horizontally (vanilla nether biomes are 3D). */
+	private const BIOME_Y_SCALE = 0.6;
 
 	private Simplex $temperature;
 	private Simplex $humidity;
@@ -82,7 +84,7 @@ class VanillaNether extends Generator{
 		$this->basalt = VanillaBlocks::BASALT()->getStateId();
 		$this->blackstone = VanillaBlocks::BLACKSTONE()->getStateId();
 		$this->magma = VanillaBlocks::MAGMA()->getStateId();
-		$ctx = new StructureContext($seed, fn(int $x, int $y, int $z) : int => $this->biomeAt($x, $z), fn(int $x, int $z) : int => 64);
+		$ctx = new StructureContext($seed, fn(int $x, int $y, int $z) : int => $this->biomeAt3D($x, $y, $z), fn(int $x, int $z) : int => 64);
 		$this->structures = new StructureManager($ctx, [
 			new NetherFortress(),
 			new Bastion(),
@@ -95,11 +97,20 @@ class VanillaNether extends Generator{
 	}
 
 	/**
-	 * Nearest of the vanilla nether biome climate points (temperature, humidity, offset).
+	 * Biome in the middle of the nether (y 64), for callers that only know a column.
 	 */
 	public function biomeAt(float $x, float $z) : int{
-		$t = $this->temperature->noise2D($x, $z, true) * 1.6;
-		$h = $this->humidity->noise2D($x + 3000, $z - 3000, true) * 1.6;
+		return $this->biomeAt3D($x, 64, $z);
+	}
+
+	/**
+	 * Nearest of the vanilla nether biome climate points (temperature, humidity, offset). Like vanilla the
+	 * climate is sampled in 3D, so a cave can be a warped forest above a soul sand valley.
+	 */
+	public function biomeAt3D(float $x, float $y, float $z) : int{
+		$sy = $y * self::BIOME_Y_SCALE;
+		$t = $this->temperature->noise3D($x, $sy, $z, true) * 1.6;
+		$h = $this->humidity->noise3D($x + 3000, $sy, $z - 3000, true) * 1.6;
 		static $points = [
 			[B::HELL, 0.0, 0.0, 0.0],
 			[B::SOULSAND_VALLEY, 0.0, -0.5, 0.0],
@@ -125,30 +136,50 @@ class VanillaNether extends Generator{
 		$baseZ = $chunkZ << 4;
 		$random = new Random($this->seed ^ ($chunkX * 0x1B873593) ^ ($chunkZ * 0x5BD1E995));
 
-		$biomes = new PalettedBlockArray(B::HELL);
-		$columnBiome = [];
-		for($x = 0; $x < 16; ++$x){
-			for($z = 0; $z < 16; ++$z){
-				$biome = ($x & 3) === 0 && ($z & 3) === 0 ? $this->biomeAt($baseX + $x + 2, $baseZ + $z + 2) : $columnBiome[$x & ~3][$z & ~3];
-				$columnBiome[$x][$z] = $biome;
-				for($y = 0; $y < 16; ++$y){
-					$biomes->set($x, $y, $z, $biome);
+		//biome climate on a 4 x 8 x 4 grid of world positions (shared by neighbouring chunks, so terrain
+		//roughness has no seams); the client stores biomes per block, filled per 4x4x4 cell from the grid
+		$ny = intdiv(self::HEIGHT, self::CELL);
+		$biomeGrid = [];
+		for($gx = 0; $gx <= 4; ++$gx){
+			for($gz = 0; $gz <= 4; ++$gz){
+				for($k = 0; $k <= ($ny >> 1); ++$k){
+					$biomeGrid[$gx][$gz][$k] = $this->biomeAt3D($baseX + ($gx << 2), $k << 3, $baseZ + ($gz << 2));
 				}
 			}
 		}
+		$cellBiome = [];
+		for($cx = 0; $cx < 4; ++$cx){
+			for($cz = 0; $cz < 4; ++$cz){
+				for($gy = 0; $gy < $ny; ++$gy){
+					$cellBiome[$cx][$cz][$gy] = $biomeGrid[$cx][$cz][$gy >> 1];
+				}
+			}
+		}
+		$biomeArrays = [];
+		for($sy = 0; $sy < (self::HEIGHT >> 4); ++$sy){
+			$array = new PalettedBlockArray(B::HELL);
+			for($x = 0; $x < 16; ++$x){
+				for($z = 0; $z < 16; ++$z){
+					$cells = $cellBiome[$x >> 2][$z >> 2];
+					for($y = 0; $y < 16; ++$y){
+						$array->set($x, $y, $z, $cells[(($sy << 4) + $y) >> 2]);
+					}
+				}
+			}
+			$biomeArrays[$sy] = $array;
+		}
 
 		//density on a 4x4x4 grid: caverns in the middle, solid towards floor and roof
-		$ny = intdiv(self::HEIGHT, self::CELL);
 		$density = [];
 		for($gx = 0; $gx <= 4; ++$gx){
 			for($gz = 0; $gz <= 4; ++$gz){
 				$x = $baseX + $gx * 4;
 				$z = $baseZ + $gz * 4;
-				$biome = $this->biomeAt($x, $z);
-				$roughness = $biome === B::BASALT_DELTAS ? 1.35 : ($biome === B::SOULSAND_VALLEY ? 0.85 : 1.0);
 				$col = [];
 				for($gy = 0; $gy <= $ny; ++$gy){
 					$y = $gy * 4;
+					$biome = $biomeGrid[$gx][$gz][min($ny >> 1, $gy >> 1)];
+					$roughness = $biome === B::BASALT_DELTAS ? 1.35 : ($biome === B::SOULSAND_VALLEY ? 0.85 : 1.0);
 					$shape = -0.06;
 					if($y < 40){
 						$shape += (40 - $y) / 40 * 0.9;
@@ -164,7 +195,7 @@ class VanillaNether extends Generator{
 
 		$subChunks = [];
 		for($sy = Chunk::MIN_SUBCHUNK_INDEX; $sy <= Chunk::MAX_SUBCHUNK_INDEX; ++$sy){
-			$subChunks[$sy] = new SubChunk($this->air, [], clone $biomes);
+			$subChunks[$sy] = new SubChunk($this->air, [], $biomeArrays[$sy] ?? new PalettedBlockArray(B::HELL));
 		}
 		for($cx = 0; $cx < 4; ++$cx){
 			for($cz = 0; $cz < 4; ++$cz){
@@ -218,22 +249,24 @@ class VanillaNether extends Generator{
 			}
 		}
 
-		$this->buildSurfaces($chunk, $baseX, $baseZ, $columnBiome, $random);
+		$this->buildSurfaces($chunk, $baseX, $baseZ, $cellBiome, $random);
 	}
 
 	/**
-	 * @param int[][] $columnBiome
+	 * @param int[][][] $cellBiome biome per 4x4x4 cell [x >> 2][z >> 2][y >> 2]
 	 */
-	private function buildSurfaces(Chunk $chunk, int $baseX, int $baseZ, array $columnBiome, Random $random) : void{
+	private function buildSurfaces(Chunk $chunk, int $baseX, int $baseZ, array $cellBiome, Random $random) : void{
+		$ny = intdiv(self::HEIGHT, self::CELL);
 		for($x = 0; $x < 16; ++$x){
 			for($z = 0; $z < 16; ++$z){
-				$biome = $columnBiome[$x][$z];
+				$cells = $cellBiome[$x >> 2][$z >> 2];
 				$wx = $baseX + $x;
 				$wz = $baseZ + $z;
 				$patch = $this->patch->noise2D($wx, $wz, true);
 				$detail = $this->detail->noise2D($wx, $wz, true);
 				$above = $this->air;
 				for($y = self::HEIGHT - 6; $y > 4; --$y){
+					$biome = $cells[min($ny - 1, $y >> 2)];
 					$id = $chunk->getBlockStateId($x, $y, $z);
 					if($id === $this->netherrack && ($above === $this->air || $above === $this->lava)){
 						//floor block
@@ -283,7 +316,6 @@ class VanillaNether extends Generator{
 
 		$this->structures->populate($w, $chunkX, $chunkZ);
 
-		$biome = $w->getBiome($baseX + 8, 64, $baseZ + 8);
 
 		//glowstone clusters hanging from ceilings
 		$glowstone = VanillaBlocks::GLOWSTONE()->getStateId();
@@ -384,12 +416,12 @@ class VanillaNether extends Generator{
 			}
 		}
 
-		//weeping vines from crimson ceilings
-		if($biome === B::CRIMSON_FOREST){
-			for($i = 0; $i < 10; ++$i){
-				$x = $baseX + $r->nextBoundedInt(16);
-				$z = $baseZ + $r->nextBoundedInt(16);
-				$y = 30 + $r->nextBoundedInt(90);
+		//weeping vines from crimson ceilings (the biome is checked where the vine hangs: biomes are 3D)
+		for($i = 0; $i < 10; ++$i){
+			$x = $baseX + $r->nextBoundedInt(16);
+			$z = $baseZ + $r->nextBoundedInt(16);
+			$y = 30 + $r->nextBoundedInt(90);
+			if($w->getBiome($x, $y, $z) === B::CRIMSON_FOREST){
 				if($w->get($x, $y, $z) === $this->air && $w->get($x, $y + 1, $z) === $this->netherrack){
 					$len = 1 + $r->nextBoundedInt(8);
 					for($d = 0; $d < $len && $w->get($x, $y - $d, $z) === $this->air; ++$d){
