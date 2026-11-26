@@ -5,6 +5,9 @@
 <p align="center">
   <b>A vanilla game engine for PocketMine-MP 5.</b><br>
   Developed by <b>Leon Development</b><br>
+  <a href="https://betterpmmp.github.io/Betterpmmp/"><b>Website & documentation</b></a> ·
+  <a href="https://betterpmmp.github.io/Betterpmmp/plugins.html">Plugin development</a> ·
+  <a href="https://github.com/BetterPMMP/Betterpmmp/releases">Download</a><br>
   Minecraft: Bedrock Edition 1.26.60 · Java Edition players through the built-in bridge · PocketMine plugins keep working
 </p>
 

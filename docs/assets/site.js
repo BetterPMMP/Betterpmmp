@@ -1,0 +1,39 @@
+// BetterPMMP website: language switch and copy buttons
+(function(){
+  var root = document.documentElement;
+  var saved = null;
+  try{ saved = localStorage.getItem("lang"); }catch(e){}
+  var lang = saved || ((navigator.language || "en").toLowerCase().indexOf("de") === 0 ? "de" : "en");
+
+  function setLang(l){
+    root.lang = l;
+    document.querySelectorAll("[data-set-lang]").forEach(function(b){
+      b.setAttribute("aria-pressed", b.dataset.setLang === l ? "true" : "false");
+    });
+    var t = document.querySelector("meta[name='title-" + l + "']");
+    if(t){ document.title = t.content; }
+    try{ localStorage.setItem("lang", l); }catch(e){}
+  }
+
+  document.querySelectorAll("[data-set-lang]").forEach(function(b){
+    b.addEventListener("click", function(){ setLang(b.dataset.setLang); });
+  });
+  setLang(lang);
+
+  document.querySelectorAll("pre").forEach(function(pre){
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "copy";
+    btn.textContent = root.lang === "de" ? "Kopieren" : "Copy";
+    btn.addEventListener("click", function(){
+      var code = pre.querySelector("code");
+      var text = (code || pre).innerText;
+      var done = function(){
+        btn.textContent = root.lang === "de" ? "Kopiert" : "Copied";
+        setTimeout(function(){ btn.textContent = root.lang === "de" ? "Kopieren" : "Copy"; }, 1500);
+      };
+      if(navigator.clipboard){ navigator.clipboard.writeText(text).then(done, function(){}); }
+    });
+    pre.appendChild(btn);
+  });
+})();

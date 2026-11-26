@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Custom content – BetterPMMP</title>
+<meta name="title-en" content="Custom content – BetterPMMP">
+<meta name="title-de" content="Eigene Inhalte – BetterPMMP">
+<meta name="description" content="Add custom items, blocks and creatures to BetterPMMP with YAML files, without a plugin.">
+<meta name="author" content="Leon Development">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#0b0f14">
+<link rel="canonical" href="https://betterpmmp.github.io/Betterpmmp/custom-content.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="BetterPMMP">
+<meta property="og:title" content="Custom content – BetterPMMP">
+<meta property="og:description" content="Add custom items, blocks and creatures to BetterPMMP with YAML files, without a plugin.">
+<meta property="og:url" content="https://betterpmmp.github.io/Betterpmmp/custom-content.html">
+<meta property="og:image" content="https://betterpmmp.github.io/Betterpmmp/banner.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="logo" href="index.html"><i></i><span>Better<b>PMMP</b></span></a>
+  <nav class="menu" aria-label="Main"><a href="index.html"><span data-lang-block="en">Home</span><span data-lang-block="de">Start</span></a><a href="install.html"><span data-lang-block="en">Install</span><span data-lang-block="de">Installation</span></a><a href="java.html"><span data-lang-block="en">Java</span><span data-lang-block="de">Java</span></a><a href="custom-content.html" aria-current="page"><span data-lang-block="en">Content</span><span data-lang-block="de">Inhalte</span></a><a href="commands.html"><span data-lang-block="en">Commands</span><span data-lang-block="de">Befehle</span></a><a href="plugins.html"><span data-lang-block="en">Plugins</span><span data-lang-block="de">Plugins</span></a></nav>
+  <div class="lang" role="group" aria-label="Language">
+    <button type="button" data-set-lang="de" title="Deutsch" aria-label="Deutsch">🇩🇪</button>
+    <button type="button" data-set-lang="en" title="English" aria-label="English">🇬🇧</button>
+  </div>
+  <a class="gh" href="https://github.com/BetterPMMP/Betterpmmp" title="GitHub" aria-label="GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
+</div></header>
+<main class="wrap docs"><nav class="side" aria-label="Documentation"><p><span data-lang-block="en">Documentation</span><span data-lang-block="de">Dokumentation</span></p><a href="install.html"><span data-lang-block="en">Installation</span><span data-lang-block="de">Installation</span></a><a href="configuration.html"><span data-lang-block="en">Configuration</span><span data-lang-block="de">Konfiguration</span></a><a href="java.html"><span data-lang-block="en">Java players</span><span data-lang-block="de">Java-Spieler</span></a><a href="custom-content.html" aria-current="page"><span data-lang-block="en">Custom content</span><span data-lang-block="de">Eigene Inhalte</span></a><a href="commands.html"><span data-lang-block="en">Commands</span><span data-lang-block="de">Befehle</span></a><a href="plugins.html"><span data-lang-block="en">Plugin development</span><span data-lang-block="de">Plugins entwickeln</span></a></nav><article class="doc"><div data-lang-block="en"><h1>Custom content</h1>
+<p class="intro">Add your own items, blocks and creatures without writing a plugin. Describe them in a YAML file, put the textures next to it and restart. BetterPMMP builds a resource pack and sends it to every player automatically.</p>
+<div class="scroll"><table class="table"><thead><tr><th>File</th><th>Textures and models</th><th>What you can add</th></tr></thead><tbody>
+<tr><td><code>custom_items.yml</code></td><td><code>custom_items/</code></td><td>items, food, tools, armour</td></tr>
+<tr><td><code>custom_blocks.yml</code></td><td><code>custom_blocks/</code></td><td>full blocks, one texture or top/side/bottom, light, hardness</td></tr>
+<tr><td><code>custom_entities.yml</code></td><td><code>custom_entities/</code></td><td>creatures with Blockbench models, animations and natural spawning</td></tr>
+</tbody></table></div>
+<p>All three files are created with commented examples on the first start.</p>
+<h2>Items</h2>
+<pre><code class="lang-yaml">items:
+  myserver:ruby:
+    name: &quot;Ruby&quot;
+    texture: ruby.png
+  myserver:ruby_sword:
+    name: &quot;Ruby Sword&quot;
+    tool:
+      type: sword
+      tier: diamond
+      attack: 8
+      durability: 2000
+  myserver:golden_bread:
+    name: &quot;Golden Bread&quot;
+    food:
+      nutrition: 8
+      saturation: 12.8
+      can-always-eat: true</code></pre>
+<p>Textures are square PNG files, for example 16 × 16 pixels. Give an item with <code>/give @s myserver:ruby_sword</code>.</p>
+<h2>Blocks</h2>
+<pre><code class="lang-yaml">blocks:
+  myserver:ruby_block:
+    name: &quot;Ruby Block&quot;
+    texture: ruby_block.png
+    hardness: 5
+    tool: pickaxe
+  myserver:crystal_lamp:
+    name: &quot;Crystal Lamp&quot;
+    texture: crystal_lamp.png
+    light: 15</code></pre>
+<p>Use <code>texture-top</code>, <code>texture-bottom</code> and <code>texture-side</code> for different sides. Place a block with <code>/setblock ~ ~ ~ myserver:ruby_block</code>.</p>
+<h2>Creatures</h2>
+<pre><code class="lang-yaml">entities:
+  myserver:goblin:
+    name: &quot;Goblin&quot;
+    behaviour: hostile        # or passive
+    texture: goblin.png
+    model: goblin.geo.json    # Blockbench model (optional)
+    health: 24
+    damage: 4
+    drops:
+      myserver:ruby: [0, 2]
+    spawn:
+      biomes: [plains, forest]
+      group: [1, 3]
+      max-nearby: 4
+      chance: 0.3
+      time: night</code></pre>
+<p>Make the model in <a href="https://www.blockbench.net/">Blockbench</a> as a "Bedrock Entity" and export it as <code>.geo.json</code>. Without a model the creature is a box of its size with the skin wrapped around it. Summon one with <code>/summon myserver:goblin</code>.</p>
+<div class="note warn"><p>Never rename or remove a block or creature that already exists in a world. Blocks would turn into unknown blocks, creatures would be deleted.</p></div>
+</div><div data-lang-block="de"><h1>Eigene Inhalte</h1>
+<p class="intro">Füge eigene Items, Blöcke und Wesen hinzu, ganz ohne Plugin. Beschreibe sie in einer YAML-Datei, lege die Texturen daneben und starte neu. BetterPMMP baut daraus ein Resource-Pack und schickt es automatisch an alle Spieler.</p>
+<div class="scroll"><table class="table"><thead><tr><th>Datei</th><th>Texturen und Modelle</th><th>Was du hinzufügen kannst</th></tr></thead><tbody>
+<tr><td><code>custom_items.yml</code></td><td><code>custom_items/</code></td><td>Items, Essen, Werkzeuge, Rüstung</td></tr>
+<tr><td><code>custom_blocks.yml</code></td><td><code>custom_blocks/</code></td><td>volle Blöcke, eine Textur oder oben/seitlich/unten, Licht, Härte</td></tr>
+<tr><td><code>custom_entities.yml</code></td><td><code>custom_entities/</code></td><td>Wesen mit Blockbench-Modell, Animationen und natürlichem Spawnen</td></tr>
+</tbody></table></div>
+<p>Alle drei Dateien werden beim ersten Start mit kommentierten Beispielen angelegt.</p>
+<h2>Items</h2>
+<pre><code class="lang-yaml">items:
+  myserver:ruby:
+    name: &quot;Ruby&quot;
+    texture: ruby.png
+  myserver:ruby_sword:
+    name: &quot;Ruby Sword&quot;
+    tool:
+      type: sword
+      tier: diamond
+      attack: 8
+      durability: 2000
+  myserver:golden_bread:
+    name: &quot;Golden Bread&quot;
+    food:
+      nutrition: 8
+      saturation: 12.8
+      can-always-eat: true</code></pre>
+<p>Texturen sind quadratische PNG-Dateien, zum Beispiel 16 × 16 Pixel. Ein Item gibst du mit <code>/give @s myserver:ruby_sword</code>.</p>
+<h2>Blöcke</h2>
+<pre><code class="lang-yaml">blocks:
+  myserver:ruby_block:
+    name: &quot;Ruby Block&quot;
+    texture: ruby_block.png
+    hardness: 5
+    tool: pickaxe
+  myserver:crystal_lamp:
+    name: &quot;Crystal Lamp&quot;
+    texture: crystal_lamp.png
+    light: 15</code></pre>
+<p>Für verschiedene Seiten gibt es <code>texture-top</code>, <code>texture-bottom</code> und <code>texture-side</code>. Setzen mit <code>/setblock ~ ~ ~ myserver:ruby_block</code>.</p>
+<h2>Wesen</h2>
+<pre><code class="lang-yaml">entities:
+  myserver:goblin:
+    name: &quot;Goblin&quot;
+    behaviour: hostile        # or passive
+    texture: goblin.png
+    model: goblin.geo.json    # Blockbench model (optional)
+    health: 24
+    damage: 4
+    drops:
+      myserver:ruby: [0, 2]
+    spawn:
+      biomes: [plains, forest]
+      group: [1, 3]
+      max-nearby: 4
+      chance: 0.3
+      time: night</code></pre>
+<p>Das Modell baust du in <a href="https://www.blockbench.net/">Blockbench</a> als „Bedrock Entity“ und exportierst es als <code>.geo.json</code>. Ohne Modell ist das Wesen ein Kasten in seiner Größe mit dem Skin außen herum. Beschwören mit <code>/summon myserver:goblin</code>.</p>
+<div class="note warn"><p>Benenne nie einen Block oder ein Wesen um, das schon in einer Welt vorkommt, und entferne es nicht. Blöcke würden zu unbekannten Blöcken, Wesen würden gelöscht.</p></div>
+</div><div class="pager"><a href="java.html"><small><span data-lang-block="en">Previous</span><span data-lang-block="de">Zurück</span></small><span data-lang-block="en">Java players</span><span data-lang-block="de">Java-Spieler</span></a><a class="next" href="commands.html"><small><span data-lang-block="en">Next</span><span data-lang-block="de">Weiter</span></small><span data-lang-block="en">Commands</span><span data-lang-block="de">Befehle</span></a></div></article></main>
+<footer><div class="wrap cols">
+  <div><b style="color:var(--text)">BetterPMMP</b> © Leon Development<br>
+  <span data-lang-block="en">Licensed under the LGPL-3.0-or-later, based on PocketMine-MP.</span><span data-lang-block="de">Lizenz LGPL-3.0-or-later, basiert auf PocketMine-MP.</span><br>
+  <span data-lang-block="en">Not affiliated with Mojang Studios or Microsoft.</span><span data-lang-block="de">Nicht verbunden mit Mojang Studios oder Microsoft.</span></div>
+  <nav>
+    <a href="install.html"><span data-lang-block="en">Installation</span><span data-lang-block="de">Installation</span></a>
+    <a href="plugins.html"><span data-lang-block="en">Plugin development</span><span data-lang-block="de">Plugins entwickeln</span></a>
+    <a href="https://github.com/BetterPMMP/Betterpmmp/releases"><span data-lang-block="en">Download</span><span data-lang-block="de">Download</span></a>
+    <a href="https://github.com/BetterPMMP/Betterpmmp">GitHub</a>
+    <a href="https://github.com/BetterPMMP/Betterpmmp/issues"><span data-lang-block="en">Report a bug</span><span data-lang-block="de">Fehler melden</span></a>
+  </nav>
+</div></footer>
+<script src="assets/site.js"></script>
+</body>
+</html>
