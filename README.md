@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/BetterPMMP/Betterpmmp/releases"><img src="https://img.shields.io/badge/version-5.84--vanilla--beta.1-3fb950?style=flat-square" alt="Version"></a>
+  <a href="https://github.com/BetterPMMP/Betterpmmp/releases"><img src="https://img.shields.io/badge/version-5.85--vanilla--beta.1-3fb950?style=flat-square" alt="Version"></a>
   <img src="https://img.shields.io/badge/Bedrock-1.26.60-2f81f7?style=flat-square" alt="Bedrock 1.26.60">
   <img src="https://img.shields.io/badge/API-5.51.0-8957e5?style=flat-square" alt="API 5.51.0">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-777bb4?style=flat-square" alt="PHP 8.1+">
@@ -38,7 +38,7 @@ the Nether and the End with their bosses, and Java Edition players can join the 
 - [Java Edition players](#java-edition-players)
 - [Configuration](#configuration)
 - [Custom items, blocks and creatures](#custom-items-blocks-and-creatures)
-- [What's new in 5.84](#whats-new-in-584)
+- [What's new](#whats-new)
 - [Known issues](#known-issues)
 - [Building from source](#building-from-source)
 - [License](#license)
@@ -46,10 +46,11 @@ the Nether and the End with their bosses, and Java Edition players can join the 
 ## Why BetterPMMP
 
 - **Vanilla gameplay.** Most PocketMine-based servers are an empty shell. BetterPMMP plays like vanilla:
-  mob AI with pathfinding, the Nether and the End with their bosses, 1.18+ world generation with cave
-  biomes, redstone and the vanilla commands.
-- **Smooth performance.** Chunk generation and chunk sending run in worker threads, so the main thread stays
-  free for the game. Even with many players the server stays stable.
+  mob AI with pathfinding, the Nether with 3D biomes and the End with their bosses, 1.18+ world generation
+  with cave biomes, redstone and the vanilla commands.
+- **Smooth performance.** Multithreading where it counts: world generation, chunk sending and mob path finding
+  run in worker threads, so the main thread stays free for the game tick. Even with many players and mobs the
+  server stays stable.
 - **Java and Bedrock together.** Java Edition players join the same world through the built-in bridge,
   no extra setup.
 - **Your plugins keep working.** BetterPMMP keeps the PocketMine-MP 5 API (5.51.0).
@@ -97,13 +98,13 @@ Download the one for your system from
 [pmmp/PHP-Binaries](https://github.com/pmmp/PHP-Binaries/releases) and unpack it into an empty folder.
 You should end up with a `bin` folder.
 
-**2. Get BetterPMMP.** Download `BetterPMMP-5.84.phar` from the
+**2. Get BetterPMMP.** Download `BetterPMMP-5.85.phar` from the
 [latest release](https://github.com/BetterPMMP/Betterpmmp/releases) and put it next to the `bin` folder.
 
 ```
 my-server/
 ├── bin/
-└── BetterPMMP-5.84.phar
+└── BetterPMMP-5.85.phar
 ```
 
 **3. Start it.**
@@ -111,13 +112,13 @@ my-server/
 Linux and macOS:
 
 ```bash
-./bin/php7/bin/php BetterPMMP-5.84.phar
+./bin/php7/bin/php BetterPMMP-5.85.phar
 ```
 
 Windows (in the server folder):
 
 ```
-bin\php\php.exe BetterPMMP-5.84.phar
+bin\php\php.exe BetterPMMP-5.85.phar
 ```
 
 The setup wizard asks for the language, server name and port, like PocketMine-MP does. After that the server
@@ -206,8 +207,13 @@ Give or place them like any other item: `/give @s myserver:ruby_sword`, `/setblo
 Don't rename or remove a block or creature that already exists in a world. It would turn into an unknown block
 or be deleted.
 
-## What's new in 5.84
+## What's new
 
+**5.85**
+- 3D biomes in the Nether like vanilla: a cave can be a warped forest above a crimson forest
+- Mob path finding runs in worker threads, in parallel with the world tick (`mob-ai.async-pathfinding`)
+
+**5.84**
 - Vanilla commands: target selectors, `/execute`, `/scoreboard`, all 38 game rules and 20 more commands
 - Vibrant Visuals for Bedrock players
 - Custom items, blocks and creatures from YAML files, with an automatic resource pack

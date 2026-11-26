@@ -23,6 +23,7 @@ return array(
     'pocketmine\\block\\tile\\Dropper' => $baseDir . '/src/block/tile/Dropper.php',
     'pocketmine\\block\\inventory\\DispenserInventory' => $baseDir . '/src/block/inventory/DispenserInventory.php',
     'pocketmine\\entity\\ai\\PathFinder' => $baseDir . '/src/entity/ai/PathFinder.php',
+    'pocketmine\\entity\\ai\\AsyncPathTask' => $baseDir . '/src/entity/ai/AsyncPathTask.php',
     'pocketmine\\entity\\ai\\Navigator' => $baseDir . '/src/entity/ai/Navigator.php',
     'pocketmine\\entity\\ai\\MobStats' => $baseDir . '/src/entity/ai/MobStats.php',
     'pocketmine\\entity\\ai\\CombatAI' => $baseDir . '/src/entity/ai/CombatAI.php',

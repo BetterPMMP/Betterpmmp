@@ -157,6 +157,7 @@ class ComposerStaticInit01c34b5648e4177bfa963b48f7da5526
         'pocketmine\\block\\tile\\Dropper' => __DIR__ . '/../..' . '/src/block/tile/Dropper.php',
         'pocketmine\\block\\inventory\\DispenserInventory' => __DIR__ . '/../..' . '/src/block/inventory/DispenserInventory.php',
         'pocketmine\\entity\\ai\\PathFinder' => __DIR__ . '/../..' . '/src/entity/ai/PathFinder.php',
+        'pocketmine\\entity\\ai\\AsyncPathTask' => __DIR__ . '/../..' . '/src/entity/ai/AsyncPathTask.php',
         'pocketmine\\entity\\ai\\Navigator' => __DIR__ . '/../..' . '/src/entity/ai/Navigator.php',
         'pocketmine\\entity\\ai\\MobStats' => __DIR__ . '/../..' . '/src/entity/ai/MobStats.php',
         'pocketmine\\entity\\ai\\CombatAI' => __DIR__ . '/../..' . '/src/entity/ai/CombatAI.php',

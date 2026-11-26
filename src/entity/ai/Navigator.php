@@ -49,6 +49,9 @@ final class Navigator{
 	private ?Vector3 $lastPos = null;
 	private int $failures = 0;
 	private bool $breakDoors = false;
+	/** A worker thread is searching a path for this mob. */
+	private bool $waiting = false;
+	private ?Vector3 $requestedGoal = null;
 
 	/** Zombies on Hard plan their paths through wooden doors (and break them). */
 	public function setCanBreakDoors(bool $value) : void{
@@ -94,20 +97,47 @@ final class Navigator{
 		if($goal === null){
 			return false;
 		}
+		if($this->waiting){
+			return true; // a worker is still searching
+		}
 		$world = $this->mob->getWorld();
+		$pos = $this->mob->getPosition();
+		$sx = (int) floor($pos->x);
+		$sy = (int) floor($pos->y + 0.01);
+		$sz = (int) floor($pos->z);
+		$gx = (int) floor($goal->x);
+		$gy = (int) floor($goal->y + 0.01);
+		$gz = (int) floor($goal->z);
+		$maxNodes = (int) min(600, max(100, $pos->distance($goal) * 16));
+
+		if(self::asyncEnabled() && AsyncPathTask::pending() < AsyncPathTask::MAX_PENDING){
+			$task = AsyncPathTask::create($this, $world, $sx, $sy, $sz, $gx, $gy, $gz, $this->height, $this->canSwim, $this->breakDoors, $maxNodes, $this->reach);
+			if($task !== null){
+				$this->waiting = true;
+				$this->requestedGoal = $goal;
+				$this->repathCooldown = 10;
+				$world->getServer()->getAsyncPool()->submitTask($task);
+				return true;
+			}
+		}
+
 		if(!PathFinder::takeBudget()){
 			$this->repathCooldown = 1;
 			return false;
 		}
-		$pos = $this->mob->getPosition();
-		$distance = $pos->distance($goal);
 		$finder = new PathFinder($world, $this->height, $this->canSwim, false, $this->breakDoors);
-		$path = $finder->find(
-			(int) floor($pos->x), (int) floor($pos->y + 0.01), (int) floor($pos->z),
-			(int) floor($goal->x), (int) floor($goal->y + 0.01), (int) floor($goal->z),
-			(int) min(600, max(100, $distance * 16)),
-			$this->reach
-		);
+		return $this->applyPath($finder->find($sx, $sy, $sz, $gx, $gy, $gz, $maxNodes, $this->reach));
+	}
+
+	private static function asyncEnabled() : bool{
+		return \pocketmine\BetterPMMPConfig::flag("mob-ai", "async-pathfinding", true) && !AsyncPathTask::hasFailed();
+	}
+
+	/**
+	 * @param int[][]|null $path
+	 * @phpstan-param list<array{int, int, int}>|null $path
+	 */
+	private function applyPath(?array $path) : bool{
 		$this->repathCooldown = 10;
 		if($path === null){
 			++$this->failures;
@@ -121,6 +151,29 @@ final class Navigator{
 		$this->path = $path;
 		$this->index = 0;
 		return true;
+	}
+
+	/**
+	 * Result of a search in a worker thread ({@link AsyncPathTask}), on the main thread.
+	 *
+	 * @param int[][]|null $path
+	 * @phpstan-param list<array{int, int, int}>|null $path
+	 */
+	public function onAsyncPath(?array $path, bool $workerFailed = false) : void{
+		$this->waiting = false;
+		$requested = $this->requestedGoal;
+		$this->requestedGoal = null;
+		if($this->goal === null || $this->mob->isClosed() || !$this->mob->isAlive()){
+			return;
+		}
+		if($workerFailed || $requested === null || $requested->distanceSquared($this->goal) > 16){
+			$this->repathCooldown = 0; // goal moved away meanwhile (or the worker failed): plan again
+			return;
+		}
+		if(!$this->applyPath($path) && $this->failures >= 4){
+			$this->halt();
+			$this->stop();
+		}
 	}
 
 	/**

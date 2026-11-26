@@ -1,10 +1,15 @@
-![BetterPMMP 5.84](https://raw.githubusercontent.com/BetterPMMP/Betterpmmp/v5.84-vanilla-beta.1/release/banner-5.84.png)
+![BetterPMMP 5.85](https://raw.githubusercontent.com/BetterPMMP/Betterpmmp/v5.85-vanilla-beta.1/release/banner-5.84.png)
 
-## BetterPMMP 5.84-vanilla-beta.1
+## BetterPMMP 5.85-vanilla-beta.1
 
-PocketMine-MP 5 (API 5.51.0) based server for Minecraft: Bedrock Edition 1.26.60, with Java Edition players through the built-in bridge. Download `BetterPMMP-5.84.phar` below and start it like PocketMine-MP.
+PocketMine-MP 5 (API 5.51.0) based server for Minecraft: Bedrock Edition 1.26.60, with Java Edition players through the built-in bridge. Download `BetterPMMP-5.85.phar` below and start it like PocketMine-MP.
 
 **Beta:** much of this release was only checked offline. Try it on a copy of your world first.
+
+### New in 5.85
+
+- **3D biomes in the Nether**, like vanilla: a cave can be a warped forest above a crimson forest. Floors, plants, fungus trees and vines follow the biome at their height. Nether chunks that already exist stay as they are.
+- **Mob path finding in worker threads**: the A* search runs in parallel with the world tick, the main thread only copies the blocks around the mob. Switch: `mob-ai.async-pathfinding` in `betterpmmp.yml`.
 
 ### New since 5.67
 

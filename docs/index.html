@@ -24,7 +24,7 @@
   "alternateName": ["Better PMMP", "BetterPocketMine"],
   "applicationCategory": "GameApplication",
   "operatingSystem": "Windows, Linux, macOS",
-  "softwareVersion": "5.84-vanilla-beta.1",
+  "softwareVersion": "5.85-vanilla-beta.1",
   "description": "Server software for Minecraft: Bedrock Edition 1.26.60 based on PocketMine-MP 5, with a vanilla game engine and Java Edition crossplay.",
   "url": "https://betterpmmp.github.io/Betterpmmp/",
   "downloadUrl": "https://github.com/BetterPMMP/Betterpmmp/releases",
@@ -88,8 +88,8 @@ mob AI, the Nether and the End with their bosses, and Java Edition players on th
 
 <h2>Why BetterPMMP</h2>
 <div class="grid">
-  <div class="card"><h3>Vanilla gameplay</h3><p>Mob AI with pathfinding, the Nether and the End with their bosses, 1.18+ world generation with cave biomes, redstone and the vanilla commands.</p></div>
-  <div class="card"><h3>Smooth performance</h3><p>Chunk generation and chunk sending run in worker threads, so the main thread stays free for the game, even with many players.</p></div>
+  <div class="card"><h3>Vanilla gameplay</h3><p>Mob AI with pathfinding, the Nether with 3D biomes and the End with their bosses, 1.18+ world generation with cave biomes, redstone and the vanilla commands.</p></div>
+  <div class="card"><h3>Smooth performance</h3><p>Multithreading where it counts: world generation, chunk sending and mob path finding run in worker threads, so the main thread stays free for the game tick, even with many players and mobs.</p></div>
   <div class="card"><h3>Java and Bedrock together</h3><p>Java Edition players join the same world through the built-in bridge, without extra setup.</p></div>
   <div class="card"><h3>Plugins keep working</h3><p>BetterPMMP keeps the PocketMine-MP 5 API, so your existing plugins run as before.</p></div>
 </div>
@@ -107,11 +107,11 @@ mob AI, the Nether and the End with their bosses, and Java Edition players on th
 <h2>Installation</h2>
 <ol>
   <li>Download the PHP binary for your system from <a href="https://github.com/pmmp/PHP-Binaries/releases">pmmp/PHP-Binaries</a> and unpack it into an empty folder.</li>
-  <li>Download <code>BetterPMMP-5.84.phar</code> from the <a href="https://github.com/BetterPMMP/Betterpmmp/releases">releases</a> and put it next to the <code>bin</code> folder.</li>
+  <li>Download <code>BetterPMMP-5.85.phar</code> from the <a href="https://github.com/BetterPMMP/Betterpmmp/releases">releases</a> and put it next to the <code>bin</code> folder.</li>
   <li>Start the server:</li>
 </ol>
-<pre>./bin/php7/bin/php BetterPMMP-5.84.phar        # Linux / macOS
-bin\php\php.exe BetterPMMP-5.84.phar           # Windows</pre>
+<pre>./bin/php7/bin/php BetterPMMP-5.85.phar        # Linux / macOS
+bin\php\php.exe BetterPMMP-5.85.phar           # Windows</pre>
 <p>Bedrock players join on port 19132 (UDP), Java players on port 25565 (TCP).</p>
 
 </div>
@@ -131,8 +131,8 @@ Nether und End mit ihren Bossen und Java-Edition-Spieler auf demselben Server.</
 
 <h2>Warum BetterPMMP</h2>
 <div class="grid">
-  <div class="card"><h3>Vanilla-Gameplay</h3><p>Mob-KI mit Wegfindung, Nether und End mit ihren Bossen, Weltgenerierung wie ab 1.18 mit Höhlenbiomen, Redstone und die Vanilla-Befehle.</p></div>
-  <div class="card"><h3>Flüssige Performance</h3><p>Chunks werden in eigenen Threads erzeugt und verschickt. Der Hauptthread bleibt frei fürs Spiel, auch bei vielen Spielern.</p></div>
+  <div class="card"><h3>Vanilla-Gameplay</h3><p>Mob-KI mit Wegfindung, Nether mit 3D-Biomen und End mit ihren Bossen, Weltgenerierung wie ab 1.18 mit Höhlenbiomen, Redstone und die Vanilla-Befehle.</p></div>
+  <div class="card"><h3>Flüssige Performance</h3><p>Multithreading, wo es zählt: Weltgenerierung, Chunk-Versand und die Wegfindung der Mobs laufen in eigenen Threads. Der Hauptthread bleibt frei für den Spiel-Tick, auch bei vielen Spielern und Mobs.</p></div>
   <div class="card"><h3>Java und Bedrock zusammen</h3><p>Java-Edition-Spieler kommen über die eingebaute Bridge in dieselbe Welt, ohne zusätzliche Einrichtung.</p></div>
   <div class="card"><h3>Plugins laufen weiter</h3><p>BetterPMMP behält die PocketMine-MP-5-API, deine Plugins funktionieren wie vorher.</p></div>
 </div>
@@ -150,11 +150,11 @@ Nether und End mit ihren Bossen und Java-Edition-Spieler auf demselben Server.</
 <h2>Installation</h2>
 <ol>
   <li>Die PHP-Binary für dein System von <a href="https://github.com/pmmp/PHP-Binaries/releases">pmmp/PHP-Binaries</a> herunterladen und in einen leeren Ordner entpacken.</li>
-  <li><code>BetterPMMP-5.84.phar</code> aus den <a href="https://github.com/BetterPMMP/Betterpmmp/releases">Releases</a> herunterladen und neben den Ordner <code>bin</code> legen.</li>
+  <li><code>BetterPMMP-5.85.phar</code> aus den <a href="https://github.com/BetterPMMP/Betterpmmp/releases">Releases</a> herunterladen und neben den Ordner <code>bin</code> legen.</li>
   <li>Den Server starten:</li>
 </ol>
-<pre>./bin/php7/bin/php BetterPMMP-5.84.phar        # Linux / macOS
-bin\php\php.exe BetterPMMP-5.84.phar           # Windows</pre>
+<pre>./bin/php7/bin/php BetterPMMP-5.85.phar        # Linux / macOS
+bin\php\php.exe BetterPMMP-5.85.phar           # Windows</pre>
 <p>Bedrock-Spieler verbinden sich über Port 19132 (UDP), Java-Spieler über Port 25565 (TCP).</p>
 </div>
 

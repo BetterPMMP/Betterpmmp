@@ -50,6 +50,13 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
 
+## Neu in 5.85
+
+| System | Stand |
+|---|---|
+| 3D-Biome im Nether | 🟡 offline geprüft, im Spiel ungetestet – Das Nether-Klima (Temperatur, Feuchte) wird wie in Vanilla in 3D abgetastet: Über einem Karmesinwald kann eine Höhle Nether-Ödland sein, darüber ein Wirrwald. Biome stehen pro 4×4×4-Zelle im Chunk (so liest sie der Client), Boden (Nyzel, Seelenerde, Basalt), Rauheit des Geländes, Pflanzen, Pilzbäume und Trauerranken richten sich nach dem Biom an ihrer Höhe. Bereits erzeugte Nether-Chunks bleiben wie sie sind; an der Grenze zu neuen Chunks können Biome wechseln |
+| Wegfindung in eigenen Threads | 🟡 offline geprüft (gleicher Weg wie im Hauptthread), im Spiel ungetestet – Die A*-Suche der Mobs läuft jetzt in den Async-Workern parallel zum Welt-Tick. Der Hauptthread kopiert nur die Blöcke um Mob und Ziel (wenige Unterchunks) und bekommt den Weg ein bis zwei Ticks später zurück. Bis zu 64 Suchen gleichzeitig, größere Bereiche und volle Warteschlangen wie früher im Hauptthread. Schalter: `mob-ai.async-pathfinding` in `betterpmmp.yml`. Fällt eine Suche im Worker mit einem Fehler aus, wechselt der Server mit einer Warnung zurück auf den Hauptthread |
+
 ## Neu in 5.84
 
 | System | Stand |
