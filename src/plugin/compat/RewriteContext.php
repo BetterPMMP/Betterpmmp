@@ -423,7 +423,7 @@ final class RewriteContext{
 				$visibility = $k;
 			}
 		}
-		return ["name" => $name, "params" => $params, "close" => $close, "returnType" => $returnType, "body" => $body, "visibility" => $visibility];
+		return ["name" => $name, "nameIndex" => $j, "open" => $open, "params" => $params, "close" => $close, "returnType" => $returnType, "body" => $body, "visibility" => $visibility];
 	}
 
 	/**

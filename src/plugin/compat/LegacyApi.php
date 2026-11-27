@@ -72,7 +72,7 @@ use const PHP_BINARY;
 final class LegacyApi{
 
 	/** bump when the rewriter changes, so cached copies are rebuilt */
-	private const VERSION = 7;
+	private const VERSION = 8;
 
 	/** classes that only moved or were renamed: old name (lowercase) => new name */
 	private const CLASSES = [

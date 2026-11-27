@@ -63,7 +63,7 @@ final class PluginLoadabilityChecker{
 		}
 
 		$ambiguousVersions = ApiVersion::checkAmbiguousVersions($description->getCompatibleApis());
-		if(count($ambiguousVersions) > 0){
+		if(count($ambiguousVersions) > 0 && !\pocketmine\plugin\compat\LegacyApi::isLegacy($description)){ //BetterPMMP: old plugins listed every version they were tested with
 			return KnownTranslationFactory::pocketmine_plugin_ambiguousMinAPI(implode(", ", $ambiguousVersions));
 		}
 

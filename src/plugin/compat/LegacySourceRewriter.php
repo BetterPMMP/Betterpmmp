@@ -23,6 +23,9 @@ use function strrpos;
 use function strtolower;
 use function substr;
 use function trim;
+use function var_export;
+use function is_a;
+use function str_replace;
 use const T_ABSTRACT;
 use const T_CLASS;
 use const T_COMMENT;
@@ -166,6 +169,25 @@ final class LegacySourceRewriter{
 				$ref = $this->findReference($class["name"], $method["name"]);
 				if($ref === null){
 					continue;
+				}
+				if($ref->isFinal()){
+					// PocketMine-MP 5 made the method final. Entity::close() has a hook for subclasses: onDispose()
+					$isClose = strtolower($ref->getName()) === "close" && is_a($ref->getDeclaringClass()->getName(), \pocketmine\entity\Entity::class, true);
+					$newName = $isClose ? "onDispose" : $method["name"] . "Legacy";
+					$replace[$method["nameIndex"]] = $newName;
+					if($isClose && $method["body"] !== null && ($end = $ctx->matching($method["body"])) !== null){
+						for($k = $method["body"]; $k < $end; ++$k){
+							if(strtolower($ctx->tokens[$k]->text) === "close" && ($p = $ctx->prev($k)) !== null && $ctx->tokens[$p]->id === T_DOUBLE_COLON && ($q = $ctx->prev($p)) !== null && strtolower($ctx->tokens[$q]->text) === "parent"){
+								$replace[$k] = "onDispose";
+							}
+						}
+					}
+					$this->changes[] = $file . ": " . $class["short"] . "::" . $method["name"] . "() is final in PocketMine-MP 5, renamed to $newName()";
+					$ref = $isClose ? $this->findReference($class["name"], "onDispose") : null;
+					if($ref === null){
+						continue;
+					}
+					$method["name"] = $newName;
 				}
 				$this->fixSignature($ctx, $method, $ref, $replace, $after, $file . ": " . $class["short"] . "::" . $method["name"] . "()");
 			}
@@ -488,8 +510,55 @@ final class LegacySourceRewriter{
 		}
 		$refParams = $ref->getParameters();
 		$inject = [];
+		// fewer parameters than the PocketMine method: PHP needs all of them. Missing ones at the end are added
+		// (Command::testPermission($target) -> + ?string $permission = null); when the types do not line up from
+		// the start, they are missing at the front (API 3 Generator::generateChunk($x, $z) -> ($world, $x, $z)).
+		$shift = 0;
+		$childCount = count($method["params"]);
+		$hasVariadic = false;
+		foreach($method["params"] as $param){
+			$hasVariadic = $hasVariadic || $param["variadic"];
+		}
+		if($childCount < count($refParams) && !$hasVariadic){
+			// which alignment fits better: missing parameters at the end or at the front? (names and types)
+			$score = function(int $offset) use ($ctx, $method, $refParams) : int{
+				$score = 0;
+				foreach($method["params"] as $index => $param){
+					$refParam = $refParams[$index + $offset];
+					if(strtolower(substr($ctx->tokens[$param["var"]]->text, 1)) === strtolower($refParam->getName())){
+						$score += 2;
+					}
+					if($param["type"] !== null && $refParam->hasType()){
+						$childType = strtolower(ltrim(LegacyApi::modernClass(ltrim($ctx->resolve(ltrim(trim($ctx->text($param["type"][0], $param["type"][1])), "?")), "\\")), "\\"));
+						$refType = $refParam->getType();
+						$score += ($refType instanceof \ReflectionNamedType && strtolower($refType->getName()) === $childType) ? 1 : -10;
+					}
+				}
+				return $score;
+			};
+			$fromStart = $score(0) >= $score(count($refParams) - $childCount);
+			if($fromStart){
+				$extra = [];
+				for($k = $childCount; $k < count($refParams); ++$k){
+					$extra[] = self::paramToString($refParams[$k], "");
+				}
+				$replace[$method["close"]] = ($childCount > 0 ? ", " : "") . implode(", ", $extra) . ")";
+			}else{
+				$shift = count($refParams) - $childCount;
+				$extra = [];
+				for($k = 0; $k < $shift; ++$k){
+					$extra[] = self::paramToString($refParams[$k], "__");
+				}
+				$after[$method["open"]] = ($after[$method["open"]] ?? "") . implode(", ", $extra) . ($childCount > 0 ? ", " : "");
+				if(strtolower($ref->getDeclaringClass()->getName()) === "pocketmine\\world\\generator\\generator" && isset($refParams[0]) && $refParams[0]->getName() === "world"){
+					// API 3 generators kept the world from init() in $this->level
+					$inject[] = '$this->level = $__world; if(!isset($this->__betterpmmpInit)){ $this->__betterpmmpInit = true; if(method_exists($this, "init")){ $this->init($__world, $this->random ?? new \pocketmine\utils\Random($this->seed ?? 0)); } }';
+				}
+			}
+			$this->changes[] = "$where: missing parameters added";
+		}
 		foreach($method["params"] as $index => $param){
-			$refParam = $refParams[$index] ?? null;
+			$refParam = $refParams[$index + $shift] ?? null;
 			if($refParam === null){
 				// extra parameter (API 3: Task::onRun(int $currentTick), AsyncTask::onCompletion(Server $server))
 				if(!$param["default"] && !$param["variadic"]){
@@ -536,6 +605,25 @@ final class LegacySourceRewriter{
 		if(count($inject) > 0 && $method["body"] !== null){
 			$after[$method["body"]] = ($after[$method["body"]] ?? "") . " " . implode(" ", $inject);
 		}
+	}
+
+	private static function paramToString(\ReflectionParameter $param, string $prefix) : string{
+		$text = "";
+		if($param->hasType()){
+			$text .= (self::typeToString($param->getType(), $param->getDeclaringClass()?->getName() ?? "") ?? "") . " ";
+		}
+		$text .= ($param->isVariadic() ? "..." : "") . "$" . $prefix . $param->getName();
+		if($param->isDefaultValueAvailable()){
+			if($param->isDefaultValueConstant()){
+				$constant = (string) $param->getDefaultValueConstantName();
+				$text .= " = \\" . ltrim(str_replace("self::", ($param->getDeclaringClass()?->getName() ?? "") . "::", $constant), "\\");
+			}else{
+				$text .= " = " . var_export($param->getDefaultValue(), true);
+			}
+		}elseif(!$param->isVariadic() && $prefix !== ""){
+			// a required parameter in front stays required
+		}
+		return $text;
 	}
 
 	private static function typeToString(?\ReflectionType $type, string $declaringClass) : ?string{
