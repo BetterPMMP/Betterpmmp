@@ -507,6 +507,22 @@ class Item implements \JsonSerializable{
 		return $this->identifier->getTypeId();
 	}
 
+	/**
+	 * BetterPMMP: the numeric item ID of API 3 and 4, for old plugins (Item::getId() == 276).
+	 * @deprecated use getTypeId() or compare with VanillaItems
+	 */
+	public function getId() : int{
+		return \pocketmine\plugin\compat\LegacyIds::itemId($this);
+	}
+
+	/**
+	 * BetterPMMP: the meta value of API 3 and 4 (damage of tools, colour of dyes ...), for old plugins.
+	 * @deprecated
+	 */
+	public function getMeta() : int{
+		return \pocketmine\plugin\compat\LegacyIds::itemMeta($this);
+	}
+
 	final public function getStateId() : int{
 		return morton2d_encode($this->identifier->getTypeId(), $this->computeStateData());
 	}

@@ -163,6 +163,22 @@ class Block{
 	}
 
 	/**
+	 * BetterPMMP: the numeric block ID of API 3 and 4, for old plugins (Block::getId() == 1 for stone).
+	 * @deprecated use getTypeId() or compare with VanillaBlocks
+	 */
+	public function getId() : int{
+		return \pocketmine\plugin\compat\LegacyIds::blockId($this);
+	}
+
+	/**
+	 * BetterPMMP: the meta value of API 3 and 4 (colour of wool, wood type of logs ...), for old plugins.
+	 * @deprecated
+	 */
+	public function getMeta() : int{
+		return \pocketmine\plugin\compat\LegacyIds::blockMeta($this);
+	}
+
+	/**
 	 * @internal
 	 *
 	 * Returns the full blockstate ID of this block. This is a compact way of representing a blockstate used to store

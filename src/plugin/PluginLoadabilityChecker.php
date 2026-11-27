@@ -58,7 +58,7 @@ final class PluginLoadabilityChecker{
 			}
 		}
 
-		if(!ApiVersion::isCompatible($this->apiVersion, $description->getCompatibleApis())){
+		if(!ApiVersion::isCompatible($this->apiVersion, $description->getCompatibleApis()) && !\pocketmine\plugin\compat\LegacyApi::isLegacy($description)){ //BetterPMMP: API 3 and 4 plugins load in compatibility mode
 			return KnownTranslationFactory::pocketmine_plugin_incompatibleAPI(implode(", ", $description->getCompatibleApis()));
 		}
 

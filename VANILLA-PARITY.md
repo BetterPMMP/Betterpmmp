@@ -50,6 +50,12 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
 
+## Neu in 5.86
+
+| System | Stand |
+|---|---|
+| Multi-API: Plugins für API 3 und 4 | 🟡 offline geprüft, mit echten alten Plugins ungetestet – Plugins, deren `plugin.yml` nur API 3.x oder 4.x verlangt, werden trotzdem geladen („compatibility mode“ im Log). Ihr Code wird beim Start nach `plugin_cache/` kopiert und angepasst: fehlende Rückgabetypen (`onEnable() : void`, `Task::onRun() : void` …) werden aus der PocketMine-Klasse übernommen, zusätzliche Parameter (`onRun(int $currentTick)`, `onCompletion(Server $server)`) werden optional und mit dem richtigen Wert gefüllt, zu kleine Sichtbarkeit wird angehoben, unpassende Parametertypen entfernt. Umgeschrieben werden außerdem `getLevel()`→`getWorld()`, `getDefaultLevel()`, `getLevelByName()`, `Level::getName()`→`getFolderName()`, `Server::getPlayer()`→`getPlayerByPrefix()`, `addTitle()`→`sendTitle()`, `setCancelled()`→`cancel()/uncancel()`, `Item::get()`/`Block::get()` und `Item::DIAMOND_SWORD`-Konstanten. Verschobene Klassen bekommen Aliase (`pocketmine\Player`, `pocketmine\level\Level`, `pocketmine\event\level\*`, `pocketmine\tile\*` …), entfernte Klassen gibt es wieder: `ItemFactory`, `BlockFactory`, `ItemIds`, `BlockLegacyIds`, `PluginIdentifiableCommand`. `Item::getId()/getMeta()` und `Block::getId()/getMeta()` liefern die alten Zahlen-IDs (über die Tabellen des Welt-Konverters, geprüft: Diamantschwert 276, rote Wolle 35:14, Lapis 351:4, Birkenstamm 17:2). Jede umgeschriebene Klasse wird vorher in einem eigenen PHP-Prozess geladen: Lässt PHP sie trotzdem nicht zu, wird nur dieses Plugin mit Fehlermeldung übersprungen statt den Server abstürzen zu lassen. Was geändert wurde, steht in `plugin_cache/<Plugin>/changes.txt`. Grenzen: Plugins, die tief in geänderte Interna greifen (Pakete, NBT, Chunks, Entity-Erzeugung von API 3, Spielmodus als Zahl), können weiterhin Fehler werfen. Schalter: `plugins.legacy-api` in `betterpmmp.yml` |
+
 ## Neu in 5.85
 
 | System | Stand |

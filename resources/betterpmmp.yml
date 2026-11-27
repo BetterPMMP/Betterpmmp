@@ -49,6 +49,15 @@ mob-ai:
   async-pathfinding: true
 
 # ---------------------------------------------------------------
+# Plugins
+# ---------------------------------------------------------------
+plugins:
+  # Multi-API: Plugins für API 3.x und 4.x trotzdem laden. Ihr Code wird beim Start in plugin_cache/
+  # angepasst (Rückgabetypen, getLevel -> getWorld, Item::get mit Zahlen-IDs ...). Was geändert wurde,
+  # steht in plugin_cache/<Plugin>/changes.txt. false = nur Plugins für API 5 laden
+  legacy-api: true
+
+# ---------------------------------------------------------------
 # Karten (Fehlersuche)
 # ---------------------------------------------------------------
 # Wenn Spieler beim Erstellen oder Halten einer Karte rausfliegen:

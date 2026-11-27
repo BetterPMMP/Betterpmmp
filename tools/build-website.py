@@ -5,8 +5,8 @@ import html, os, sys
 OUT = sys.argv[1]
 BASE = "https://betterpmmp.github.io/Betterpmmp/"
 REPO = "https://github.com/BetterPMMP/Betterpmmp"
-VERSION = "5.85-vanilla-beta.1"
-PHAR = "BetterPMMP-5.85.phar"
+VERSION = "5.86-vanilla-beta.1"
+PHAR = "BetterPMMP-5.86.phar"
 
 GH_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>'
 
@@ -200,10 +200,10 @@ def features(lang):
 
 
 COMPARE = {
-    "en": [("Plugin API (PocketMine-MP 5)", "✓", "✓"), ("Vanilla world generation (1.18+)", "✓", "flat / simple"), ("Structures (villages, strongholds, cities …)", "✓", "–"),
+    "en": [("Plugin API (PocketMine-MP 5)", "✓", "✓"), ("Old plugins (API 3 and 4)", "✓ compatibility mode", "–"), ("Vanilla world generation (1.18+)", "✓", "flat / simple"), ("Structures (villages, strongholds, cities …)", "✓", "–"),
            ("Redstone", "✓", "–"), ("Mob AI and natural spawning", "✓", "–"), ("Nether and End with bosses", "✓", "–"),
            ("Vanilla commands and game rules", "✓", "few"), ("Java Edition players", "✓ built in", "–"), ("Custom items, blocks, creatures", "✓ YAML", "plugin needed")],
-    "de": [("Plugin-API (PocketMine-MP 5)", "✓", "✓"), ("Vanilla-Weltgenerierung (ab 1.18)", "✓", "flach / einfach"), ("Strukturen (Dörfer, Festungen, Städte …)", "✓", "–"),
+    "de": [("Plugin-API (PocketMine-MP 5)", "✓", "✓"), ("Alte Plugins (API 3 und 4)", "✓ Kompatibilitätsmodus", "–"), ("Vanilla-Weltgenerierung (ab 1.18)", "✓", "flach / einfach"), ("Strukturen (Dörfer, Festungen, Städte …)", "✓", "–"),
            ("Redstone", "✓", "–"), ("Mob-KI und natürliches Spawnen", "✓", "–"), ("Nether und End mit Bossen", "✓", "–"),
            ("Vanilla-Befehle und Spielregeln", "✓", "wenige"), ("Java-Edition-Spieler", "✓ eingebaut", "–"), ("Eigene Items, Blöcke, Wesen", "✓ YAML", "Plugin nötig")],
 }
@@ -346,6 +346,9 @@ mob-ai:
   pathfinding-ms-per-tick: 6   # main-thread budget for pathfinding
   async-pathfinding: true      # pathfinding in worker threads
 
+plugins:
+  legacy-api: true             # load plugins for API 3 and 4
+
 hand-swap:
   double-sneak: true           # sneak twice to swap hands'''
 CFG_DE = '''graphics:
@@ -364,6 +367,9 @@ mob-spawning:
 mob-ai:
   pathfinding-ms-per-tick: 6   # Zeitbudget im Hauptthread für Wegfindung
   async-pathfinding: true      # Wegfindung in eigenen Threads
+
+plugins:
+  legacy-api: true             # Plugins für API 3 und 4 laden
 
 hand-swap:
   double-sneak: true           # zweimal schleichen tauscht die Hände'''
@@ -735,7 +741,7 @@ public function onDeath(EntityDeathEvent $event) : void{
 def plugins(lang):
     if lang == "en":
         return f'''<h1>Plugin development</h1>
-<p class="intro">BetterPMMP keeps the plugin API of PocketMine-MP 5 (API 5.51.0). Every plugin written for PocketMine-MP 5 runs on BetterPMMP, and everything you learn here also works there. On top of that, BetterPMMP gives plugins access to game rules, scoreboards, target selectors and structures.</p>
+<p class="intro">BetterPMMP keeps the plugin API of PocketMine-MP 5 (API 5.51.0). Every plugin written for PocketMine-MP 5 runs on BetterPMMP, and everything you learn here also works there. Old plugins for API 3 and 4 load in a compatibility mode. On top of that, BetterPMMP gives plugins access to game rules, scoreboards, target selectors and structures.</p>
 <h2>What you need</h2>
 <ul>
 <li>A BetterPMMP server for testing (see <a href="install.html">Installation</a>).</li>
@@ -769,6 +775,18 @@ def plugins(lang):
 <h3>Structures</h3>
 <p><code>pocketmine\\world\\structure\\McStructure</code> reads, writes and places <code>.mcstructure</code> files, the format of the structure block and of Bedrock add-ons.</p>
 {code(STRUCT, "php")}
+<h2>Old plugins (API 3 and 4)</h2>
+<p>BetterPMMP also loads plugins whose <code>plugin.yml</code> asks for <code>api: 3.0.0</code> or <code>4.0.0</code>. They run in a compatibility mode, you see it in the log:</p>
+{code("[Server thread/NOTICE]: Loading OldPlugin v1.0.0 (API 3.0.0) in compatibility mode")}
+<p>On start their code is copied to <code>plugin_cache/</code> and adapted automatically:</p>
+<ul>
+<li>Return types and parameters PHP 8 requires (<code>onEnable() : void</code>, <code>Task::onRun(int $currentTick)</code>, <code>AsyncTask::onCompletion(Server $server)</code>).</li>
+<li>Renamed methods: <code>getLevel()</code> → <code>getWorld()</code>, <code>getDefaultLevel()</code>, <code>getLevelByName()</code>, <code>Server::getPlayer()</code>, <code>addTitle()</code>, <code>setCancelled()</code>.</li>
+<li>Numeric IDs: <code>Item::get(276)</code>, <code>ItemFactory</code>, <code>BlockFactory</code>, <code>ItemIds</code>, <code>BlockLegacyIds</code>, <code>getId()</code> and <code>getMeta()</code> work again.</li>
+<li>Moved classes: <code>pocketmine\\Player</code>, <code>pocketmine\\level\\Level</code>, <code>pocketmine\\event\\level\\*</code> and others point to their new names.</li>
+</ul>
+<p>Every change is listed in <code>plugin_cache/&lt;Plugin&gt;/changes.txt</code>. If PHP still refuses a class, only that plugin is skipped with an error, the server keeps running.</p>
+<div class="note warn"><p>Simple plugins (commands, events, messages, forms, configs, tasks) usually work. Plugins that rely deeply on internals that changed (packets, NBT, chunks, entity spawning of API 3) can still fail. For your own plugins, porting them to API 5 is still the best way. Turn the compatibility mode off with <code>plugins.legacy-api: false</code> in <code>betterpmmp.yml</code>.</p></div>
 <h2>Learn more</h2>
 <ul>
 <li><a href="https://doc.pmmp.io/">PocketMine-MP documentation</a>: plugin basics, events, forms, tasks.</li>
@@ -778,7 +796,7 @@ def plugins(lang):
 <div class="note"><p>Questions or ideas for new APIs? Open an <a href="{REPO}/issues">issue on GitHub</a>.</p></div>
 '''
     return f'''<h1>Plugins entwickeln</h1>
-<p class="intro">BetterPMMP behält die Plugin-API von PocketMine-MP 5 (API 5.51.0). Jedes Plugin für PocketMine-MP 5 läuft auf BetterPMMP, und alles, was du hier lernst, funktioniert auch dort. Zusätzlich gibt BetterPMMP Plugins Zugriff auf Spielregeln, Scoreboards, Zielauswahl und Strukturen.</p>
+<p class="intro">BetterPMMP behält die Plugin-API von PocketMine-MP 5 (API 5.51.0). Jedes Plugin für PocketMine-MP 5 läuft auf BetterPMMP, und alles, was du hier lernst, funktioniert auch dort. Alte Plugins für API 3 und 4 laufen in einem Kompatibilitätsmodus. Zusätzlich gibt BetterPMMP Plugins Zugriff auf Spielregeln, Scoreboards, Zielauswahl und Strukturen.</p>
 <h2>Was du brauchst</h2>
 <ul>
 <li>Einen BetterPMMP-Server zum Testen (siehe <a href="install.html">Installation</a>).</li>
@@ -812,6 +830,18 @@ def plugins(lang):
 <h3>Strukturen</h3>
 <p><code>pocketmine\\world\\structure\\McStructure</code> liest, schreibt und setzt <code>.mcstructure</code>-Dateien, das Format des Strukturblocks und der Bedrock-Add-ons.</p>
 {code(STRUCT, "php")}
+<h2>Alte Plugins (API 3 und 4)</h2>
+<p>BetterPMMP lädt auch Plugins, deren <code>plugin.yml</code> <code>api: 3.0.0</code> oder <code>4.0.0</code> verlangt. Sie laufen in einem Kompatibilitätsmodus, das siehst du im Log:</p>
+{code("[Server thread/NOTICE]: Loading OldPlugin v1.0.0 (API 3.0.0) in compatibility mode")}
+<p>Beim Start wird ihr Code nach <code>plugin_cache/</code> kopiert und automatisch angepasst:</p>
+<ul>
+<li>Rückgabetypen und Parameter, die PHP 8 verlangt (<code>onEnable() : void</code>, <code>Task::onRun(int $currentTick)</code>, <code>AsyncTask::onCompletion(Server $server)</code>).</li>
+<li>Umbenannte Methoden: <code>getLevel()</code> → <code>getWorld()</code>, <code>getDefaultLevel()</code>, <code>getLevelByName()</code>, <code>Server::getPlayer()</code>, <code>addTitle()</code>, <code>setCancelled()</code>.</li>
+<li>Zahlen-IDs: <code>Item::get(276)</code>, <code>ItemFactory</code>, <code>BlockFactory</code>, <code>ItemIds</code>, <code>BlockLegacyIds</code>, <code>getId()</code> und <code>getMeta()</code> funktionieren wieder.</li>
+<li>Verschobene Klassen: <code>pocketmine\\Player</code>, <code>pocketmine\\level\\Level</code>, <code>pocketmine\\event\\level\\*</code> und andere zeigen auf ihre neuen Namen.</li>
+</ul>
+<p>Jede Änderung steht in <code>plugin_cache/&lt;Plugin&gt;/changes.txt</code>. Lässt PHP eine Klasse trotzdem nicht zu, wird nur dieses Plugin mit Fehlermeldung übersprungen, der Server läuft weiter.</p>
+<div class="note warn"><p>Einfache Plugins (Befehle, Events, Nachrichten, Formulare, Configs, Tasks) laufen meistens. Plugins, die tief in geänderte Interna greifen (Pakete, NBT, Chunks, Entity-Erzeugung von API 3), können weiterhin Fehler werfen. Eigene Plugins auf API 5 umzustellen bleibt der beste Weg. Abschalten mit <code>plugins.legacy-api: false</code> in <code>betterpmmp.yml</code>.</p></div>
 <h2>Weiterlernen</h2>
 <ul>
 <li><a href="https://doc.pmmp.io/">PocketMine-MP-Dokumentation</a>: Plugin-Grundlagen, Events, Formulare, Tasks.</li>
@@ -867,7 +897,7 @@ HUB_BODY = (
     '<section class="hero small"><div class="wrap">'
     f'<span class="badge">{t(f"{n} plugins", f"{n} Plugins")}</span>'
     f'<h1>{t("Plugins for <b>BetterPMMP</b>", "Plugins für <b>BetterPMMP</b>")}</h1>'
-    f'<p class="lead">{t("Download plugins for your server, or share your own. Every plugin for PocketMine-MP 5 also runs on BetterPMMP.", "Lade Plugins für deinen Server herunter oder teile deine eigenen. Jedes Plugin für PocketMine-MP 5 läuft auch auf BetterPMMP.")}</p>'
+    f'<p class="lead">{t("Download plugins for your server, or share your own. Every plugin for PocketMine-MP 5 runs on BetterPMMP, and many old ones for API 3 and 4 too.", "Lade Plugins für deinen Server herunter oder teile deine eigenen. Jedes Plugin für PocketMine-MP 5 läuft auf BetterPMMP, viele alte für API 3 und 4 auch.")}</p>'
     f'<div class="btns"><a class="btn main" href="submit.html">{t("Submit a plugin", "Plugin einreichen")}</a><a class="btn" href="plugins.html">{t("Write a plugin", "Plugin schreiben")}</a></div>'
     '</div></section>'
     '<section style="padding-top:8px"><div class="wrap">'
