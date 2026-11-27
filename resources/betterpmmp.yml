@@ -104,3 +104,4 @@ java-bridge:
   real-light: true                  # echtes Licht (Sonne, Fackeln, Höhlen) an Java-Spieler schicken - wichtig für Shader
   build-log: true                   # schreibt jeden Java-Klick beim Bauen ins Log (Fehlersuche), false = aus
   fast-build-fix: true              # false = gesetzte Blöcke wie im Original-ViaBedrock bestätigen (falls schnelles Bauen Probleme macht)
+  all-java-versions: true           # Java 1.7.2 bis neueste: kleine Übersetzungsfehler alter Versionen kicken den Spieler nicht

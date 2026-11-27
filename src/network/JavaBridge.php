@@ -162,12 +162,17 @@ final class JavaBridge{
 			"--proxy-online-mode", $online ? "true" : "false",
 			"--auth-method", "NONE",
 		];
+		if(BetterPMMPConfig::flag("java-bridge", "all-java-versions", true)){
+			//every Java version from 1.7.2 to the newest joins (ViaVersion, ViaBackwards, ViaRewind); a packet an older
+			//client cannot translate is dropped instead of kicking the player
+			array_push(self::$command, "--ignore-protocol-translation-errors", "true", "--suppress-client-protocol-errors", "true");
+		}
 		if(!self::launch()){
 			$logger->error("[Java-Bridge] ViaProxy konnte nicht gestartet werden");
 			return;
 		}
 		self::$active = true;
-		$logger->info("[Java-Bridge] Java-Spieler können jetzt joinen: Port $port (Log: java-bridge/proxy.log)");
+		$logger->info("[Java-Bridge] Java-Spieler (Java 1.7.2 bis neueste Version) können jetzt joinen: Port $port (Log: java-bridge/proxy.log)");
 		if(!$online){
 			$logger->warning("[Java-Bridge] online-mode ist aus: Java-Spieler können jeden Namen benutzen.");
 		}
