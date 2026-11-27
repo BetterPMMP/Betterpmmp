@@ -1074,9 +1074,14 @@ class Server{
 			$loadErrorCount = 0;
 			$this->pluginManager->loadPlugins($this->pluginPath, $loadErrorCount);
 			if($loadErrorCount > 0){
-				$this->logger->emergency($this->language->translate(KnownTranslationFactory::pocketmine_plugin_someLoadErrors()));
-				$this->forceShutdownExit();
-				return;
+				//BetterPMMP: a plugin that does not load is skipped (see the errors above) instead of stopping the server;
+				//plugins.stop-on-load-error: true in betterpmmp.yml restores the PocketMine behaviour
+				if(\pocketmine\BetterPMMPConfig::flag("plugins", "stop-on-load-error", false)){
+					$this->logger->emergency($this->language->translate(KnownTranslationFactory::pocketmine_plugin_someLoadErrors()));
+					$this->forceShutdownExit();
+					return;
+				}
+				$this->logger->warning("$loadErrorCount plugin(s) could not be loaded, see the errors above. The server keeps running without them.");
 			}
 			if(!$this->enablePlugins(PluginEnableOrder::STARTUP)){
 				$this->logger->emergency($this->language->translate(KnownTranslationFactory::pocketmine_plugin_someEnableErrors()));

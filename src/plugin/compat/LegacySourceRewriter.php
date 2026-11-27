@@ -128,8 +128,26 @@ final class LegacySourceRewriter{
 		/** @var array<int, string> $after token index => text inserted after it */
 		$after = [];
 
+		// old "$text{0}" offsets: PHP 8 only knows "$text[0]"
+		foreach($tokens as $i => $tok){
+			if($tok->text !== "{" || $i === 0){
+				continue;
+			}
+			$before = $tokens[$i - 1];
+			$isOffset = $before->id === T_VARIABLE || $before->text === "]"
+				|| ($before->id === T_STRING && ($p = $ctx->prev($i - 1)) !== null && in_array($tokens[$p]->id, [T_OBJECT_OPERATOR, T_NULLSAFE_OBJECT_OPERATOR], true));
+			if($isOffset && ($close = $ctx->matching($i)) !== null){
+				$replace[$i] = "[";
+				$replace[$close] = "]";
+				$this->changes[] = "$file: {} offset -> []";
+			}
+		}
+
 		// 1. signatures of methods that override PocketMine methods
 		foreach($ctx->classes as $class){
+			if(($class["kind"] ?? "") === "class"){
+				$this->fixClassBody($ctx, $class, $replace, $after, $file);
+			}
 			foreach($class["methods"] as $method){
 				// "function x() : bool" that can end without a return: PHP 8 throws a TypeError there
 				if($method["returnType"] && $method["body"] !== null && strtolower($this->returnTypeText($ctx, $method["close"], $method["body"])) === "bool"){
@@ -296,6 +314,91 @@ final class LegacySourceRewriter{
 		}
 		$first = $ctx->next($open);
 		return $first !== null && in_array($ctx->tokens[$first]->id, [\T_RETURN, \T_THROW], true);
+	}
+
+	/**
+	 * Class-level fixes: events that implement Cancellable get the trait PocketMine-MP 5 needs, and properties
+	 * that a PocketMine parent class declares with a type get the same type.
+	 *
+	 * @param array<string, mixed> $class
+	 * @param array<int, string> $replace
+	 * @param array<int, string> $after
+	 */
+	private function fixClassBody(RewriteContext $ctx, array $class, array &$replace, array &$after, string $file) : void{
+		$declared = [];
+		foreach($class["methods"] as $method){
+			$declared[strtolower($method["name"])] = true;
+		}
+		foreach($class["interfaces"] as $interface){
+			if(strtolower(LegacyApi::modernClass($interface)) === "pocketmine\\event\\cancellable" && !isset($declared["iscancelled"])){
+				$after[$class["open"]] = ($after[$class["open"]] ?? "") . " use \\pocketmine\\event\\CancellableTrait;";
+				$this->changes[] = "$file: " . $class["short"] . " uses CancellableTrait";
+				break;
+			}
+		}
+		foreach($class["properties"] as $property){
+			if($property["multi"]){
+				continue;
+			}
+			$ref = $this->findPropertyReference($class["name"], $property["name"]);
+			if($ref === null || !$ref->hasType() || $ref->isStatic() !== $property["static"]){
+				continue;
+			}
+			$type = self::typeToString($ref->getType(), $ref->getDeclaringClass()->getName());
+			if($type === null){
+				continue;
+			}
+			if($property["type"] !== null){
+				[$ts, $te] = $property["type"];
+				$replace[$ts] = $type;
+				for($k = $ts + 1; $k <= $te; ++$k){
+					$replace[$k] = "";
+				}
+			}else{
+				$after[$property["modifier"]] = ($after[$property["modifier"]] ?? "") . " " . $type;
+			}
+			$refType = $ref->getType();
+			if($property["default"] !== null && $refType !== null && !$refType->allowsNull() && strtolower(trim($ctx->text($property["default"][0] + 1, $property["default"][1]))) === "null"){
+				for($k = $property["default"][0]; $k <= $property["default"][1]; ++$k){
+					$replace[$k] = "";
+				}
+			}
+			$this->changes[] = "$file: " . $class["short"] . "::$" . $property["name"] . " typed $type";
+		}
+	}
+
+	private function findPropertyReference(string $class, string $property) : ?\ReflectionProperty{
+		$seen = [];
+		$current = $class;
+		while($current !== null){
+			$key = strtolower(ltrim($current, "\\"));
+			if(isset($seen[$key])){
+				return null;
+			}
+			$seen[$key] = true;
+			if(isset($this->classes[$key])){
+				$current = $this->classes[$key]["parent"];
+				continue;
+			}
+			$modern = LegacyApi::modernClass($current);
+			if(!str_starts_with(strtolower($modern), "pocketmine\\")){
+				return null;
+			}
+			try{
+				if(!class_exists($modern)){
+					return null;
+				}
+				$reflection = new \ReflectionClass($modern);
+				if(!$reflection->hasProperty($property)){
+					return null;
+				}
+				$ref = $reflection->getProperty($property);
+				return $ref->isPrivate() ? null : $ref;
+			}catch(\Throwable){
+				return null;
+			}
+		}
+		return null;
 	}
 
 	/** Whether the class declaration starting at $start already has an attribute right before it. */

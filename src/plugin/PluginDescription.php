@@ -166,7 +166,14 @@ class PluginDescription{
 
 		$this->srcNamespacePrefix = $plugin[self::KEY_SRC_NAMESPACE_PREFIX] ?? "";
 
-		$this->api = array_map("\strval", (array) ($plugin[self::KEY_API] ?? []));
+		$this->api = [];
+		foreach((array) ($plugin[self::KEY_API] ?? []) as $api){
+			foreach(explode(",", (string) $api) as $part){ //BetterPMMP: old plugins wrote api: "3.0.0, 4.0.0"
+				if(trim($part) !== ""){
+					$this->api[] = trim($part);
+				}
+			}
+		}
 		//BetterPMMP: old plugins wrote "3.9" or "3" for 3.9.0 / 3.0.0
 		$this->api = array_map(fn(string $v) : string => preg_match('/^\d+$/', $v) === 1 ? "$v.0.0" : (preg_match('/^\d+\.\d+$/', $v) === 1 ? "$v.0" : $v), $this->api);
 		$legacy = \pocketmine\plugin\compat\LegacyApi::isLegacy($this);
