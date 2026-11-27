@@ -1,0 +1,18 @@
+# Generator preset values are validated by PlotGenerator.
+# This specification does not automatically create a world.
+worlds:
+  plots:
+    generator: betterplots
+    preset:
+      size: 32
+      road: 7
+      offsetX: 0
+      offsetZ: 0
+      height: 64
+      blocks:
+        bottom: {bedrock: 1}
+        fill: {dirt: 1}
+        floor: {grass: 1}
+        wall: {stone_bricks: 1}
+        border: {stone_slab: 1}
+        road: {oak_planks: 3, stone: 1}

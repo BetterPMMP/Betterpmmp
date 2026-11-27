@@ -1,6 +1,37 @@
 {
   "plugins": [
     {
+      "id": "betterplots",
+      "name": "BetterPlots",
+      "author": "Leon Development",
+      "version": "0.6.0",
+      "api": "5.51.0",
+      "categories": ["world", "admin"],
+      "betterpmmp_only": true,
+      "updated": "2026-11-27",
+      "summary": {
+        "en": "Plot worlds for city build servers: claim, members, flags, menus, road styles and plot spawners.",
+        "de": "Plotwelten für Citybuild-Server: Plots beanspruchen, Mitglieder, Flags, Menüs, Straßenstile und Plot-Spawner."
+      },
+      "description": {
+        "en": "BetterPlots creates and manages plot worlds. Players claim plots, add members, set flags like PvP, redstone, weather and time, and design the border and wall of their plot. Everything is available in a menu (/p) as a form or chest view. Admins build their own roads with /p1, /p2 and /p schematic create, or use the ready road style \"allee\" with lit wooden paths, a green strip, arches and wooden bridges over every road. Plot spawners and all BetterPMMP mobs work on plots. Merging plots is currently OP only. Old MyPlot and CPlot worlds can be imported. Data is stored in SQLite or MySQL.",
+        "de": "BetterPlots erstellt und verwaltet Plotwelten. Spieler beanspruchen Plots, fügen Mitglieder hinzu, stellen Flags wie PvP, Redstone, Wetter und Tageszeit ein und gestalten Rand und Wand ihres Plots. Alles geht über ein Menü (/p) als Formular oder Kistenansicht. Admins bauen eigene Straßen mit /p1, /p2 und /p schematic create oder nutzen den fertigen Straßenstil \"allee\" mit beleuchteten Holzwegen, Grünstreifen, Bögen und Holzbrücken über jeder Straße. Plot-Spawner und alle BetterPMMP-Mobs funktionieren auf Plots. Mergen ist aktuell nur für OPs. Alte MyPlot- und CPlot-Welten lassen sich importieren. Gespeichert wird in SQLite oder MySQL."
+      },
+      "commands": [
+        ["/p", "Open the plot menu", "Plot-Menü öffnen"],
+        ["/p claim | /p auto", "Claim a plot", "Plot beanspruchen"],
+        ["/p home | /p visit <player>", "Teleport to plots", "Zu Plots teleportieren"],
+        ["/p trust | add | deny <player>", "Manage members", "Mitglieder verwalten"],
+        ["/p flag set <flag> <value>", "Change plot flags", "Plot-Flags ändern"],
+        ["/merge | /unmerge", "Merge or split neighbour plots (OP)", "Nachbarplots verbinden oder trennen (OP)"],
+        ["/p setup <world> [size road height style]", "Create a plot world (OP)", "Plotwelt erstellen (OP)"],
+        ["/p roadstyle allee [world]", "Rebuild every road in the allee style (OP)", "Alle Straßen im Allee-Stil umbauen (OP)"],
+        ["/p1 | /p2 | /p schematic create <name>", "Capture your own road module (OP)", "Eigenes Straßenmodul aufnehmen (OP)"]
+      ],
+      "download": "files/BetterPlots.phar",
+      "source": "https://github.com/BetterPMMP/Betterpmmp/tree/HEAD/examples/plugins/BetterPlots"
+    },
+    {
       "id": "killboard",
       "name": "KillBoard",
       "author": "Leon Development",

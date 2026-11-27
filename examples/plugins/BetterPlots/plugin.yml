@@ -1,0 +1,453 @@
+name: BetterPlots
+main: BetterPlots\Main
+version: 0.6.0
+api: 5.51.0
+load: STARTUP
+author: Leon Development
+description: Plotverwaltung fuer BetterPMMP
+commands:
+  plot:
+    description: BetterPlots
+    aliases: [p, bp, betterplot, plots, plotsquared, ps, "2", plotme]
+    permission: plots.use
+  merge:
+    description: Nachbarplot in Blickrichtung verbinden
+    permission: plots.merge
+  unmerge:
+    description: Verbindung zum Nachbarplot in Blickrichtung trennen
+    permission: plots.unlink
+  setowner:
+    description: Besitzer des ausgewaehlten Plots aendern
+    usage: /setowner SPIELER
+    permission: plots.setowner
+  p1:
+    description: Strassenposition 1 setzen
+    permission: plots.schematic
+  p2:
+    description: Strassenposition 2 setzen
+    permission: plots.schematic
+  schematic:
+    description: Bauwerke speichern und einsetzen
+    aliases: [bpschematic]
+    permission: plots.schematic
+permissions:
+  plots.use:
+    default: true
+  plots.admin.*:
+    default: op
+  plots.plot.1:
+    default: true
+  plots.help:
+    default: true
+  plots.confirm:
+    default: true
+  plots.info:
+    default: true
+  plots.list:
+    default: true
+  plots.target:
+    default: true
+  plots.caps:
+    default: true
+  plots.home:
+    default: true
+  plots.visit:
+    default: true
+  plots.middle:
+    default: true
+  plots.comment:
+    default: true
+  plots.inbox:
+    default: true
+  plots.buy:
+    default: true
+  plots.claim:
+    default: true
+  plots.auto:
+    default: true
+  plots.setowner:
+    default: true
+  plots.add:
+    default: true
+  plots.trust:
+    default: true
+  plots.remove:
+    default: true
+  plots.deny:
+    default: true
+  plots.grant:
+    default: op
+  plots.kick:
+    default: true
+  plots.merge:
+    default: true
+  plots.unlink:
+    default: true
+  plots.set:
+    default: true
+  plots.alias:
+    default: true
+  plots.desc:
+    default: true
+  plots.music:
+    default: true
+  plots.biome:
+    default: true
+  plots.flag:
+    default: true
+  plots.done:
+    default: true
+  plots.continue:
+    default: true
+  plots.toggle:
+    default: true
+  plots.copy:
+    default: true
+  plots.move:
+    default: true
+  plots.swap:
+    default: true
+  plots.backup:
+    default: op
+  plots.clear:
+    default: true
+  plots.delete:
+    default: true
+  plots.load:
+    default: op
+  plots.download:
+    default: op
+  plots.schematic:
+    default: op
+  plots.like:
+    default: true
+  plots.dislike:
+    default: true
+  plots.rate:
+    default: true
+  plots.plugin:
+    default: op
+  plots.template:
+    default: op
+  plots.setup:
+    default: op
+  plots.area:
+    default: op
+  plots.createroadschematic:
+    default: op
+  plots.regenallroads:
+    default: op
+  plots.purge:
+    default: op
+  plots.reload:
+    default: op
+  plots.database:
+    default: op
+  plots.condense:
+    default: op
+  plots.trim:
+    default: op
+  plots.cluster:
+    default: true
+  plots.debugsavetest:
+    default: op
+  plots.debugloadtest:
+    default: op
+  plots.debugallowunsafe:
+    default: op
+  plots.debug:
+    default: op
+  plots.debugpaste:
+    default: op
+  plots.debugroadregen:
+    default: op
+  plots.debugexec:
+    default: op
+  plots.set.flag.break:
+    default: op
+  plots.set.flag.place:
+    default: op
+  plots.set.flag.use:
+    default: op
+  plots.set.flag.animal-attack:
+    default: op
+  plots.set.flag.animal-interact:
+    default: op
+  plots.set.flag.beacon-effects:
+    default: op
+  plots.set.flag.block-burn:
+    default: op
+  plots.set.flag.block-ignition:
+    default: op
+  plots.set.flag.chat:
+    default: op
+  plots.set.flag.concrete-harden:
+    default: op
+  plots.set.flag.coral-dry:
+    default: op
+  plots.set.flag.crop-grow:
+    default: op
+  plots.set.flag.copper-oxide:
+    default: op
+  plots.set.flag.deny-exit:
+    default: op
+  plots.set.flag.deny-portal-travel:
+    default: op
+  plots.set.flag.deny-portals:
+    default: op
+  plots.set.flag.device-interact:
+    default: op
+  plots.set.flag.disable-physics:
+    default: op
+  plots.set.flag.drop-protection:
+    default: op
+  plots.set.flag.edit-sign:
+    default: op
+  plots.set.flag.entity-change-block:
+    default: op
+  plots.set.flag.explosion:
+    default: op
+  plots.set.flag.fishing:
+    default: op
+  plots.set.flag.fly:
+    default: op
+  plots.set.flag.forcefield:
+    default: op
+  plots.set.flag.grass-grow:
+    default: op
+  plots.set.flag.hanging-break:
+    default: op
+  plots.set.flag.hanging-place:
+    default: op
+  plots.set.flag.hide-info:
+    default: op
+  plots.set.flag.hostile-attack:
+    default: op
+  plots.set.flag.hostile-interact:
+    default: op
+  plots.set.flag.ice-form:
+    default: op
+  plots.set.flag.ice-melt:
+    default: op
+  plots.set.flag.instabreak:
+    default: op
+  plots.set.flag.invincible:
+    default: op
+  plots.set.flag.item-drop:
+    default: op
+  plots.set.flag.keep-inventory:
+    default: op
+  plots.set.flag.kelp-grow:
+    default: op
+  plots.set.flag.leaf-decay:
+    default: op
+  plots.set.flag.lectern-read-book:
+    default: op
+  plots.set.flag.misc-break:
+    default: op
+  plots.set.flag.misc-place:
+    default: op
+  plots.set.flag.misc-interact:
+    default: op
+  plots.set.flag.mob-break:
+    default: op
+  plots.set.flag.mob-place:
+    default: op
+  plots.set.flag.mycel-grow:
+    default: op
+  plots.set.flag.no-worldedit:
+    default: op
+  plots.set.flag.notify-enter:
+    default: op
+  plots.set.flag.notify-leave:
+    default: op
+  plots.set.flag.player-interact:
+    default: op
+  plots.set.flag.pve:
+    default: op
+  plots.set.flag.pvp:
+    default: true
+  plots.set.flag.prevent-creative-copy:
+    default: op
+  plots.set.flag.projectiles:
+    default: op
+  plots.set.flag.projectile-change-block:
+    default: op
+  plots.set.flag.redstone:
+    default: true
+  plots.set.flag.mob-combat:
+    default: true
+  plots.set.flag.mob-spawner:
+    default: true
+  plots.set.flag.server-plot:
+    default: op
+  plots.set.flag.snow-form:
+    default: op
+  plots.set.flag.snow-melt:
+    default: op
+  plots.set.flag.soil-dry:
+    default: op
+  plots.set.flag.tamed-attack:
+    default: op
+  plots.set.flag.tamed-interact:
+    default: op
+  plots.set.flag.tile-drop:
+    default: op
+  plots.set.flag.untrusted-visit:
+    default: op
+  plots.set.flag.vehicle-break:
+    default: op
+  plots.set.flag.vehicle-place:
+    default: op
+  plots.set.flag.vehicle-use:
+    default: op
+  plots.set.flag.villager-interact:
+    default: op
+  plots.set.flag.vine-grow:
+    default: op
+  plots.set.flag.weaving-death-place:
+    default: op
+  plots.set.flag.price:
+    default: op
+  plots.set.flag.animal-cap:
+    default: op
+  plots.set.flag.entity-cap:
+    default: op
+  plots.set.flag.hostile-cap:
+    default: op
+  plots.set.flag.misc-cap:
+    default: op
+  plots.set.flag.mob-cap:
+    default: op
+  plots.set.flag.vehicle-cap:
+    default: op
+  plots.set.flag.time:
+    default: op
+  plots.set.flag.deny-teleport:
+    default: op
+  plots.set.flag.liquid-flow:
+    default: op
+  plots.set.flag.titles:
+    default: op
+  plots.set.flag.weather:
+    default: op
+  plots.set.flag.blocked-cmds:
+    default: op
+  plots.set.flag.gamemode:
+    default: op
+  plots.set.flag.guest-gamemode:
+    default: op
+  plots.set.flag.music:
+    default: op
+  plots.set.flag.description:
+    default: op
+  plots.set.flag.farewell:
+    default: op
+  plots.set.flag.greeting:
+    default: op
+  plots.set.flag.plot-title:
+    default: op
+  plots.set.flag.feed:
+    default: op
+  plots.set.flag.heal:
+    default: op
+  plots.set.flag.analysis:
+    default: op
+  plots.set.flag.done:
+    default: op
+  plots.bypass:
+    default: op
+  plots.road:
+    default: op
+  plots.climate:
+    default: true
+  plots.set.flag.border:
+    default: op
+  plots.set.flag.animal-spawn:
+    default: op
+  plots.set.flag.mob-spawn:
+    default: op
+  splash.plot.border.air:
+    default: true
+  splash.plot.border.stone_slab:
+    default: true
+  splash.plot.border.smooth_stone_slab:
+    default: true
+  splash.plot.border.oak_slab:
+    default: op
+  splash.plot.border.spruce_slab:
+    default: op
+  splash.plot.border.cobblestone_slab:
+    default: op
+  splash.plot.border.sandstone_slab:
+    default: op
+  splash.plot.border.birch_slab:
+    default: op
+  splash.plot.border.brick_slab:
+    default: op
+  splash.plot.border.stone_brick_slab:
+    default: op
+  splash.plot.border.red_sandstone_slab:
+    default: op
+  splash.plot.border.quartz_slab:
+    default: op
+  splash.plot.border.dark_oak_slab:
+    default: op
+  splash.plot.border.mossy_stone_brick_slab:
+    default: op
+  splash.plot.border.nether_brick_slab:
+    default: op
+  splash.plot.border.prismarine_slab:
+    default: op
+  splash.plot.border.dark_prismarine_slab:
+    default: op
+  splash.plot.border.purpur_slab:
+    default: op
+  splash.plot.border.end_stone_brick_slab:
+    default: op
+  splash.plot.border.cherry_slab:
+    default: op
+  splash.plot.border.warped_slab:
+    default: op
+  splash.plot.border.crimson_slab:
+    default: op
+  splash.plot.border.polished_blackstone_brick_slab:
+    default: op
+  splash.plot.border.deepslate_tile_slab:
+    default: op
+  splash.plot.wall.dirt:
+    default: true
+  splash.plot.wall.stone:
+    default: op
+  splash.plot.wall.cobblestone:
+    default: op
+  splash.plot.wall.oak_planks:
+    default: op
+  splash.plot.wall.stone_bricks:
+    default: op
+  splash.plot.wall.bricks:
+    default: op
+  splash.plot.wall.sandstone:
+    default: op
+  splash.plot.wall.quartz:
+    default: op
+  splash.plot.wall.mossy_stone_bricks:
+    default: op
+  splash.plot.wall.nether_bricks:
+    default: op
+  splash.plot.wall.prismarine:
+    default: op
+  splash.plot.wall.dark_prismarine:
+    default: op
+  splash.plot.wall.purpur:
+    default: op
+  splash.plot.wall.obsidian:
+    default: op
+  splash.plot.wall.amethyst_block:
+    default: op
+  splash.plot.wall.deepslate_tiles:
+    default: op
+  plots.plot.2:
+    default: op
+  splash.plot.merge.others:
+    default: op

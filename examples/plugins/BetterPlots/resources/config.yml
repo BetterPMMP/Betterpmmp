@@ -1,0 +1,47 @@
+# BetterPlots 0.5.0-dev; siehe README und PARITY vor dem Testbetrieb.
+language: de_DE
+database:
+  driver: sqlite
+  sqlite-file: betterplots.sqlite
+  mysql:
+    host: 127.0.0.1
+    port: 3306
+    database: betterplots
+    username: betterplots
+    password: ""
+  callback-budget-ms: 2.0
+  max-pending-requests: 256
+generation:
+  generator: betterplots
+  async: true
+queue:
+  tick-budget-ms: 2.0
+  capture-budget-ms: 1.5
+  road-budget-ms: 6.0
+  max-chunks: 256
+ui:
+  enabled: true
+  open-on-empty: true
+  default: form
+  chest-enabled: true
+  confirmation-forms: true
+# OP gewährt Verwaltungsrechte, aber keinen automatischen Bauschutz-Bypass.
+# Bewusst mit /p bypass einschalten; wird beim Disconnect verworfen.
+
+commands:
+  confirmation-seconds: 30
+  auto-search-limit: 100000
+limits:
+  snapshots-per-player: 20
+  comments-per-plot: 100
+messages:
+  prefix: "§bBetterPlots §8» §r"
+protection:
+  denial-messages: true
+
+world-creation:
+  always-day: true
+road-styles:
+  classic: {road: oak_planks, border: stone_slab, wall: stone_bricks}
+  modern: {road: smooth_stone, border: stone_slab, wall: stone_bricks}
+  natural: {road: gravel, border: stone_slab, wall: cobblestone}

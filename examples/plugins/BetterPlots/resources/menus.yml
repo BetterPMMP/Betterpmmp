@@ -1,0 +1,968 @@
+---
+version: 5
+pages:
+  main:
+    title: §b§lBetterPlots §r§8· Dein Baubereich
+    description: '§7Dein Grundstück, deine Ideen.
+
+      §fWähle einen Bereich. Eingaben folgen als Formular.'
+    entries:
+    - label: '§aGrundstücke
+
+        §7Besuchen · Beanspruchen · Infos'
+      page: plots
+      icon: grass
+    - label: '§eMitglieder
+
+        §7Vertrauen · Einladen · Sperren'
+      page: members
+      icon: player_head
+    - label: '§bPlot-Einstellungen
+
+        §7PvP · Redstone · Wetter'
+      page: settings
+      icon: comparator
+    - label: '§6Einfach gestalten
+
+        §7Rand · Wand · Wiederherstellen'
+      page: build
+      icon: diamond_pickaxe
+    - label: '§dBackups
+
+        §7Sichern · Laden · Kopieren'
+      page: backups
+      icon: chest
+    - label: '§aCommunity
+
+        §7Kommentare · Bewertungen · Chat'
+      page: social
+      icon: book
+    - label: '§cAdministration
+
+        §7Welten · Vorlagen · Diagnose'
+      page: admin
+      icon: command_block
+      permission: plots.admin.*
+  plots:
+    title: §b§lBetterPlots §r§8· Grundstücke
+    description: Wähle eine Aktion. Änderungen prüfen immer deine Grundstücksrechte.
+    entries:
+    - label: §aFreies Plot finden
+      icon: compass
+      enabled: true
+      command:
+      - auto
+      plot-context: true
+      fields:
+      - label: Breite in Plots
+        default: '1'
+      - label: Länge in Plots
+        default: '1'
+    - label: §aDieses Plot beanspruchen
+      icon: grass
+      enabled: true
+      command:
+      - claim
+      plot-context: true
+    - label: §bMein Zuhause
+      icon: bed
+      enabled: true
+      command:
+      - home
+      plot-context: false
+      fields:
+      - label: Plotnummer
+        default: '1'
+    - label: §bPlot besuchen
+      icon: ender_pearl
+      enabled: true
+      command:
+      - visit
+      plot-context: false
+      fields:
+      - label: Spieler, Alias oder X;Z
+        default: ''
+      - label: Treffer-Nummer
+        default: '1'
+    - label: §fPlotinformationen
+      icon: book
+      enabled: true
+      command:
+      - info
+      plot-context: true
+    - label: §bZur Mitte
+      icon: compass
+      enabled: true
+      command:
+      - middle
+      plot-context: true
+    - label: §ePlots auflisten
+      icon: paper
+      enabled: true
+      command:
+      - list
+      plot-context: false
+      fields:
+      - label: Filter
+        default: ''
+        options:
+        - mine
+        - shared
+        - world
+        - all
+        - forsale
+        - top
+        - done
+      - label: Seite
+        default: '1'
+    - label: §ePlots eines Spielers
+      icon: paper
+      enabled: true
+      command:
+      - list
+      - player
+      plot-context: false
+      fields:
+      - label: Spielername
+        default: ''
+      - label: Seite
+        default: '1'
+    - label: §eAlias suchen
+      icon: paper
+      enabled: true
+      command:
+      - list
+      - fuzzy
+      plot-context: false
+      fields:
+      - label: Suchtext
+        default: ''
+      - label: Seite
+        default: '1'
+    - label: §eFreie IDs anzeigen
+      icon: paper
+      enabled: true
+      command:
+      - list
+      - unowned
+      plot-context: true
+    - label: §fAls Befehlsziel wählen
+      icon: paper
+      enabled: true
+      command:
+      - target
+      plot-context: true
+    - label: §7Befehlsziel aufheben
+      icon: paper
+      enabled: true
+      command:
+      - target
+      - 'off'
+      plot-context: false
+  members:
+    title: §b§lBetterPlots §r§8· Mitglieder
+    description: Wähle eine Aktion. Änderungen prüfen immer deine Grundstücksrechte.
+    entries:
+    - label: §aMember hinzufügen
+      icon: emerald
+      enabled: true
+      command:
+      - add
+      plot-context: true
+      fields:
+      - label: Spielername oder *
+        default: ''
+    - label: §bTrusted hinzufügen
+      icon: diamond
+      enabled: true
+      command:
+      - trust
+      plot-context: true
+      fields:
+      - label: Spielername oder *
+        default: ''
+    - label: §cSpieler sperren
+      icon: barrier
+      enabled: true
+      command:
+      - deny
+      plot-context: true
+      fields:
+      - label: Spielername oder *
+        default: ''
+    - label: §eEintrag entfernen
+      icon: paper
+      enabled: true
+      command:
+      - remove
+      plot-context: true
+      fields:
+      - label: Spielername oder *
+        default: ''
+    - label: §cBesucher entfernen
+      icon: paper
+      enabled: true
+      command:
+      - kick
+      plot-context: true
+      fields:
+      - label: Spielername oder *
+        default: ''
+    - label: §6Besitzer wechseln
+      icon: gold_ingot
+      enabled: true
+      command:
+      - setowner
+      plot-context: true
+      fields:
+      - label: Neuer Besitzer
+        default: ''
+  settings:
+    title: §b§lBetterPlots §r§8· Plot-Einstellungen
+    description: Wähle eine Aktion. Änderungen prüfen immer deine Grundstücksrechte.
+    entries:
+    - label: §ePlotname
+      icon: name_tag
+      enabled: true
+      command:
+      - alias
+      plot-context: true
+      fields:
+      - label: Name
+        default: ''
+    - label: §fBeschreibung
+      icon: book
+      enabled: true
+      command:
+      - desc
+      plot-context: true
+      fields:
+      - label: Beschreibung
+        default: ''
+    - label: §bHome hier setzen
+      icon: bed
+      enabled: true
+      command:
+      - set
+      - home
+      plot-context: true
+    - label: '§cPvP: An / Aus'
+      icon: diamond_sword
+      enabled: true
+      command:
+      - flag
+      - set
+      - pvp
+      plot-context: true
+      fields:
+      - label: Spieler dürfen sich bekämpfen
+        default: ''
+        options:
+        - Aus
+        - An
+        values:
+        - 'false'
+        - 'true'
+    - label: '§6Redstone: An / Aus'
+      icon: redstone
+      enabled: true
+      command:
+      - flag
+      - set
+      - redstone
+      plot-context: true
+      fields:
+      - label: Platzieren und Bedienen von Redstone (eingeschränkt)
+        default: ''
+        options:
+        - An
+        - Aus
+        values:
+        - 'true'
+        - 'false'
+      hint: Keine vollständige Abschaltung bestehender Schaltungen; unsichere Geräte bleiben gesperrt.
+    - label: §bWetter, Tageszeit & Biome
+      page: atmosphere
+      icon: clock
+    - label: §aBegrüßung
+      icon: paper
+      enabled: true
+      command:
+      - flag
+      - set
+      - greeting
+      plot-context: true
+      fields:
+      - label: Text beim Betreten
+        default: ''
+    - label: §eAbschied
+      icon: paper
+      enabled: true
+      command:
+      - flag
+      - set
+      - farewell
+      plot-context: true
+      fields:
+      - label: Text beim Verlassen
+        default: ''
+    - label: '§aFliegen: An / Aus'
+      icon: feather
+      enabled: true
+      command:
+      - flag
+      - set
+      - fly
+      plot-context: true
+      fields:
+      - label: Fliegen
+        default: ''
+        options:
+        - Aus
+        - An
+        values:
+        - 'false'
+        - 'true'
+    - label: §aFertig markieren
+      icon: emerald
+      enabled: true
+      command:
+      - done
+      plot-context: true
+    - label: §eWeiterbauen
+      icon: diamond_pickaxe
+      enabled: true
+      command:
+      - continue
+      plot-context: true
+  build:
+    title: §b§lBetterPlots §r§8· Einfach gestalten
+    description: Wähle eine Aktion. Änderungen prüfen immer deine Grundstücksrechte.
+    entries:
+    - label: §aPlots verbinden
+      icon: chain
+      enabled: true
+      command:
+      - merge
+      plot-context: true
+      fields:
+      - label: Richtung
+        default: ''
+        options:
+        - Alle Seiten
+        - Norden
+        - Osten
+        - Süden
+        - Westen
+        values:
+        - all
+        - n
+        - e
+        - s
+        - w
+    - label: §ePlots trennen
+      icon: shears
+      enabled: true
+      command:
+      - unlink
+      plot-context: true
+    - label: §bRand gestalten
+      icon: stone_slab
+      enabled: true
+      command:
+      - set
+      - border
+      plot-context: true
+      fields:
+      - label: Material
+        default: ''
+        options:
+        - Steinziegel
+        - Glatter Stein
+        - Bruchstein
+        - Eichenholz
+        - Sandstein
+        values:
+        - stone_bricks
+        - smooth_stone
+        - cobblestone
+        - oak_planks
+        - sandstone
+    - label: §bWand gestalten
+      icon: stone_bricks
+      enabled: true
+      command:
+      - set
+      - wall
+      plot-context: true
+      fields:
+      - label: Material
+        default: ''
+        options:
+        - Steinziegel
+        - Glatter Stein
+        - Bruchstein
+        - Eichenholz
+        - Sandstein
+        values:
+        - stone_bricks
+        - smooth_stone
+        - cobblestone
+        - oak_planks
+        - sandstone
+    - label: §eBebauung leeren
+      icon: iron_shovel
+      enabled: true
+      command:
+      - set
+      - air
+      plot-context: true
+      hint: Entfernt Blöcke oberhalb der Bodenhöhe, einschließlich Rand.
+    - label: §aUntergrund wiederherstellen
+      icon: grass
+      enabled: true
+      command:
+      - set
+      - refill
+      plot-context: true
+      hint: Setzt Boden und Untergrund zurück. Bauten darüber bleiben erhalten.
+    - label: §cGanzes Plot zurücksetzen
+      icon: barrier
+      enabled: true
+      command:
+      - clear
+      plot-context: true
+      hint: Löscht auch Gebäude und Keller; stellt den ursprünglichen Zustand her.
+    - label: §6Wege rund ums Plot gestalten
+      icon: oak_planks
+      enabled: true
+      command:
+      - road
+      plot-context: true
+      fields:
+      - label: Wegmaterial
+        default: ''
+        options:
+        - Eichenholz
+        - Glatter Stein
+        - Kies
+        - Steinziegel
+        values:
+        - oak_planks
+        - smooth_stone
+        - gravel
+        - stone_bricks
+      hint: Adminfunktion. Nur äußere Straßenoberfläche; keine gemergten Innenflächen.
+  backups:
+    title: §l§bBauwerke & Schematics
+    description: '§f1. Speichern  §7→  §f2. Bauwerk auswählen  §7→  §f3. Einsetzen
+
+      §7BetterPlots .bplot · Gleiche Plotgröße und Gruppenform erforderlich.'
+    entries:
+    - label: §a+ Aktuelles Plot speichern
+      command:
+      - schematic
+      - save
+      fields:
+      - label: Name (Buchstaben, Zahlen, _ oder -)
+      icon: chest
+    - label: §eDatei importieren
+      command:
+      - schematic
+      - import
+      fields:
+      - label: Dateiname ohne UUID-Präfix und ohne .bplot
+      icon: paper
+      plot-context: false
+    - label: §bImport / Export erklärt
+      command:
+      - schematic
+      - guide
+      icon: book
+      plot-context: false
+    - label: §7Liste und Fortschritt aktualisieren
+      page: backups
+      icon: clock
+  social:
+    title: §b§lBetterPlots §r§8· Community
+    description: Wähle eine Aktion. Änderungen prüfen immer deine Grundstücksrechte.
+    entries:
+    - label: §aKommentar schreiben
+      icon: book
+      enabled: true
+      command:
+      - comment
+      plot-context: true
+      fields:
+      - label: Sichtbarkeit
+        default: ''
+        options:
+        - public
+        - owner
+        - report
+      - label: Nachricht
+        default: ''
+    - label: §fPostfach lesen
+      icon: chest
+      enabled: true
+      command:
+      - inbox
+      plot-context: true
+    - label: §aGefällt mir
+      icon: emerald
+      enabled: true
+      command:
+      - like
+      plot-context: true
+    - label: §cGefällt mir nicht
+      icon: coal
+      enabled: true
+      command:
+      - dislike
+      plot-context: true
+    - label: §eBewertung vergeben
+      icon: gold_ingot
+      enabled: true
+      command:
+      - rate
+      plot-context: true
+      fields:
+      - label: Punkte 0–10
+        default: '10'
+    - label: §bPlot-Chat umschalten
+      icon: paper
+      enabled: true
+      command:
+      - toggle
+      - chat
+      plot-context: true
+    - label: §bTitel umschalten
+      icon: paper
+      enabled: true
+      command:
+      - toggle
+      - titles
+      plot-context: true
+    - label: §cChatspy umschalten
+      icon: paper
+      enabled: true
+      command:
+      - toggle
+      - chatspy
+      plot-context: true
+  admin:
+    title: §b§lBetterPlots §r§8· Administration
+    description: Wähle eine Aktion. Änderungen prüfen immer deine Grundstücksrechte.
+    entries:
+    - label: §cBau-Bypass an/aus
+      icon: barrier
+      enabled: true
+      command:
+      - bypass
+      plot-context: false
+    - label: §fPluginstatus
+      icon: paper
+      enabled: true
+      command:
+      - plugin
+      plot-context: false
+    - label: §eKonfiguration neu laden
+      icon: paper
+      enabled: true
+      command:
+      - reload
+      plot-context: false
+    - label: §aPlotwelt erstellen
+      icon: grass
+      enabled: true
+      command:
+      - setup
+      plot-context: false
+      fields:
+      - label: Neuer Weltname
+        default: ''
+      - label: Plotgröße
+        default: '32'
+      - label: Straßenbreite
+        default: '7'
+      - label: Bodenhöhe
+        default: '64'
+      - label: Wegstil
+        default: ''
+        options:
+        - Klassisch – Holz
+        - Modern – Stein
+        - Natürlich – Kies
+        values:
+        - classic
+        - modern
+        - natural
+    - label: §bWelten & Areas
+      page: areas
+      icon: compass
+    - label: §dCluster
+      page: clusters
+      icon: map
+    - label: §eVorlagen
+      page: templates
+      icon: book
+    - label: §aZusätzliche Plotrechte
+      icon: paper
+      enabled: true
+      command:
+      - grant
+      plot-context: false
+      fields:
+      - label: Spieler
+        default: ''
+      - label: Anzahl
+        default: '1'
+    - label: §6Internes Guthaben setzen
+      icon: gold_ingot
+      enabled: true
+      command:
+      - debugexec
+      - balance
+      plot-context: false
+      fields:
+      - label: Spieler
+        default: ''
+      - label: Betrag
+        default: '1000'
+    - label: §eAlle Gruppen sichern (max. 20)
+      icon: paper
+      enabled: true
+      command:
+      - schematic
+      - saveall
+      plot-context: true
+    - label: §fDiagnose
+      icon: paper
+      enabled: true
+      command:
+      - debug
+      plot-context: false
+    - label: §fDatenbankstatus
+      icon: paper
+      enabled: true
+      command:
+      - database
+      plot-context: false
+    - label: §fDatenbank-Schreibtest
+      icon: paper
+      enabled: true
+      command:
+      - debugsavetest
+      plot-context: false
+    - label: §fDatenbank-Lesetest
+      icon: paper
+      enabled: true
+      command:
+      - debugloadtest
+      plot-context: false
+    - label: §eDatenbank komprimieren
+      icon: paper
+      enabled: true
+      command:
+      - condense
+      plot-context: false
+  areas:
+    title: §b§lBetterPlots §r§8· Welten & Areas
+    description: Wähle eine Aktion. Änderungen prüfen immer deine Grundstücksrechte.
+    entries:
+    - label: §fPlotwelten anzeigen
+      icon: paper
+      enabled: true
+      command:
+      - area
+      - list
+      plot-context: false
+    - label: §fWeltinformationen
+      icon: paper
+      enabled: true
+      command:
+      - area
+      - info
+      plot-context: false
+      fields:
+      - label: Welt
+        default: ''
+    - label: §bZur Plotwelt
+      icon: paper
+      enabled: true
+      command:
+      - area
+      - tp
+      plot-context: false
+      fields:
+      - label: Welt
+        default: ''
+    - label: §aPartielle Area definieren
+      icon: paper
+      enabled: true
+      command:
+      - area
+      - create
+      plot-context: false
+      fields:
+      - label: Welt
+        default: ''
+      - label: Name
+        default: ''
+      - label: Erste Plot-ID (X;Z)
+        default: ''
+      - label: Zweite Plot-ID (X;Z)
+        default: ''
+  templates:
+    title: §b§lBetterPlots §r§8· Vorlagen
+    description: Wähle eine Aktion. Änderungen prüfen immer deine Grundstücksrechte.
+    entries:
+    - label: §fVorlagen anzeigen
+      icon: paper
+      enabled: true
+      command:
+      - template
+      - list
+      plot-context: false
+    - label: §aWeltkonfiguration speichern
+      icon: paper
+      enabled: true
+      command:
+      - template
+      - save
+      plot-context: false
+      fields:
+      - label: Name
+        default: ''
+      - label: Welt
+        default: ''
+    - label: §bNeue Welt aus Vorlage
+      icon: paper
+      enabled: true
+      command:
+      - template
+      - load
+      plot-context: false
+      fields:
+      - label: Name
+        default: ''
+      - label: Neue Welt
+        default: ''
+    - label: §cVorlage löschen
+      icon: paper
+      enabled: true
+      command:
+      - template
+      - delete
+      plot-context: false
+      fields:
+      - label: Name
+        default: ''
+  clusters:
+    title: §b§lBetterPlots §r§8· Cluster
+    description: Wähle eine Aktion. Änderungen prüfen immer deine Grundstücksrechte.
+    entries:
+    - label: §fCluster anzeigen
+      icon: paper
+      enabled: true
+      command:
+      - cluster
+      - list
+      plot-context: true
+    - label: §fClusterinformationen
+      icon: paper
+      enabled: true
+      command:
+      - cluster
+      - info
+      plot-context: true
+      fields:
+      - label: Name
+        default: ''
+    - label: §aCluster erstellen
+      icon: paper
+      enabled: true
+      command:
+      - cluster
+      - create
+      plot-context: true
+      fields:
+      - label: Name
+        default: ''
+      - label: Erste Plot-ID (X;Z)
+        default: ''
+      - label: Zweite Plot-ID (X;Z)
+        default: ''
+    - label: §eClustergröße ändern
+      icon: paper
+      enabled: true
+      command:
+      - cluster
+      - resize
+      plot-context: true
+      fields:
+      - label: Name
+        default: ''
+      - label: Erste Plot-ID (X;Z)
+        default: ''
+      - label: Zweite Plot-ID (X;Z)
+        default: ''
+    - label: §aSpieler einladen
+      icon: paper
+      enabled: true
+      command:
+      - cluster
+      - invite
+      plot-context: true
+      fields:
+      - label: Name
+        default: ''
+      - label: Spieler
+        default: ''
+    - label: §cSpieler entfernen
+      icon: paper
+      enabled: true
+      command:
+      - cluster
+      - kick
+      plot-context: true
+      fields:
+      - label: Name
+        default: ''
+      - label: Spieler
+        default: ''
+    - label: §bHelfer hinzufügen
+      icon: paper
+      enabled: true
+      command:
+      - cluster
+      - helpers
+      plot-context: true
+      fields:
+      - label: Name
+        default: ''
+      - label: Spieler
+        default: ''
+    - label: §eCluster verlassen
+      icon: paper
+      enabled: true
+      command:
+      - cluster
+      - leave
+      plot-context: true
+      fields:
+      - label: Name
+        default: ''
+    - label: §bCluster-Home setzen
+      icon: paper
+      enabled: true
+      command:
+      - cluster
+      - sethome
+      plot-context: true
+      fields:
+      - label: Name
+        default: ''
+    - label: §bZum Cluster
+      icon: paper
+      enabled: true
+      command:
+      - cluster
+      - tp
+      plot-context: true
+      fields:
+      - label: Name
+        default: ''
+      hint: Zielzelle muss bisher beansprucht sein.
+    - label: §cCluster löschen
+      icon: paper
+      enabled: true
+      command:
+      - cluster
+      - delete
+      plot-context: true
+      fields:
+      - label: Name
+        default: ''
+  atmosphere:
+    title: §b§lBetterPlots §r§8· Wetter & Biome
+    description: §7Wetter bestimmt die Atmosphäre. Biome bestimmen Landschaftsfarben und ob Niederschlag als Regen oder Schnee erscheint.
+    entries:
+    - label: §eWetter auswählen
+      icon: water_bucket
+      enabled: true
+      command:
+      - climate
+      plot-context: true
+      fields:
+      - label: Wetter
+        default: ''
+        options:
+        - Sonne
+        - Regen
+        - Gewitter
+        - Schnee (setzt Schneebiom)
+        values:
+        - sun
+        - rain
+        - storm
+        - snow
+      hint: Schnee ändert das Biom. Sonne entfernt keine bereits liegenden Schneeblöcke.
+    - label: §bHell oder dunkel
+      icon: clock
+      enabled: true
+      command:
+      - flag
+      - set
+      - time
+      plot-context: true
+      fields:
+      - label: Tageszeit
+        default: ''
+        options:
+        - Tag – hell
+        - Nacht – dunkel
+        - Sonnenaufgang
+        - Sonnenuntergang
+        values:
+        - '6000'
+        - '18000'
+        - '0'
+        - '12000'
+    - label: §7Zeit wie in der Welt
+      icon: clock
+      enabled: true
+      command:
+      - flag
+      - remove
+      - time
+      plot-context: true
+    - label: §7Wetter wie in der Welt
+      icon: paper
+      enabled: true
+      command:
+      - flag
+      - remove
+      - weather
+      plot-context: true
+    - label: §aBiom auswählen
+      icon: sapling
+      enabled: true
+      command:
+      - biome
+      plot-context: true
+      fields:
+      - label: Landschaft / Vegetationsfarben
+        default: ''
+        options:
+        - Ebene
+        - Wald
+        - Wüste
+        - Taiga
+        - Schneelandschaft
+        values:
+        - '1'
+        - '4'
+        - '2'
+        - '5'
+        - '12'
