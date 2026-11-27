@@ -561,4 +561,29 @@ class Human extends Living implements ProjectileSource, InventoryHolder{
 		);
 		parent::destroyCycles();
 	}
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/** @deprecated API 3: use getHungerManager() */
+	public function getFood() : float{ return $this->getHungerManager()->getFood(); }
+	/** @deprecated API 3: use getHungerManager() */
+	public function setFood(float $food) : void{ $this->getHungerManager()->setFood($food); }
+	/** @deprecated API 3: use getHungerManager() */
+	public function addFood(float $amount) : void{ $this->getHungerManager()->addFood($amount); }
+	/** @deprecated API 3: use getHungerManager() */
+	public function getSaturation() : float{ return $this->getHungerManager()->getSaturation(); }
+	/** @deprecated API 3: use getHungerManager() */
+	public function setSaturation(float $saturation) : void{ $this->getHungerManager()->setSaturation($saturation); }
+	/** @deprecated API 3: use getXpManager() */
+	public function getXpLevel() : int{ return $this->getXpManager()->getXpLevel(); }
+	/** @deprecated API 3: use getXpManager() */
+	public function setXpLevel(int $level) : bool{ return $this->getXpManager()->setXpLevel($level); }
+	/** @deprecated API 3: use getXpManager() */
+	public function addXpLevels(int $amount, bool $playSound = true) : bool{ return $this->getXpManager()->addXpLevels($amount, $playSound); }
+	/** @deprecated API 3: use getXpManager() */
+	public function addXp(int $amount, bool $playSound = true) : bool{ return $this->getXpManager()->addXp($amount, $playSound); }
+	/** @deprecated API 3: use getXpManager() */
+	public function getXpProgress() : float{ return $this->getXpManager()->getXpProgress(); }
+	/** @deprecated API 3: use getXpManager() */
+	public function setXpProgress(float $progress) : bool{ return $this->getXpManager()->setXpProgress($progress); }
 }

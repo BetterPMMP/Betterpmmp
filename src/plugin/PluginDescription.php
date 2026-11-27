@@ -232,7 +232,9 @@ class PluginDescription{
 
 		if(isset($plugin[self::KEY_PERMISSIONS])){
 			try{
-				$this->permissions = PermissionParser::loadPermissions($plugin[self::KEY_PERMISSIONS]);
+				$this->permissions = \pocketmine\plugin\compat\LegacyApi::isLegacy($this)
+					? \pocketmine\plugin\compat\LegacyApi::loadPermissions($plugin[self::KEY_PERMISSIONS]) //BetterPMMP: API 3/4 rules (default op, nested children)
+					: PermissionParser::loadPermissions($plugin[self::KEY_PERMISSIONS]);
 			}catch(PermissionParserException $e){
 				throw new PluginDescriptionParseException("Invalid Plugin \"" . self::KEY_PERMISSIONS . "\": " . $e->getMessage(), 0, $e);
 			}

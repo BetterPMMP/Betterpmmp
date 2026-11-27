@@ -1007,4 +1007,28 @@ class Block{
 
 		return $currentHit;
 	}
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/**
+	 * API 3 blocks were positions: $block->x, $block->y, $block->z, $block->level.
+	 * @deprecated use getPosition()
+	 */
+	public function __get(string $name) : mixed{
+		$position = $this->position ?? null;
+		return match($name){
+			"x" => $position?->x,
+			"y" => $position?->y,
+			"z" => $position?->z,
+			"level", "world" => $position?->getWorld(),
+			default => throw new \Error("Undefined property: " . static::class . "::$" . $name),
+		};
+	}
+
+	/** @deprecated API 3: use getPosition() */
+	public function getX() : int{ return (int) $this->getPosition()->x; }
+	/** @deprecated API 3: use getPosition() */
+	public function getY() : int{ return (int) $this->getPosition()->y; }
+	/** @deprecated API 3: use getPosition() */
+	public function getZ() : int{ return (int) $this->getPosition()->z; }
 }

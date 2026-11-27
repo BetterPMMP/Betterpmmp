@@ -815,4 +815,9 @@ class Item implements \JsonSerializable{
 			$this->blockEntityTag = clone $this->blockEntityTag;
 		}
 	}
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/** @deprecated API 3/4: the meta value (durability damage for tools) */
+	public function getDamage() : int{ return \pocketmine\plugin\compat\LegacyIds::itemMeta($this); }
 }

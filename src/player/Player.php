@@ -3361,4 +3361,11 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 			$this->stopSleep();
 		}
 	}
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/** @deprecated API 3: use sendTitle() */
+	public function addTitle(string $title, string $subtitle = "", int $fadeIn = -1, int $stay = -1, int $fadeOut = -1) : void{ $this->sendTitle($title, $subtitle, $fadeIn, $stay, $fadeOut); }
+	/** @deprecated API 3: use sendSubTitle() */
+	public function addSubTitle(string $subtitle) : void{ $this->sendSubTitle($subtitle); }
 }

@@ -95,6 +95,12 @@ class PermissibleInternal implements Permissible{
 			return $this->permissions[$name]->getValue();
 		}
 
+		//BetterPMMP: in API 3 an undeclared permission was granted to operators; plugins in compatibility mode
+		//still check such permissions, so they are created for operators on first use
+		if(\pocketmine\plugin\compat\LegacyApi::registerMissingPermission($name) && $this->isPermissionSet($name)){
+			return $this->permissions[$name]->getValue();
+		}
+
 		return false;
 	}
 

@@ -35,6 +35,8 @@ use function filemtime;
 use function filesize;
 use function implode;
 use function interface_exists;
+use function is_array;
+use function is_bool;
 use function ltrim;
 use function is_dir;
 use function is_file;
@@ -203,17 +205,70 @@ final class LegacyApi{
 		return true;
 	}
 
+	/**
+	 * The permissions section of an API 3/4 plugin.yml. Differences to API 5: a permission without "default"
+	 * belonged to operators (not to nobody), and permissions could be nested under "children" with their own
+	 * defaults. Nested ones are declared separately here and stay children of their parent.
+	 *
+	 * @param mixed[] $data
+	 * @return \pocketmine\permission\Permission[][] default => permissions
+	 */
+	public static function loadPermissions(array $data) : array{
+		$flat = [];
+		self::flattenPermissions($data, \pocketmine\permission\PermissionParser::DEFAULT_OP, $flat);
+		$result = [];
+		foreach($flat as $name => [$default, $description, $children]){
+			$result[$default][] = new \pocketmine\permission\Permission($name, $description, $children);
+		}
+		return $result;
+	}
+
+	/**
+	 * @param mixed[] $data
+	 * @param array<string, array{string, ?string, array<string, bool>}> $flat
+	 */
+	private static function flattenPermissions(array $data, string $inherited, array &$flat) : void{
+		foreach($data as $name => $entry){
+			$name = (string) $name;
+			$entry = is_array($entry) ? $entry : [];
+			$default = $inherited;
+			if(isset($entry["default"])){
+				try{
+					$default = \pocketmine\permission\PermissionParser::defaultFromString($entry["default"]);
+				}catch(\Throwable){
+					$default = $inherited;
+				}
+			}
+			$children = [];
+			if(isset($entry["children"]) && is_array($entry["children"])){
+				foreach($entry["children"] as $childName => $child){
+					if(is_bool($child)){
+						$children[(string) $childName] = $child; // API 5 style: name => true/false
+						continue;
+					}
+					$children[(string) $childName] = true;
+					self::flattenPermissions([(string) $childName => $child], $default, $flat);
+				}
+			}
+			$description = isset($entry["description"]) ? (string) $entry["description"] : null;
+			$flat[$name] = [$default, $description, ($flat[$name][2] ?? []) + $children];
+		}
+	}
+
 	/** Whether the current call comes from a plugin loaded in compatibility mode. */
 	private static function fromLegacyPlugin() : bool{
 		if(!self::$autoloader){
 			return false; // no plugin was loaded in compatibility mode
 		}
-		foreach(debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 8) as $frame){
+		foreach(debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 12) as $frame){
 			$file = str_replace("\\", "/", $frame["file"] ?? "");
 			if(str_contains($file, "/plugin_cache/")){
 				return true;
 			}
 			$object = $frame["object"] ?? null;
+			if($object instanceof \pocketmine\plugin\PluginOwned){
+				$object = $object->getOwningPlugin();
+			}
 			if($object instanceof \pocketmine\plugin\Plugin && self::isLegacy($object->getDescription())){
 				return true;
 			}
