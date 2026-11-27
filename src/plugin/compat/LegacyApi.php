@@ -70,7 +70,7 @@ use const PHP_BINARY;
 final class LegacyApi{
 
 	/** bump when the rewriter changes, so cached copies are rebuilt */
-	private const VERSION = 4;
+	private const VERSION = 5;
 
 	/** classes that only moved or were renamed: old name (lowercase) => new name */
 	private const CLASSES = [
@@ -221,11 +221,26 @@ final class LegacyApi{
 		return false;
 	}
 
+	/** Whether a class, interface or trait exists (loading it if needed). */
+	public static function classExists(string $class) : bool{
+		try{
+			return class_exists($class) || interface_exists($class) || trait_exists($class);
+		}catch(\Throwable){
+			return false;
+		}
+	}
+
 	public static function registerAutoloader() : void{
 		if(self::$autoloader){
 			return;
 		}
 		self::$autoloader = true;
+		// the fixed list of moved classes is aliased right away, so names in strings and group imports work too
+		foreach(self::CLASSES as $old => $new){
+			if(!class_exists($old, false) && !interface_exists($old, false) && self::classExists($new)){
+				@class_alias($new, $old);
+			}
+		}
 		spl_autoload_register(static function(string $class) : void{
 			$lower = strtolower(ltrim($class, "\\"));
 			if(isset(self::SHIMS[$lower])){

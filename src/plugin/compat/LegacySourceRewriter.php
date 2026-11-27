@@ -19,6 +19,7 @@ use function ltrim;
 use function preg_match;
 use function str_contains;
 use function str_starts_with;
+use function strrpos;
 use function strtolower;
 use function substr;
 use function trim;
@@ -154,8 +155,37 @@ final class LegacySourceRewriter{
 
 		// 2. renamed methods and static calls
 		$n = count($tokens);
+		$depth = 0;
+		$inUse = false;
 		for($i = 0; $i < $n; ++$i){
 			$tok = $tokens[$i];
+			// moved classes are written with their new name. An alias alone is not enough: "instanceof Player"
+			// does not load anything and is simply false while pocketmine\Player was never loaded.
+			if($tok->text === "{" || $tok->id === \T_CURLY_OPEN || $tok->id === \T_DOLLAR_OPEN_CURLY_BRACES){
+				++$depth;
+			}elseif($tok->text === "}"){
+				--$depth;
+			}elseif($tok->id === T_USE && $depth === 0){
+				$inUse = true;
+			}elseif($inUse && $tok->text === ";"){
+				$inUse = false;
+			}elseif($tok->id === T_NAME_QUALIFIED || $tok->id === T_NAME_FULLY_QUALIFIED){
+				$full = $inUse ? ltrim($tok->text, "\\") : $ctx->resolve($tok->text);
+				$modern = LegacyApi::modernClass($full);
+				if(strtolower($modern) !== strtolower($full) && LegacyApi::classExists($modern)){
+					if($inUse){
+						$next = $ctx->next($i);
+						$oldShort = substr($full, (int) strrpos($full, "\\") + 1);
+						$newShort = substr($modern, (int) strrpos($modern, "\\") + 1);
+						$hasAs = $next !== null && $tokens[$next]->id === \T_AS;
+						$replace[$i] = $modern . (!$hasAs && strtolower($oldShort) !== strtolower($newShort) ? " as " . $oldShort : "");
+					}else{
+						$replace[$i] = "\\" . $modern;
+					}
+					$this->changes[] = "$file: $full -> $modern";
+				}
+				continue;
+			}
 			if(($tok->id === T_OBJECT_OPERATOR || $tok->id === T_NULLSAFE_OBJECT_OPERATOR) && ($j = $ctx->next($i)) !== null && $tokens[$j]->id === T_STRING){
 				$name = strtolower($tokens[$j]->text);
 				$open = $ctx->next($j);
