@@ -33,6 +33,7 @@ use pocketmine\world\generator\vanilla\Overworld;
 use pocketmine\world\generator\vanilla\VanillaEnd;
 use pocketmine\world\generator\vanilla\VanillaNether;
 use function array_keys;
+use function in_array;
 use function strtolower;
 
 final class GeneratorManager{
@@ -99,6 +100,12 @@ final class GeneratorManager{
 		Utils::testValidInstance($class, Generator::class);
 
 		$name = strtolower($name);
+		//BetterPMMP: the vanilla generators stay; worlds created with them (also the Nether and End) keep their terrain
+		//when a plugin (e.g. MultiWorld) registers its own generator under the same name
+		if($overwrite && isset($this->list[$name]) && in_array($this->list[$name]->getGeneratorClass(), [\pocketmine\world\generator\vanilla\Overworld::class, \pocketmine\world\generator\vanilla\VanillaNether::class, \pocketmine\world\generator\vanilla\VanillaEnd::class], true) && $class !== $this->list[$name]->getGeneratorClass()){
+			\GlobalLogger::get()->debug("Generator \"$name\" of $class not registered: BetterPMMP's vanilla generator keeps this name");
+			return;
+		}
 		if(!$overwrite && isset($this->list[$name])){
 			throw new \InvalidArgumentException("Alias \"$name\" is already assigned");
 		}
