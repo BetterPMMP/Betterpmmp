@@ -107,6 +107,9 @@ abstract class Command{
 		$permissionManager = PermissionManager::getInstance();
 		foreach($permissions as $perm){
 			if($permissionManager->getPermission($perm) === null){
+				if(\pocketmine\plugin\compat\LegacyApi::registerMissingPermission($perm)){
+					continue; //BetterPMMP: API 3 plugins used permissions without declaring them
+				}
 				throw new \InvalidArgumentException("Cannot use non-existing permission \"$perm\"");
 			}
 		}

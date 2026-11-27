@@ -17,6 +17,7 @@ use function class_alias;
 use function class_exists;
 use function basename;
 use function count;
+use function debug_backtrace;
 use function defined;
 use function fclose;
 use function function_exists;
@@ -47,6 +48,7 @@ use function strlen;
 use function strtolower;
 use function substr;
 use function trait_exists;
+use const DEBUG_BACKTRACE_PROVIDE_OBJECT;
 use const E_ALL;
 use const E_DEPRECATED;
 use const PHP_BINARY;
@@ -68,7 +70,7 @@ use const PHP_BINARY;
 final class LegacyApi{
 
 	/** bump when the rewriter changes, so cached copies are rebuilt */
-	private const VERSION = 1;
+	private const VERSION = 3;
 
 	/** classes that only moved or were renamed: old name (lowercase) => new name */
 	private const CLASSES = [
@@ -151,6 +153,54 @@ final class LegacyApi{
 			}
 		}
 		return $class;
+	}
+
+	/** API 3 game modes were numbers: 0 survival, 1 creative, 2 adventure, 3 spectator. */
+	public static function gameMode(mixed $mode) : \pocketmine\player\GameMode{
+		if($mode instanceof \pocketmine\player\GameMode){
+			return $mode;
+		}
+		return match((int) $mode){
+			1 => \pocketmine\player\GameMode::CREATIVE(),
+			2 => \pocketmine\player\GameMode::ADVENTURE(),
+			3 => \pocketmine\player\GameMode::SPECTATOR(),
+			default => \pocketmine\player\GameMode::SURVIVAL(),
+		};
+	}
+
+	/**
+	 * API 3 let commands use permissions that were never declared in plugin.yml; PocketMine-MP 5 throws. When
+	 * the call comes from a plugin in compatibility mode, the permission is created (for operators, like the
+	 * default of API 3) and true is returned.
+	 */
+	public static function registerMissingPermission(string $permission) : bool{
+		if(!self::fromLegacyPlugin()){
+			return false;
+		}
+		$manager = \pocketmine\permission\PermissionManager::getInstance();
+		if($manager->getPermission($permission) === null){
+			$manager->addPermission(new \pocketmine\permission\Permission($permission));
+			$manager->getPermission(\pocketmine\permission\DefaultPermissions::ROOT_OPERATOR)?->addChild($permission, true);
+		}
+		return true;
+	}
+
+	/** Whether the current call comes from a plugin loaded in compatibility mode. */
+	private static function fromLegacyPlugin() : bool{
+		if(!self::$autoloader){
+			return false; // no plugin was loaded in compatibility mode
+		}
+		foreach(debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 8) as $frame){
+			$file = str_replace("\\", "/", $frame["file"] ?? "");
+			if(str_contains($file, "/plugin_cache/")){
+				return true;
+			}
+			$object = $frame["object"] ?? null;
+			if($object instanceof \pocketmine\plugin\Plugin && self::isLegacy($object->getDescription())){
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public static function registerAutoloader() : void{
