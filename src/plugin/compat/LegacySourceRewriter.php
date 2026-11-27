@@ -129,6 +129,16 @@ final class LegacySourceRewriter{
 
 		// 1. signatures of methods that override PocketMine methods
 		foreach($ctx->classes as $class){
+			foreach($class["methods"] as $method){
+				// "function x() : bool" that can end without a return: PHP 8 throws a TypeError there
+				if($method["returnType"] && $method["body"] !== null && strtolower($this->returnTypeText($ctx, $method["close"], $method["body"])) === "bool"){
+					$end = $ctx->matching($method["body"]);
+					if($end !== null && !$this->endsWithReturn($ctx, $method["body"], $end)){
+						$replace[$end] = "\treturn true;\n\t}";
+						$this->changes[] = "$file: " . $class["short"] . "::" . $method["name"] . "() returns true at the end";
+					}
+				}
+			}
 			if(($class["kind"] ?? "") === "class" && !$this->hasAttribute($ctx, $class["start"])){
 				// old plugins create properties on the fly, which PHP 8.2 reports as deprecated
 				$replace[$class["start"]] = "#[\\AllowDynamicProperties]\n" . ($replace[$class["start"]] ?? $ctx->tokens[$class["start"]]->text);
@@ -230,6 +240,32 @@ final class LegacySourceRewriter{
 			}
 		}
 		return $out;
+	}
+
+	private function returnTypeText(RewriteContext $ctx, int $close, int $body) : string{
+		$colon = $ctx->next($close);
+		return $colon === null ? "" : trim($ctx->text($colon + 1, $body - 1));
+	}
+
+	/** Whether the last statement of a body is a return or throw (then nothing needs to be added). */
+	private function endsWithReturn(RewriteContext $ctx, int $open, int $close) : bool{
+		$last = $ctx->prev($close);
+		if($last === null || $last <= $open){
+			return false;
+		}
+		if($ctx->tokens[$last]->text !== ";"){
+			return false;
+		}
+		// walk back to the start of the last statement
+		for($i = $ctx->prev($last); $i !== null && $i > $open; $i = $ctx->prev($i)){
+			$t = $ctx->tokens[$i]->text;
+			if($t === ";" || $t === "{" || $t === "}"){
+				$first = $ctx->next($i);
+				return $first !== null && in_array($ctx->tokens[$first]->id, [\T_RETURN, \T_THROW], true);
+			}
+		}
+		$first = $ctx->next($open);
+		return $first !== null && in_array($ctx->tokens[$first]->id, [\T_RETURN, \T_THROW], true);
 	}
 
 	/** Whether the class declaration starting at $start already has an attribute right before it. */
