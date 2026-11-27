@@ -262,9 +262,4 @@ abstract class Command{
 
 	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
 
-	/** @deprecated API 3/4: the permissions joined with ";" */
-	public function getPermission() : ?string{
-		$permissions = $this->getPermissions();
-		return count($permissions) === 0 ? null : implode(";", $permissions);
-	}
 }
