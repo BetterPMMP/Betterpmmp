@@ -185,6 +185,24 @@ final class LegacyApi{
 		return true;
 	}
 
+	/**
+	 * API 3 commands without a permission could be used by everyone; PocketMine-MP 5 refuses to register them.
+	 * For plugins in compatibility mode the command gets its own permission that everyone has.
+	 */
+	public static function giveOpenPermission(\pocketmine\command\Command $command, string $prefix) : bool{
+		if(!self::fromLegacyPlugin()){
+			return false;
+		}
+		$name = strtolower((string) preg_replace('/[^A-Za-z0-9_.-]/', "", $prefix . ".command." . $command->getName()));
+		$manager = \pocketmine\permission\PermissionManager::getInstance();
+		if($manager->getPermission($name) === null){
+			$manager->addPermission(new \pocketmine\permission\Permission($name));
+			$manager->getPermission(\pocketmine\permission\DefaultPermissions::ROOT_USER)?->addChild($name, true);
+		}
+		$command->setPermission($name);
+		return true;
+	}
+
 	/** Whether the current call comes from a plugin loaded in compatibility mode. */
 	private static function fromLegacyPlugin() : bool{
 		if(!self::$autoloader){
