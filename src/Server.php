@@ -2033,4 +2033,103 @@ class Server{
 	public function loadLevel(string $name) : bool{ return $this->getWorldManager()->loadWorld($name, true); }
 	/** @deprecated API 3: use getWorldManager() */
 	public function isLevelLoaded(string $name) : bool{ return $this->getWorldManager()->isWorldLoaded($name); }
+
+	/** @deprecated API 3 */
+	public function getAutoSave() : bool{ return $this->getWorldManager()->getAutoSave(); }
+	/** @deprecated API 3 */
+	public function setAutoSave(bool $value) : void{ $this->getWorldManager()->setAutoSave($value); }
+	/** @deprecated API 3: the default game mode as a number */
+	public function getDefaultGamemode() : int{ return \pocketmine\data\java\GameModeIdMap::getInstance()->toId($this->getGamemode()); }
+	/** @deprecated API 3 */
+	public function getSpawnRadius() : int{ return $this->getConfigGroup()->getConfigInt("spawn-protection", 16); }
+	/** @deprecated API 3 */
+	public function getAllowFlight() : bool{ return $this->getConfigGroup()->getConfigBool("allow-flight", false); }
+	/**
+	 * @deprecated API 3: use getOnlinePlayers()
+	 * @return Player[]
+	 */
+	public function getLoggedInPlayers() : array{ return $this->getOnlinePlayers(); }
+	/**
+	 * @deprecated API 3: players whose name contains $partialName (an exact match alone if there is one)
+	 * @return Player[]
+	 */
+	public function matchPlayer(string $partialName) : array{
+		$partialName = strtolower($partialName);
+		$matched = [];
+		foreach($this->getOnlinePlayers() as $player){
+			$name = strtolower($player->getName());
+			if($name === $partialName){
+				return [$player];
+			}
+			if(str_contains($name, $partialName)){
+				$matched[] = $player;
+			}
+		}
+		return $matched;
+	}
+	/** @deprecated API 3 */
+	public function setDefaultLevel(?\pocketmine\world\World $world) : void{ $this->getWorldManager()->setDefaultWorld($world); }
+	/** @deprecated API 3 */
+	public function getLevel(int $id) : ?\pocketmine\world\World{ return $this->getWorldManager()->getWorld($id); }
+	/** @deprecated API 3 */
+	public function unloadLevel(\pocketmine\world\World $world, bool $force = false) : bool{ return $this->getWorldManager()->unloadWorld($world, $force); }
+	/** @deprecated API 3 */
+	public function isLevelGenerated(string $name) : bool{ return $this->getWorldManager()->isWorldGenerated($name); }
+	/** @deprecated API 3 */
+	public function findEntity(int $entityId) : ?\pocketmine\entity\Entity{
+		foreach($this->getWorldManager()->getWorlds() as $world){
+			if(($entity = $world->getEntity($entityId)) !== null){
+				return $entity;
+			}
+		}
+		return null;
+	}
+	/** @deprecated API 3: pocketmine.yml values */
+	public function getProperty(string $variable, mixed $defaultValue = null) : mixed{ return $this->getConfigGroup()->getProperty($variable, $defaultValue); }
+	/** @deprecated API 3: server.properties values */
+	public function getConfigString(string $variable, string $defaultValue = "") : string{ return $this->getConfigGroup()->getConfigString($variable, $defaultValue); }
+	/** @deprecated API 3 */
+	public function setConfigString(string $variable, string $value) : void{ $this->getConfigGroup()->setConfigString($variable, $value); }
+	/** @deprecated API 3 */
+	public function getConfigInt(string $variable, int $defaultValue = 0) : int{ return $this->getConfigGroup()->getConfigInt($variable, $defaultValue); }
+	/** @deprecated API 3 */
+	public function setConfigInt(string $variable, int $value) : void{ $this->getConfigGroup()->setConfigInt($variable, $value); }
+	/** @deprecated API 3 */
+	public function getConfigBool(string $variable, bool $defaultValue = false) : bool{ return $this->getConfigGroup()->getConfigBool($variable, $defaultValue); }
+	/** @deprecated API 3 */
+	public function setConfigBool(string $variable, bool $value) : void{ $this->getConfigGroup()->setConfigBool($variable, $value); }
+	/** @deprecated API 3: sends a message to everyone with one of the permissions (separated by ";") */
+	public function broadcast(\pocketmine\lang\Translatable|string $message, string $permissions) : int{
+		$recipients = [];
+		foreach(explode(";", $permissions) as $permission){
+			foreach(\pocketmine\permission\PermissionManager::getInstance()->getPermissionSubscriptions($permission) as $permissible){
+				if($permissible instanceof \pocketmine\command\CommandSender && $permissible->hasPermission($permission)){
+					$recipients[spl_object_id($permissible)] = $permissible;
+				}
+			}
+		}
+		foreach($this->getOnlinePlayers() as $player){
+			foreach(explode(";", $permissions) as $permission){
+				if($player->hasPermission($permission)){
+					$recipients[spl_object_id($player)] = $player;
+				}
+			}
+		}
+		return $this->broadcastMessage($message, array_values($recipients));
+	}
+	/** @deprecated API 3 */
+	public function enablePlugin(\pocketmine\plugin\Plugin $plugin) : void{ $this->getPluginManager()->enablePlugin($plugin); }
+	/** @deprecated API 3: "Survival", "Creative" ... for a game mode number */
+	public static function getGamemodeString(int $mode) : string{
+		return match($mode){ 1 => "%gameMode.creative", 2 => "%gameMode.adventure", 3 => "%gameMode.spectator", default => "%gameMode.survival" };
+	}
+	/** @deprecated API 3 */
+	public static function getGamemodeName(int $mode) : string{
+		return match($mode){ 1 => "Creative", 2 => "Adventure", 3 => "Spectator", default => "Survival" };
+	}
+	/** @deprecated API 3: the game mode number for a name, -1 if unknown */
+	public static function getGamemodeFromString(string $str) : int{
+		$mode = \pocketmine\player\GameMode::fromString($str);
+		return $mode === null ? -1 : \pocketmine\data\java\GameModeIdMap::getInstance()->toId($mode);
+	}
 }

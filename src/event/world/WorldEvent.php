@@ -35,4 +35,9 @@ abstract class WorldEvent extends Event{
 	public function getWorld() : World{
 		return $this->world;
 	}
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/** @deprecated API 3: use getWorld() */
+	public function getLevel() : \pocketmine\world\World{ return $this->getWorld(); }
 }

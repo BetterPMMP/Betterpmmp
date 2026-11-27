@@ -686,4 +686,25 @@ class PluginManager{
 		HandlerListManager::global()->getListFor($event)->register($registeredListener);
 		return $registeredListener;
 	}
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/** @deprecated API 3: use PermissionManager */
+	public function getPermission(string $name) : ?\pocketmine\permission\Permission{ return \pocketmine\permission\PermissionManager::getInstance()->getPermission($name); }
+	/** @deprecated API 3: use PermissionManager */
+	public function addPermission(\pocketmine\permission\Permission $permission) : bool{ return \pocketmine\permission\PermissionManager::getInstance()->addPermission($permission); }
+	/** @deprecated API 3: use PermissionManager */
+	public function removePermission(\pocketmine\permission\Permission|string $permission) : void{ \pocketmine\permission\PermissionManager::getInstance()->removePermission($permission); }
+	/**
+	 * @deprecated API 3: use PermissionManager
+	 * @return \pocketmine\permission\Permission[]
+	 */
+	public function getPermissions() : array{ return \pocketmine\permission\PermissionManager::getInstance()->getPermissions(); }
+	/** @deprecated API 3: use $event->call() */
+	public function callEvent(\pocketmine\event\Event $event) : void{ $event->call(); }
+	/**
+	 * @deprecated API 3
+	 * @param string ...$versions
+	 */
+	public function isCompatibleApi(string ...$versions) : bool{ return ApiVersion::isCompatible($this->server->getApiVersion(), $versions); }
 }

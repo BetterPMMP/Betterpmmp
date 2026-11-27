@@ -586,4 +586,39 @@ class Human extends Living implements ProjectileSource, InventoryHolder{
 	public function getXpProgress() : float{ return $this->getXpManager()->getXpProgress(); }
 	/** @deprecated API 3: use getXpManager() */
 	public function setXpProgress(float $progress) : bool{ return $this->getXpManager()->setXpProgress($progress); }
+
+	/** @deprecated API 3: use getHungerManager() */
+	public function getMaxFood() : float{ return $this->getHungerManager()->getMaxFood(); }
+	/** @deprecated API 3: use getHungerManager() */
+	public function isHungry() : bool{ return $this->getHungerManager()->isHungry(); }
+	/** @deprecated API 3: use getHungerManager() */
+	public function addSaturation(float $amount) : void{ $this->getHungerManager()->addSaturation($amount); }
+	/** @deprecated API 3: use getHungerManager() */
+	public function getExhaustion() : float{ return $this->getHungerManager()->getExhaustion(); }
+	/** @deprecated API 3: use getHungerManager() */
+	public function setExhaustion(float $exhaustion) : void{ $this->getHungerManager()->setExhaustion($exhaustion); }
+	/** @deprecated API 3: use getHungerManager() */
+	public function exhaust(float $amount, int $cause = \pocketmine\event\player\PlayerExhaustEvent::CAUSE_CUSTOM) : float{ return $this->getHungerManager()->exhaust($amount, $cause); }
+	/** @deprecated API 3: use getXpManager() */
+	public function subtractXpLevels(int $amount) : bool{ return $this->getXpManager()->subtractXpLevels($amount); }
+	/** @deprecated API 3: use getXpManager() */
+	public function getRemainderXp() : int{ return $this->getXpManager()->getRemainderXp(); }
+	/** @deprecated API 3: use getXpManager() */
+	public function getCurrentTotalXp() : int{ return $this->getXpManager()->getCurrentTotalXp(); }
+	/** @deprecated API 3: use getXpManager() */
+	public function setCurrentTotalXp(int $amount) : bool{ return $this->getXpManager()->setCurrentTotalXp($amount); }
+	/** @deprecated API 3: use getXpManager() */
+	public function subtractXp(int $amount) : bool{ return $this->getXpManager()->subtractXp($amount); }
+	/** @deprecated API 3: use getXpManager() */
+	public function getLifetimeTotalXp() : int{ return $this->getXpManager()->getLifetimeTotalXp(); }
+	/** @deprecated API 3: use getXpManager() */
+	public function setLifetimeTotalXp(int $amount) : void{ $this->getXpManager()->setLifetimeTotalXp($amount); }
+	/** @deprecated API 3: use getXpManager() */
+	public function canPickupXp() : bool{ return $this->getXpManager()->canPickupXp(); }
+	/** @deprecated API 3: use getXpManager() */
+	public function resetXpCooldown(int $value = 2) : void{ $this->getXpManager()->resetXpCooldown($value); }
+	/** @deprecated API 3: use getEnderInventory() */
+	public function getEnderChestInventory() : \pocketmine\inventory\PlayerEnderInventory{ return $this->getEnderInventory(); }
+	/** @deprecated API 3: the UUID as 16 bytes */
+	public function getRawUniqueId() : string{ return $this->getUniqueId()->getBytes(); }
 }

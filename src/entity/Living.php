@@ -1140,4 +1140,7 @@ abstract class Living extends Entity{
 		$effect = is_int($effect) ? \pocketmine\entity\effect\Effect::getEffect($effect) : $effect;
 		return $effect === null ? null : $this->getEffects()->get($effect);
 	}
+
+	/** @deprecated API 3 */
+	public function hasEffects() : bool{ return count($this->getEffects()->all()) > 0; }
 }

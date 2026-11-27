@@ -186,4 +186,15 @@ class TaskScheduler{
 	private function isReady(int $currentTick) : bool{
 		return !$this->queue->isEmpty() && $this->queue->current()->getNextRun() <= $currentTick;
 	}
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/** @deprecated API 3: cancel a task by its id */
+	public function cancelTask(int $taskId) : void{
+		foreach($this->tasks as $handler){
+			if($handler->getTaskId() === $taskId){
+				$handler->cancel();
+			}
+		}
+	}
 }

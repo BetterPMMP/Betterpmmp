@@ -1785,4 +1785,11 @@ abstract class Entity{
 	public function __toString(){
 		return (new \ReflectionClass($this))->getShortName() . "(" . $this->getId() . ")";
 	}
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/** @deprecated API 3/4: use hasNoClientPredictions() */
+	public function isImmobile() : bool{ return $this->hasNoClientPredictions(); }
+	/** @deprecated API 3/4: use setNoClientPredictions() */
+	public function setImmobile(bool $value = true) : void{ $this->setNoClientPredictions($value); }
 }

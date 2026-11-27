@@ -72,7 +72,7 @@ use const PHP_BINARY;
 final class LegacyApi{
 
 	/** bump when the rewriter changes, so cached copies are rebuilt */
-	private const VERSION = 5;
+	private const VERSION = 6;
 
 	/** classes that only moved or were renamed: old name (lowercase) => new name */
 	private const CLASSES = [
@@ -90,6 +90,53 @@ final class LegacyApi{
 		"pocketmine\\entity\\effect" => "pocketmine\\entity\\effect\\Effect",
 		"pocketmine\\block\\blockids" => "pocketmine\\block\\BlockLegacyIds",
 		"pocketmine\\event\\entity\\entitylevelchangeevent" => "pocketmine\\event\\entity\\EntityTeleportEvent",
+		"pocketmine\\utils\\color" => "pocketmine\\color\\Color",
+		"pocketmine\\lang\\baselang" => "pocketmine\\lang\\Language",
+		"pocketmine\\command\\consolecommandsender" => "pocketmine\\console\\ConsoleCommandSender",
+		"pocketmine\\event\\player\\playercommandpreprocessevent" => "pocketmine\\event\\server\\CommandEvent",
+		"pocketmine\\event\\server\\servercommandevent" => "pocketmine\\event\\server\\CommandEvent",
+		"pocketmine\\event\\server\\remoteservercommandevent" => "pocketmine\\event\\server\\CommandEvent",
+		"pocketmine\\event\\inventory\\inventorypickupitemevent" => "pocketmine\\event\\entity\\EntityItemPickupEvent",
+		"pocketmine\\event\\inventory\\inventorypickuparrowevent" => "pocketmine\\event\\entity\\EntityItemPickupEvent",
+		"pocketmine\\event\\entity\\explosionprimeevent" => "pocketmine\\event\\entity\\EntityPreExplodeEvent",
+		"pocketmine\\inventory\\chestinventory" => "pocketmine\\block\\inventory\\ChestInventory",
+		"pocketmine\\inventory\\doublechestinventory" => "pocketmine\\block\\inventory\\DoubleChestInventory",
+		"pocketmine\\inventory\\enderchestinventory" => "pocketmine\\block\\inventory\\EnderChestInventory",
+		"pocketmine\\inventory\\furnaceinventory" => "pocketmine\\block\\inventory\\FurnaceInventory",
+		"pocketmine\\inventory\\anvilinventory" => "pocketmine\\block\\inventory\\AnvilInventory",
+		"pocketmine\\inventory\\enchantinventory" => "pocketmine\\block\\inventory\\EnchantInventory",
+		"pocketmine\\inventory\\craftingmanager" => "pocketmine\\crafting\\CraftingManager",
+		"pocketmine\\inventory\\craftinggrid" => "pocketmine\\crafting\\CraftingGrid",
+		"pocketmine\\inventory\\shapedrecipe" => "pocketmine\\crafting\\ShapedRecipe",
+		"pocketmine\\inventory\\shapelessrecipe" => "pocketmine\\crafting\\ShapelessRecipe",
+		"pocketmine\\inventory\\furnacerecipe" => "pocketmine\\crafting\\FurnaceRecipe",
+		"pocketmine\\inventory\\craftingrecipe" => "pocketmine\\crafting\\CraftingRecipe",
+		"pocketmine\\item\\consumable" => "pocketmine\\entity\\Consumable",
+		"pocketmine\\item\\foodsource" => "pocketmine\\entity\\FoodSource",
+		"pocketmine\\entity\\creature" => "pocketmine\\entity\\Living",
+		"pocketmine\\entity\\damageable" => "pocketmine\\entity\\Living",
+		"pocketmine\\tile\\skull" => "pocketmine\\block\\tile\\MobHead",
+		"pocketmine\\block\\skull" => "pocketmine\\block\\MobHead",
+		"pocketmine\\item\\diamondchestplate" => "pocketmine\\item\\Armor",
+		"pocketmine\\item\\ironleggings" => "pocketmine\\item\\Armor",
+		"pocketmine\\item\\goldhelmet" => "pocketmine\\item\\Armor",
+		"pocketmine\\item\\leatherboots" => "pocketmine\\item\\Armor",
+		"pocketmine\\item\\ironboots" => "pocketmine\\item\\Armor",
+		"pocketmine\\item\\leatherpants" => "pocketmine\\item\\Armor",
+		"pocketmine\\item\\goldchestplate" => "pocketmine\\item\\Armor",
+		"pocketmine\\item\\ironchestplate" => "pocketmine\\item\\Armor",
+		"pocketmine\\item\\diamondboots" => "pocketmine\\item\\Armor",
+		"pocketmine\\item\\goldboots" => "pocketmine\\item\\Armor",
+		"pocketmine\\item\\chainchestplate" => "pocketmine\\item\\Armor",
+		"pocketmine\\item\\chainboots" => "pocketmine\\item\\Armor",
+		"pocketmine\\item\\goldleggings" => "pocketmine\\item\\Armor",
+		"pocketmine\\item\\chainleggings" => "pocketmine\\item\\Armor",
+		"pocketmine\\item\\ironhelmet" => "pocketmine\\item\\Armor",
+		"pocketmine\\item\\diamondhelmet" => "pocketmine\\item\\Armor",
+		"pocketmine\\item\\leathercap" => "pocketmine\\item\\Armor",
+		"pocketmine\\item\\leathertunic" => "pocketmine\\item\\Armor",
+		"pocketmine\\item\\diamondleggings" => "pocketmine\\item\\Armor",
+		"pocketmine\\item\\chainhelmet" => "pocketmine\\item\\Armor",
 	];
 
 	/** moved namespaces: old prefix (lowercase) => new prefix; "Level" in the class name becomes "World" */
@@ -111,6 +158,8 @@ final class LegacyApi{
 		"pocketmine\\item\\itemids" => "ItemIds.php",
 		"pocketmine\\block\\blocklegacyids" => "BlockLegacyIds.php",
 		"pocketmine\\command\\pluginidentifiablecommand" => "PluginIdentifiableCommand.php",
+		"pocketmine\\utils\\uuid" => "UUID.php",
+		"pocketmine\\entity\\entityids" => "EntityIds.php",
 	];
 
 	private static bool $autoloader = false;
@@ -253,6 +302,25 @@ final class LegacyApi{
 			$description = isset($entry["description"]) ? (string) $entry["description"] : null;
 			$flat[$name] = [$default, $description, ($flat[$name][2] ?? []) + $children];
 		}
+	}
+
+	/** @var array<string, bool> plugin name => loaded in compatibility mode */
+	private static array $legacyPlugins = [];
+
+	public static function isLegacyPlugin(\pocketmine\plugin\Plugin $plugin) : bool{
+		return self::$legacyPlugins[$plugin->getName()] ??= self::isLegacy($plugin->getDescription());
+	}
+
+	/** Whether an object (a command, a listener ...) belongs to a plugin in compatibility mode. */
+	public static function isLegacyCode(object $object) : bool{
+		if(!self::$autoloader){
+			return false;
+		}
+		if($object instanceof \pocketmine\plugin\PluginOwned){
+			return self::isLegacyPlugin($object->getOwningPlugin());
+		}
+		$file = (new \ReflectionClass($object))->getFileName();
+		return $file !== false && str_contains(str_replace("\\", "/", $file), "/plugin_cache/");
 	}
 
 	/** Whether the current call comes from a plugin loaded in compatibility mode. */

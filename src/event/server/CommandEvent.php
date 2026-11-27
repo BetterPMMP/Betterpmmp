@@ -60,4 +60,13 @@ class CommandEvent extends ServerEvent implements Cancellable{
 	public function setCommand(string $command) : void{
 		$this->command = $command;
 	}
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/** @deprecated API 3/4 (PlayerCommandPreprocessEvent): the command with a leading slash */
+	public function getMessage() : string{ return "/" . $this->getCommand(); }
+	/** @deprecated API 3/4 (PlayerCommandPreprocessEvent) */
+	public function setMessage(string $message) : void{ $this->setCommand(ltrim($message, "/")); }
+	/** @deprecated API 3/4 (PlayerCommandPreprocessEvent): the sender */
+	public function getPlayer() : \pocketmine\command\CommandSender{ return $this->getSender(); }
 }

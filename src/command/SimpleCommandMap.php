@@ -249,7 +249,7 @@ class SimpleCommandMap implements CommandMap{
 			}
 		}
 		if($index === null || in_array($command->getLabel(), $selectorAware, true)){
-			$command->execute($sender, $label, $args);
+			$this->executeCommand($command, $sender, $label, $args);
 			return;
 		}
 		$players = \pocketmine\command\utils\TargetSelector::selectPlayers($sender, $args[$index]);
@@ -259,12 +259,12 @@ class SimpleCommandMap implements CommandMap{
 		}
 		if(count($players) === 1 && $command instanceof \pocketmine\command\defaults\VanillaCommand){
 			$args[$index] = $players[0]->getName(); //exact player, not a name prefix
-			$command->execute($sender, $label, $args);
+			$this->executeCommand($command, $sender, $label, $args);
 			return;
 		}
 		foreach($players as $player){
 			$args[$index] = $player->getName();
-			$command->execute($sender, $label, $args);
+			$this->executeCommand($command, $sender, $label, $args);
 		}
 	}
 
@@ -431,6 +431,26 @@ class SimpleCommandMap implements CommandMap{
 				unset($this->knownCommands[$lowerAlias]);
 			}
 
+		}
+	}
+
+	/**
+	 * BetterPMMP: runs a command. A command of a plugin in compatibility mode (API 3/4) that still throws is
+	 * reported to the sender and the log instead of crashing the whole server.
+	 *
+	 * @param string[] $args
+	 */
+	private function executeCommand(Command $command, CommandSender $sender, string $label, array $args) : void{
+		if(!\pocketmine\plugin\compat\LegacyApi::isLegacyCode($command)){
+			$command->execute($sender, $label, $args);
+			return;
+		}
+		try{
+			$command->execute($sender, $label, $args);
+		}catch(\Throwable $e){
+			$this->server->getLogger()->error("Command /$label of an old plugin failed: " . $e->getMessage());
+			$this->server->getLogger()->logException($e);
+			$sender->sendMessage(TextFormat::RED . "This command failed, see the server log.");
 		}
 	}
 }

@@ -820,4 +820,42 @@ class Item implements \JsonSerializable{
 
 	/** @deprecated API 3/4: the meta value (durability damage for tools) */
 	public function getDamage() : int{ return \pocketmine\plugin\compat\LegacyIds::itemMeta($this); }
+
+	/** @deprecated API 3: Item::get(id, meta, count) */
+	public static function get(int $id, int $meta = 0, int $count = 1, mixed $tags = null) : Item{
+		return \pocketmine\plugin\compat\LegacyIds::item($id, $meta, $count);
+	}
+	/** @deprecated API 3: Item::fromString("diamond_sword") or "276:0" */
+	public static function fromString(string $str) : Item{
+		return StringToItemParser::getInstance()->parse($str) ?? LegacyStringToItemParser::getInstance()->parse($str);
+	}
+	/** @deprecated API 3: use hasNamedTag() */
+	public function hasCompoundTag() : bool{ return $this->hasNamedTag(); }
+	/** @deprecated API 3: use getNamedTag() */
+	public function getNamedTagEntry(string $name) : ?\pocketmine\nbt\tag\Tag{ return $this->getNamedTag()->getTag($name); }
+	/** @deprecated API 3: use getNamedTag() */
+	public function removeNamedTagEntry(string $name) : void{
+		$tag = $this->getNamedTag();
+		$tag->removeTag($name);
+		$this->setNamedTag($tag);
+	}
+	/** @deprecated API 3: damage for tools; other items ignore it */
+	public function setDamage(int $damage) : Item{ return $this; }
+	/** @deprecated API 4 */
+	public function hasAnyDamageValue() : bool{ return false; }
+	/** @deprecated API 3: use CreativeInventory */
+	public static function addCreativeItem(Item $item) : void{ \pocketmine\inventory\CreativeInventory::getInstance()->add($item); }
+	/** @deprecated API 3: use CreativeInventory */
+	public static function removeCreativeItem(Item $item) : void{ \pocketmine\inventory\CreativeInventory::getInstance()->remove($item); }
+	/** @deprecated API 3: use CreativeInventory */
+	public static function isCreativeItem(Item $item) : bool{ return \pocketmine\inventory\CreativeInventory::getInstance()->contains($item); }
+	/**
+	 * @deprecated API 3: use CreativeInventory
+	 * @return Item[]
+	 */
+	public static function getCreativeItems() : array{ return \pocketmine\inventory\CreativeInventory::getInstance()->getAll(); }
+	/** @deprecated API 3: use CreativeInventory */
+	public static function clearCreativeItems() : void{ \pocketmine\inventory\CreativeInventory::getInstance()->clear(); }
+	/** @deprecated API 3: nothing to do any more */
+	public static function initCreativeItems() : void{}
 }

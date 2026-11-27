@@ -59,4 +59,18 @@ trait PlayerDisconnectEventTrait{
 	 * If this is null, the kick reason will be used as the disconnect screen message directly.
 	 */
 	public function getDisconnectScreenMessage() : Translatable|string|null{ return $this->disconnectScreenMessage ?? $this->disconnectReason; }
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/** @deprecated API 3/4: use getDisconnectReason() */
+	public function getReason() : string{
+		$r = $this->getDisconnectReason();
+		return $r instanceof \pocketmine\lang\Translatable ? $r->getText() : $r;
+	}
+	/** @deprecated API 3/4: use setDisconnectReason() */
+	public function setReason(\pocketmine\lang\Translatable|string $reason) : void{ $this->setDisconnectReason($reason); }
+	/** @deprecated API 4: use getDisconnectReason() */
+	public function getDisconnectMessage() : \pocketmine\lang\Translatable|string{ return $this->getDisconnectReason(); }
+	/** @deprecated API 4: use setDisconnectReason() */
+	public function setDisconnectMessage(\pocketmine\lang\Translatable|string $message) : void{ $this->setDisconnectReason($message); }
 }

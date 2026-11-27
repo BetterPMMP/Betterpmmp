@@ -198,4 +198,35 @@ class PlayerPreLoginEvent extends Event{
 
 		return "";
 	}
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/** @deprecated API 4 */
+	public function getKickReasons() : array{ return $this->getKickFlags(); }
+	/** @deprecated API 4 */
+	public function isKickReasonSet(int $flag) : bool{ return $this->isKickFlagSet($flag); }
+	/** @deprecated API 4 */
+	public function setKickReason(int $flag, \pocketmine\lang\Translatable|string $message) : void{ $this->setKickFlag($flag, $message); }
+	/** @deprecated API 4 */
+	public function clearKickReason(int $flag) : void{ $this->clearKickFlag($flag); }
+	/** @deprecated API 4 */
+	public function clearAllKickReasons() : void{ $this->clearAllKickFlags(); }
+	/** @deprecated API 3/4: the first kick message */
+	public function getKickMessage(?int $flag = null) : \pocketmine\lang\Translatable|string{
+		foreach($flag !== null ? [$flag] : $this->getKickFlags() as $f){
+			$r = $this->getDisconnectReason($f);
+			if($r !== null) return $r;
+		}
+		return "";
+	}
+	/** @deprecated API 4 */
+	public function getFinalKickMessage() : \pocketmine\lang\Translatable|string{ return $this->getKickMessage(); }
+	/** @deprecated API 3: kick with this message */
+	public function setKickMessage(\pocketmine\lang\Translatable|string $message) : void{ $this->setKickFlag(self::KICK_FLAG_PLUGIN, $message); }
+	/** @deprecated API 3: the event was cancellable */
+	public function isCancelled() : bool{ return !$this->isAllowed(); }
+	/** @deprecated API 3: the event was cancellable */
+	public function setCancelled(bool $value = true) : void{
+		$value ? $this->setKickFlag(self::KICK_FLAG_PLUGIN, "") : $this->clearKickFlag(self::KICK_FLAG_PLUGIN);
+	}
 }
