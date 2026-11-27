@@ -23,6 +23,7 @@ use pocketmine\item\Durable;
 use pocketmine\crafting\CraftingGrid;
 use pocketmine\crafting\CraftingRecipe;
 use pocketmine\inventory\Inventory;
+use pocketmine\inventory\TradeInventory;
 use pocketmine\inventory\transaction\action\DropItemAction;
 use pocketmine\inventory\transaction\action\InventoryAction;
 use pocketmine\inventory\transaction\action\SlotChangeAction;
@@ -256,6 +257,9 @@ final class JavaInventoryClick{
 		if($container instanceof CartographyTableInventory){
 			$name = \pocketmine\crafting\SmithingRecipes::nameOf($item);
 			return $name === "minecraft:filled_map" ? [[$container, 0]] : (in_array($name, ["minecraft:paper", "minecraft:empty_map", "minecraft:map", "minecraft:glass_pane"], true) ? [[$container, 1]] : []);
+		}
+		if($container instanceof TradeInventory){
+			return []; // vanilla: shift-click moves between the inventory rows and the hotbar, not into the payment slots
 		}
 		if($container instanceof EnchantInventory){
 			return $item->getTypeId() === \pocketmine\item\ItemTypeIds::LAPIS_LAZULI ? [[$container, EnchantInventory::SLOT_LAPIS]] : [[$container, EnchantInventory::SLOT_INPUT]];
@@ -890,7 +894,7 @@ final class JavaInventoryClick{
 
 	/** Java screens with two inputs and a result slot. */
 	private static function hasResultSlot(?Inventory $container) : bool{
-		return $container instanceof AnvilInventory || $container instanceof GrindstoneInventory || $container instanceof CartographyTableInventory;
+		return $container instanceof AnvilInventory || $container instanceof GrindstoneInventory || $container instanceof CartographyTableInventory || $container instanceof TradeInventory;
 	}
 
 	private static function renameFor(Player $player, Inventory $anvil) : ?string{
@@ -925,6 +929,18 @@ final class JavaInventoryClick{
 			}
 			return [$result, $used, fn() => new \pocketmine\inventory\transaction\GrindstoneTransaction($player, $container, $result, $xp), 0];
 		}
+		if($container instanceof TradeInventory){
+			$match = self::tradeMatch($player, $container);
+			if($match === null){
+				return null;
+			}
+			[$offer, $slotA, $slotB] = $match;
+			$used = [$slotA => $offer->getBuyAFor($player)->getCount()];
+			if(($buyB = $offer->getBuyB()) !== null){
+				$used[$slotB] = $buyB->getCount();
+			}
+			return [$offer->getSell(), $used, fn() => new \pocketmine\inventory\transaction\TradingTransaction($player, $container, $offer, 1), 0];
+		}
 		if($container instanceof CartographyTableInventory){
 			$calculated = \pocketmine\inventory\transaction\CartographyTransaction::calculate($container->getItem(0), $container->getItem(1), null);
 			if($calculated === null){
@@ -939,6 +955,10 @@ final class JavaInventoryClick{
 	/** Clicking the result: takes it (shift-click: into the inventory) and uses up the inputs, like vanilla. */
 	private function stationResult(bool $intoInventory) : void{
 		$container = $this->container();
+		if($container instanceof TradeInventory){
+			$this->tradeResult($container, $intoInventory);
+			return;
+		}
 		if($container === null || ($calculation = self::stationCalculation($this->player, $container)) === null){
 			return;
 		}
@@ -1056,6 +1076,160 @@ final class JavaInventoryClick{
 		}
 		$click->set($table, EnchantInventory::SLOT_INPUT, \pocketmine\item\enchantment\EnchantingHelper::enchantItem($input, $option->getEnchantments()));
 		$click->transactionFactory = fn() => new \pocketmine\inventory\transaction\EnchantingTransaction($player, $option, $cost);
+		$click->commit();
+	}
+
+	// ------------------------------------------------------------- villager trading
+
+	/** @var array<int, array{int, int}> player id => [trade window id, net id of the offer picked in the Java list] */
+	private static array $selectedTrades = [];
+
+	/**
+	 * The offer the payment slots pay for: the one picked in the list first, then any other (vanilla also
+	 * accepts the two prices in swapped slots).
+	 * @return array{\pocketmine\entity\trade\TradeOffer, int, int}|null offer, slot of price 1, slot of price 2
+	 */
+	private static function tradeMatch(Player $player, TradeInventory $trade) : ?array{
+		$offers = [];
+		$selected = self::$selectedTrades[spl_object_id($player)] ?? null;
+		if($selected !== null && $selected[0] === spl_object_id($trade) && ($picked = $trade->getOfferByNetId($selected[1])) !== null){
+			$offers[] = $picked;
+		}
+		foreach($trade->getVillager()->getOffers() as $offer){
+			$offers[] = $offer;
+		}
+		$items = [$trade->getItem(TradeInventory::SLOT_INGREDIENT_1), $trade->getItem(TradeInventory::SLOT_INGREDIENT_2)];
+		foreach($offers as $offer){
+			if($offer->isDisabled()){
+				continue;
+			}
+			$buyA = $offer->getBuyAFor($player);
+			$buyB = $offer->getBuyB();
+			foreach([[0, 1], [1, 0]] as [$slotA, $slotB]){
+				$a = $items[$slotA];
+				$b = $items[$slotB];
+				if($a->isNull() || !$a->canStackWith($buyA) || $a->getCount() < $buyA->getCount()){
+					continue;
+				}
+				if($buyB !== null && ($b->isNull() || !$b->canStackWith($buyB) || $b->getCount() < $buyB->getCount())){
+					continue;
+				}
+				return [$offer, $slotA, $slotB];
+			}
+		}
+		return null;
+	}
+
+	/** @return list<array{Inventory, int}> hotbar first, like vanilla puts results into the inventory */
+	private function playerSlots() : array{
+		$inventory = $this->player->getInventory();
+		$targets = [];
+		for($i = 8; $i >= 0; --$i){
+			$targets[] = [$inventory, $i];
+		}
+		for($i = 35; $i >= 9; --$i){
+			$targets[] = [$inventory, $i];
+		}
+		return $targets;
+	}
+
+	/** Takes the trade result (shift-click: trades as often as the payment and the inventory allow). */
+	private function tradeResult(TradeInventory $trade, bool $intoInventory) : void{
+		$match = self::tradeMatch($this->player, $trade);
+		if($match === null){
+			return;
+		}
+		[$offer, $slotA, $slotB] = $match;
+		$buyA = $offer->getBuyAFor($this->player);
+		$buyB = $offer->getBuyB();
+		$sell = $offer->getSell();
+		$times = 1;
+		if($intoInventory){
+			$times = intdiv($trade->getItem($slotA)->getCount(), max(1, $buyA->getCount()));
+			if($buyB !== null){
+				$times = min($times, intdiv($trade->getItem($slotB)->getCount(), max(1, $buyB->getCount())));
+			}
+			$times = max(1, min($times, $offer->getMaxUses() - $offer->getUses()));
+			for(; $times > 0; --$times){
+				$this->changes = [];
+				$output = (clone $sell)->setCount($sell->getCount() * $times);
+				$this->insert($output, $this->playerSlots());
+				if($output->isNull()){
+					break;
+				}
+			}
+			if($times === 0){
+				$this->changes = [];
+				return; // no room
+			}
+		}else{
+			$cursor = $this->cursor();
+			if($cursor->isNull()){
+				$this->setCursor(clone $sell);
+			}elseif($cursor->canStackWith($sell) && $cursor->getCount() + $sell->getCount() <= self::maxStack($sell, $this->player->getCursorInventory())){
+				$this->setCursor($cursor->setCount($cursor->getCount() + $sell->getCount()));
+			}else{
+				return;
+			}
+		}
+		$pay = [$slotA => $buyA->getCount() * $times];
+		if($buyB !== null){
+			$pay[$slotB] = $buyB->getCount() * $times;
+		}
+		foreach($pay as $slot => $count){
+			$item = $this->get($trade, $slot);
+			$item->pop(min($count, $item->getCount()));
+			$this->set($trade, $slot, $item);
+		}
+		$this->transactionFactory = fn() => new \pocketmine\inventory\transaction\TradingTransaction($this->player, $trade, $offer, $times);
+	}
+
+	/**
+	 * An offer picked in the Java list ("window;netId"): like a vanilla Java server, the payment goes back into
+	 * the inventory and the prices of the picked offer are taken from the inventory into the payment slots.
+	 */
+	public static function handleTradeSelect(Player $player, InventoryManager $manager, string $value) : void{
+		$parts = explode(";", $value);
+		if(count($parts) !== 2){
+			return;
+		}
+		$click = new self($player, $manager, (int) $parts[0]);
+		$trade = $click->container();
+		if(!$trade instanceof TradeInventory || ($offer = $trade->getOfferByNetId((int) $parts[1])) === null){
+			return;
+		}
+		self::$selectedTrades[spl_object_id($player)] = [spl_object_id($trade), (int) $parts[1]];
+		$targets = $click->playerSlots();
+		$free = true;
+		foreach([TradeInventory::SLOT_INGREDIENT_1, TradeInventory::SLOT_INGREDIENT_2] as $slot){
+			$item = $click->get($trade, $slot);
+			if(!$item->isNull()){
+				$click->insert($item, $targets);
+				$click->set($trade, $slot, $item);
+				$free = $free && $item->isNull();
+			}
+		}
+		if($free){
+			$inventory = $player->getInventory();
+			foreach([TradeInventory::SLOT_INGREDIENT_1 => $offer->getBuyAFor($player), TradeInventory::SLOT_INGREDIENT_2 => $offer->getBuyB()] as $slot => $cost){
+				if($cost === null){
+					continue;
+				}
+				$filled = $click->get($trade, $slot);
+				$max = self::maxStack($cost, $trade);
+				for($i = 0; $i < 36 && $filled->getCount() < $max; ++$i){
+					$item = $click->get($inventory, $i);
+					if($item->isNull() || !$item->canStackWith($cost)){
+						continue;
+					}
+					$amount = min($item->getCount(), $max - $filled->getCount());
+					$filled = $filled->isNull() ? (clone $item)->setCount($amount) : $filled->setCount($filled->getCount() + $amount);
+					$item->pop($amount);
+					$click->set($inventory, $i, $item);
+				}
+				$click->set($trade, $slot, $filled);
+			}
+		}
 		$click->commit();
 	}
 }
