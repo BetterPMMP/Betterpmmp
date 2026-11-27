@@ -1121,4 +1121,23 @@ abstract class Living extends Entity{
 	public function addEffect(\pocketmine\entity\effect\EffectInstance $effect) : bool{ return $this->getEffects()->add($effect); }
 	/** @deprecated API 3: use getEffects()->clear() */
 	public function removeAllEffects() : void{ $this->getEffects()->clear(); }
+	/** @deprecated API 3: removeEffect(Effect::SPEED) */
+	public function removeEffect(int|\pocketmine\entity\effect\Effect $effect) : void{
+		$effect = is_int($effect) ? \pocketmine\entity\effect\Effect::getEffect($effect) : $effect;
+		if($effect !== null){
+			$this->getEffects()->remove($effect);
+		}
+	}
+	/** @deprecated API 3: hasEffect(Effect::SPEED) */
+	public function hasEffect(int|\pocketmine\entity\effect\Effect $effect) : bool{
+		$effect = is_int($effect) ? \pocketmine\entity\effect\Effect::getEffect($effect) : $effect;
+		return $effect !== null && $this->getEffects()->has($effect);
+	}
+	/**
+	 * @deprecated API 3: getEffect(Effect::SPEED)
+		 */
+	public function getEffect(int|\pocketmine\entity\effect\Effect $effect) : ?\pocketmine\entity\effect\EffectInstance{
+		$effect = is_int($effect) ? \pocketmine\entity\effect\Effect::getEffect($effect) : $effect;
+		return $effect === null ? null : $this->getEffects()->get($effect);
+	}
 }

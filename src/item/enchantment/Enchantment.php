@@ -35,6 +35,99 @@ use pocketmine\utils\Utils;
  * Manages enchantment type data.
  */
 class Enchantment{
+	// ---- BetterPMMP: API 3 enchantment ids and lookups for plugins in compatibility mode ----
+	/** @deprecated API 3 */
+	public const PROTECTION = 0;
+	/** @deprecated API 3 */
+	public const FIRE_PROTECTION = 1;
+	/** @deprecated API 3 */
+	public const FEATHER_FALLING = 2;
+	/** @deprecated API 3 */
+	public const BLAST_PROTECTION = 3;
+	/** @deprecated API 3 */
+	public const PROJECTILE_PROTECTION = 4;
+	/** @deprecated API 3 */
+	public const THORNS = 5;
+	/** @deprecated API 3 */
+	public const RESPIRATION = 6;
+	/** @deprecated API 3 */
+	public const DEPTH_STRIDER = 7;
+	/** @deprecated API 3 */
+	public const AQUA_AFFINITY = 8;
+	/** @deprecated API 3 */
+	public const SHARPNESS = 9;
+	/** @deprecated API 3 */
+	public const SMITE = 10;
+	/** @deprecated API 3 */
+	public const BANE_OF_ARTHROPODS = 11;
+	/** @deprecated API 3 */
+	public const KNOCKBACK = 12;
+	/** @deprecated API 3 */
+	public const FIRE_ASPECT = 13;
+	/** @deprecated API 3 */
+	public const LOOTING = 14;
+	/** @deprecated API 3 */
+	public const EFFICIENCY = 15;
+	/** @deprecated API 3 */
+	public const SILK_TOUCH = 16;
+	/** @deprecated API 3 */
+	public const UNBREAKING = 17;
+	/** @deprecated API 3 */
+	public const FORTUNE = 18;
+	/** @deprecated API 3 */
+	public const POWER = 19;
+	/** @deprecated API 3 */
+	public const PUNCH = 20;
+	/** @deprecated API 3 */
+	public const FLAME = 21;
+	/** @deprecated API 3 */
+	public const INFINITY = 22;
+	/** @deprecated API 3 */
+	public const LUCK_OF_THE_SEA = 23;
+	/** @deprecated API 3 */
+	public const LURE = 24;
+	/** @deprecated API 3 */
+	public const FROST_WALKER = 25;
+	/** @deprecated API 3 */
+	public const MENDING = 26;
+	/** @deprecated API 3 */
+	public const BINDING = 27;
+	/** @deprecated API 3 */
+	public const VANISHING = 28;
+	/** @deprecated API 3 */
+	public const IMPALING = 29;
+	/** @deprecated API 3 */
+	public const RIPTIDE = 30;
+	/** @deprecated API 3 */
+	public const LOYALTY = 31;
+	/** @deprecated API 3 */
+	public const CHANNELING = 32;
+	/** @deprecated API 3 */
+	public const MULTISHOT = 33;
+	/** @deprecated API 3 */
+	public const PIERCING = 34;
+	/** @deprecated API 3 */
+	public const QUICK_CHARGE = 35;
+	/** @deprecated API 3 */
+	public const SOUL_SPEED = 36;
+	/** @deprecated API 3 */
+	public const SWIFT_SNEAK = 37;
+
+	/** @deprecated API 3: Enchantment::getEnchantment(Enchantment::SHARPNESS) */
+	public static function getEnchantment(int $id) : ?Enchantment{
+		return \pocketmine\data\bedrock\EnchantmentIdMap::getInstance()->fromId($id);
+	}
+
+	/** @deprecated API 3: Enchantment::getEnchantmentByName("sharpness") */
+	public static function getEnchantmentByName(string $name) : ?Enchantment{
+		return StringToEnchantmentParser::getInstance()->parse($name);
+	}
+
+	/** @deprecated API 3: the numeric id of this enchantment */
+	public function getId() : int{
+		return \pocketmine\data\bedrock\EnchantmentIdMap::getInstance()->toId($this);
+	}
+
 	use NotCloneable;
 	use NotSerializable;
 
