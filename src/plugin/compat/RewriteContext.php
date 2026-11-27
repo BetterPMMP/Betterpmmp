@@ -228,7 +228,13 @@ final class RewriteContext{
 					}
 					$k = $this->next($k);
 				}
+				$start = $i;
+				for($m = $this->prev($i); $m !== null && in_array($this->tokens[$m]->id, [\T_ABSTRACT, \T_FINAL, \T_READONLY], true); $m = $this->prev($m)){
+					$start = $m;
+				}
 				$current = [
+					"start" => $start,
+					"kind" => $tok->id === T_CLASS ? "class" : ($tok->id === T_INTERFACE ? "interface" : "trait"),
 					"name" => ($this->namespace !== "" ? $this->namespace . "\\" : "") . $short,
 					"short" => $short,
 					"parent" => $parent,

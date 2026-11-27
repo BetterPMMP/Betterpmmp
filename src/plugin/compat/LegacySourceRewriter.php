@@ -129,6 +129,10 @@ final class LegacySourceRewriter{
 
 		// 1. signatures of methods that override PocketMine methods
 		foreach($ctx->classes as $class){
+			if(($class["kind"] ?? "") === "class" && !$this->hasAttribute($ctx, $class["start"])){
+				// old plugins create properties on the fly, which PHP 8.2 reports as deprecated
+				$replace[$class["start"]] = "#[\\AllowDynamicProperties]\n" . ($replace[$class["start"]] ?? $ctx->tokens[$class["start"]]->text);
+			}
 			foreach($class["methods"] as $method){
 				$ref = $this->findReference($class["name"], $method["name"]);
 				if($ref === null){
@@ -156,6 +160,14 @@ final class LegacySourceRewriter{
 				}elseif($name === "getplayer" && $this->previousCallIs($ctx, $i, ["getserver", "getinstance"])){
 					$replace[$j] = "getPlayerByPrefix";
 					$this->changes[] = "$file: Server::getPlayer() -> getPlayerByPrefix()";
+				}elseif($name === "setgamemode" && !isset($this->declared[$name])){
+					// API 3 used numbers (0 survival, 1 creative ...); the converter accepts both
+					$close = $ctx->matching($open);
+					if($close !== null){
+						$replace[$open] = "(\\pocketmine\\plugin\\compat\\LegacyApi::gameMode(";
+						$replace[$close] = "))";
+						$this->changes[] = "$file: setGamemode() accepts numbers";
+					}
 				}elseif($name === "setcancelled" && !isset($this->declared[$name])){
 					$close = $ctx->matching($open);
 					if($close !== null){
@@ -194,7 +206,11 @@ final class LegacySourceRewriter{
 					$this->changes[] = "$file: Block::get() -> legacy ID lookup";
 				}elseif(!$isCall && preg_match('/^[A-Z0-9_]+$/', $member) === 1 && $member !== "CLASS"){
 					// API 3: Item::DIAMOND_SWORD, Block::STONE (the classes implemented the ID interfaces)
-					if($lower === "pocketmine\\item\\item" && !defined("\\pocketmine\\item\\Item::$member")){
+					if($lower === "pocketmine\\player\\player" && in_array($member, ["SURVIVAL", "CREATIVE", "ADVENTURE", "SPECTATOR"], true)){
+						$replace[$p] = "\\pocketmine\\player\\GameMode";
+						$replace[$j] = $member . "()";
+						$this->changes[] = "$file: Player::$member -> GameMode::$member()";
+					}elseif($lower === "pocketmine\\item\\item" && !defined("\\pocketmine\\item\\Item::$member")){
 						$replace[$p] = "\\pocketmine\\item\\ItemIds";
 					}elseif($lower === "pocketmine\\block\\block" && !defined("\\pocketmine\\block\\Block::$member")){
 						$replace[$p] = "\\pocketmine\\block\\BlockLegacyIds";
@@ -214,6 +230,12 @@ final class LegacySourceRewriter{
 			}
 		}
 		return $out;
+	}
+
+	/** Whether the class declaration starting at $start already has an attribute right before it. */
+	private function hasAttribute(RewriteContext $ctx, int $start) : bool{
+		$p = $ctx->prev($start);
+		return $p !== null && $ctx->tokens[$p]->text === "]";
 	}
 
 	/**
