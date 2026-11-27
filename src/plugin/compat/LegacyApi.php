@@ -262,9 +262,9 @@ final class LegacyApi{
 	 * @param mixed[] $data
 	 * @return \pocketmine\permission\Permission[][] default => permissions
 	 */
-	public static function loadPermissions(array $data) : array{
+	public static function loadPermissions(array $data, string $default = \pocketmine\permission\PermissionParser::DEFAULT_OP) : array{
 		$flat = [];
-		self::flattenPermissions($data, \pocketmine\permission\PermissionParser::DEFAULT_OP, $flat);
+		self::flattenPermissions($data, $default, $flat);
 		$result = [];
 		foreach($flat as $name => [$default, $description, $children]){
 			$result[$default][] = new \pocketmine\permission\Permission($name, $description, $children);
