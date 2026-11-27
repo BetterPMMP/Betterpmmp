@@ -89,7 +89,13 @@ final class GeneratorManager{
 	 *
 	 * @throws \InvalidArgumentException
 	 */
-	public function addGenerator(string $class, string $name, \Closure $presetValidator, bool $overwrite = false, bool $fast = false, ?\Closure $spawnPositionProvider = null) : void{
+	public function addGenerator(string $class, string $name, \Closure|bool|null $presetValidator = null, bool $overwrite = false, bool $fast = false, ?\Closure $spawnPositionProvider = null) : void{
+		//BetterPMMP: API 3/4 called addGenerator($class, $name) or addGenerator($class, $name, $overwrite)
+		if(is_bool($presetValidator)){
+			$overwrite = $presetValidator;
+			$presetValidator = null;
+		}
+		$presetValidator ??= static fn(string $preset) : ?InvalidGeneratorOptionsException => null;
 		Utils::testValidInstance($class, Generator::class);
 
 		$name = strtolower($name);
