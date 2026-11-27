@@ -193,6 +193,9 @@ class PluginManager{
 		foreach($description->getPermissions() as $permsGroup){
 			foreach($permsGroup as $perm){
 				if($permManager->getPermission($perm->getName()) !== null){
+					if(\pocketmine\plugin\compat\LegacyApi::isLegacy($description)){
+						continue; //BetterPMMP: API 3 plugins may declare a permission another plugin already has; it is shared
+					}
 					$this->server->getLogger()->critical($language->translate(KnownTranslationFactory::pocketmine_plugin_loadError(
 						$description->getName(),
 						KnownTranslationFactory::pocketmine_plugin_duplicatePermissionError($perm->getName())
@@ -205,6 +208,9 @@ class PluginManager{
 		$everyoneRoot = $permManager->getPermission(DefaultPermissions::ROOT_USER);
 		foreach(Utils::stringifyKeys($description->getPermissions()) as $default => $perms){
 			foreach($perms as $perm){
+				if($permManager->getPermission($perm->getName()) !== null){
+					continue; //BetterPMMP: shared with another (old) plugin, see above
+				}
 				$permManager->addPermission($perm);
 				switch($default){
 					case PermissionParser::DEFAULT_TRUE:

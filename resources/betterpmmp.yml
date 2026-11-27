@@ -56,6 +56,8 @@ plugins:
   # angepasst (Rückgabetypen, getLevel -> getWorld, Item::get mit Zahlen-IDs ...). Was geändert wurde,
   # steht in plugin_cache/<Plugin>/changes.txt. false = nur Plugins für API 5 laden
   legacy-api: true
+  # true = Server stoppt, wenn ein Plugin nicht lädt (wie PocketMine). false = Plugin wird übersprungen, Server läuft weiter
+  stop-on-load-error: false
 
 # ---------------------------------------------------------------
 # Karten (Fehlersuche)

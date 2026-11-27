@@ -71,7 +71,7 @@ final class PluginLoadabilityChecker{
 			return KnownTranslationFactory::pocketmine_plugin_incompatibleOS(implode(", ", $description->getCompatibleOperatingSystems()));
 		}
 
-		if(count($pluginMcpeProtocols = $description->getCompatibleMcpeProtocols()) > 0){
+		if(count($pluginMcpeProtocols = $description->getCompatibleMcpeProtocols()) > 0 && !\pocketmine\plugin\compat\LegacyApi::isLegacy($description)){ //BetterPMMP: protocol numbers of old plugins are meaningless today
 			$serverMcpeProtocols = [ProtocolInfo::CURRENT_PROTOCOL];
 			if(count(array_intersect($pluginMcpeProtocols, $serverMcpeProtocols)) === 0){
 				return KnownTranslationFactory::pocketmine_plugin_incompatibleProtocol(implode(", ", $pluginMcpeProtocols));

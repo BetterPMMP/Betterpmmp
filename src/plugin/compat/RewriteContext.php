@@ -240,8 +240,17 @@ final class RewriteContext{
 					"parent" => $parent,
 					"interfaces" => $interfaces,
 					"methods" => [],
+					"properties" => [],
+					"open" => $k,
 				];
 				$classDepth = $depth;
+				continue;
+			}
+			if($tok->id === T_VARIABLE && $current !== null && $classDepth !== null && $depth === $classDepth + 1){
+				$property = $this->parseProperty($i);
+				if($property !== null){
+					$current["properties"][] = $property;
+				}
 				continue;
 			}
 			if($tok->id === T_FUNCTION && $current !== null && $classDepth !== null && $depth === $classDepth + 1){
@@ -259,6 +268,55 @@ final class RewriteContext{
 				}
 			}
 		}
+	}
+
+	/**
+	 * A property declaration at class level ("protected $random;", "public Foo $x = null;").
+	 * @return array{name: string, var: int, type: ?array{int, int}, modifier: int, static: bool, default: ?array{int, int}, multi: bool}|null
+	 */
+	private function parseProperty(int $var) : ?array{
+		$typeStart = null;
+		$typeEnd = null;
+		$modifier = null;
+		$static = false;
+		for($k = $this->prev($var); $k !== null; $k = $this->prev($k)){
+			$t = $this->tokens[$k];
+			if(in_array($t->id, [T_PUBLIC, T_PROTECTED, T_PRIVATE, \T_VAR, \T_STATIC, \T_READONLY], true)){
+				$modifier ??= $k;
+				$static = $static || $t->id === \T_STATIC;
+				// more modifiers may follow (public static)
+				$p = $this->prev($k);
+				if($p !== null && in_array($this->tokens[$p]->id, [T_PUBLIC, T_PROTECTED, T_PRIVATE, \T_VAR, \T_STATIC, \T_READONLY], true)){
+					continue;
+				}
+				break;
+			}
+			if($t->text === "," || $t->text === ";" || $t->text === "{" || $t->text === "}" || $t->text === "(" || $t->text === ")"){
+				return $t->text === "," ? ["name" => substr($this->tokens[$var]->text, 1), "var" => $var, "type" => null, "modifier" => $var, "static" => false, "default" => null, "multi" => true] : null;
+			}
+			$typeStart = $k;
+			$typeEnd ??= $k;
+		}
+		if($modifier === null){
+			return null;
+		}
+		$default = null;
+		$n = $this->next($var);
+		if($n !== null && $this->tokens[$n]->text === "="){
+			$depth = 0;
+			$end = $n;
+			for($k = $n + 1, $c = count($this->tokens); $k < $c; ++$k){
+				$x = $this->tokens[$k]->text;
+				if($x === "(" || $x === "[") ++$depth;
+				elseif($x === ")" || $x === "]") --$depth;
+				elseif($depth === 0 && ($x === "," || $x === ";")) break;
+				$end = $k;
+			}
+			$default = [$n, $end];
+		}
+		$after = $default !== null ? $this->next($default[1]) : $n;
+		$multi = $after !== null && $this->tokens[$after]->text === ",";
+		return ["name" => substr($this->tokens[$var]->text, 1), "var" => $var, "type" => $typeStart !== null && $typeEnd !== null ? [$typeStart, $typeEnd] : null, "modifier" => $modifier, "static" => $static, "default" => $default, "multi" => $multi];
 	}
 
 	private function parseUse(int $i) : void{

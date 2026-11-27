@@ -72,7 +72,7 @@ use const PHP_BINARY;
 final class LegacyApi{
 
 	/** bump when the rewriter changes, so cached copies are rebuilt */
-	private const VERSION = 6;
+	private const VERSION = 7;
 
 	/** classes that only moved or were renamed: old name (lowercase) => new name */
 	private const CLASSES = [
@@ -176,19 +176,17 @@ final class LegacyApi{
 		if(count($apis) === 0 || !self::enabled()){
 			return false;
 		}
+		$valid = 0;
 		foreach($apis as $api){
 			if(!VersionString::isValidBaseVersion($api)){
-				return false;
+				continue;
 			}
-			$major = (new VersionString($api))->getMajor();
-			if($major >= 5){
+			if((new VersionString($api))->getMajor() >= 5){
 				return false; // the plugin also supports API 5: load it normally
 			}
-			if($major < 3){
-				return false;
-			}
+			++$valid; // API 1 to 4 (very old plugins listed every version they were tested with)
 		}
-		return true;
+		return $valid > 0;
 	}
 
 	/** The new name of a class that moved, or the name itself. */
@@ -430,6 +428,7 @@ final class LegacyApi{
 			}
 		}
 		$changes = $rewriter->getChanges();
+		@mkdir($target, 0777, true);
 		file_put_contents(Path::join(dirname($target), "changes.txt"), implode("\n", $changes) . "\n");
 		$error = self::check($target, $description->getSrcNamespacePrefix(), $rewriter->getClassNames());
 		if($error !== null){
