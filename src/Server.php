@@ -2137,4 +2137,28 @@ class Server{
 		$mode = \pocketmine\player\GameMode::fromString($str);
 		return $mode === null ? -1 : \pocketmine\data\java\GameModeIdMap::getInstance()->toId($mode);
 	}
+
+	/**
+	 * @deprecated API 3: use getWorldManager()->generateWorld()
+	 * @param mixed[] $options generator settings (given to API 3 generators as their settings array)
+	 */
+	public function generateLevel(string $name, ?int $seed = null, ?string $generator = null, array $options = []) : bool{
+		$creation = \pocketmine\world\WorldCreationOptions::create();
+		if($seed !== null){
+			$creation->setSeed($seed);
+		}
+		if($generator !== null){
+			if(!class_exists($generator)){
+				$entry = \pocketmine\world\generator\GeneratorManager::getInstance()->getGenerator($generator);
+				$generator = $entry?->getGeneratorClass();
+			}
+			if($generator !== null){
+				$creation->setGeneratorClass($generator);
+			}
+		}
+		if(count($options) > 0){
+			$creation->setGeneratorOptions((string) json_encode($options));
+		}
+		return $this->getWorldManager()->generateWorld($name, $creation);
+	}
 }

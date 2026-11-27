@@ -44,6 +44,14 @@ final class LegacyIds{
 		}
 	}
 
+	/** @var array<int, int> legacy id << 4 | meta => state id */
+	private static array $stateIds = [];
+
+	/** State id for a numeric id and meta, cached (generators set millions of blocks). */
+	public static function stateId(int $id, int $meta = 0) : int{
+		return self::$stateIds[($id << 4) | ($meta & 0xf)] ??= self::block($id, $meta)->getStateId();
+	}
+
 	public static function block(int $id, int $meta = 0) : Block{
 		try{
 			$state = GlobalBlockStateHandlers::getUpgrader()->upgradeIntIdMeta($id, $meta);

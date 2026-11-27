@@ -72,7 +72,7 @@ use const PHP_BINARY;
 final class LegacyApi{
 
 	/** bump when the rewriter changes, so cached copies are rebuilt */
-	private const VERSION = 8;
+	private const VERSION = 10;
 
 	/** classes that only moved or were renamed: old name (lowercase) => new name */
 	private const CLASSES = [
@@ -90,6 +90,7 @@ final class LegacyApi{
 		"pocketmine\\entity\\effect" => "pocketmine\\entity\\effect\\Effect",
 		"pocketmine\\block\\blockids" => "pocketmine\\block\\BlockLegacyIds",
 		"pocketmine\\event\\entity\\entitylevelchangeevent" => "pocketmine\\event\\entity\\EntityTeleportEvent",
+		"pocketmine\\command\\plugincommand" => "pocketmine\\plugin\\compat\\LegacyPluginCommand",
 		"pocketmine\\utils\\color" => "pocketmine\\color\\Color",
 		"pocketmine\\lang\\baselang" => "pocketmine\\lang\\Language",
 		"pocketmine\\command\\consolecommandsender" => "pocketmine\\console\\ConsoleCommandSender",

@@ -2662,6 +2662,7 @@ class ComposerStaticInit01c34b5648e4177bfa963b48f7da5526
         'pocketmine\\plugin\\compat\\RewriteContext' => __DIR__ . '/../..' . '/src/plugin/compat/RewriteContext.php',
         'pocketmine\\plugin\\compat\\LegacySourceRewriter' => __DIR__ . '/../..' . '/src/plugin/compat/LegacySourceRewriter.php',
         'pocketmine\\plugin\\compat\\LegacyIds' => __DIR__ . '/../..' . '/src/plugin/compat/LegacyIds.php',
+        'pocketmine\\plugin\\compat\\LegacyPluginCommand' => __DIR__ . '/../..' . '/src/plugin/compat/LegacyPluginCommand.php',
         'pocketmine\\plugin\\compat\\LegacyApi' => __DIR__ . '/../..' . '/src/plugin/compat/LegacyApi.php',
         'pocketmine\\plugin\\DisablePluginException' => __DIR__ . '/../..' . '/src/plugin/DisablePluginException.php',
         'pocketmine\\plugin\\DiskResourceProvider' => __DIR__ . '/../..' . '/src/plugin/DiskResourceProvider.php',

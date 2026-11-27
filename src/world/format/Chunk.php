@@ -183,7 +183,18 @@ class Chunk{
 	 *
 	 * @see BiomeIds
 	 */
-	public function setBiomeId(int $x, int $y, int $z, int $biomeId) : void{
+	public function setBiomeId(int $x, int $y, int $z, ?int $biomeId = null) : void{
+		if($biomeId === null){
+			//BetterPMMP: API 3 setBiomeId($x, $z, $biomeId) set the whole column
+			[$z, $biomeId] = [$y, $z];
+			foreach($this->subChunks as $subChunk){
+				for($ly = 0; $ly < SubChunk::EDGE_LENGTH; ++$ly){
+					$subChunk->getBiomeArray()->set($x, $ly, $z, $biomeId);
+				}
+			}
+			$this->terrainDirtyFlags |= self::DIRTY_FLAG_BIOMES;
+			return;
+		}
 		$this->getSubChunk($y >> SubChunk::COORD_BIT_SIZE)->getBiomeArray()->set($x, $y, $z, $biomeId);
 		$this->terrainDirtyFlags |= self::DIRTY_FLAG_BIOMES;
 	}
@@ -390,4 +401,36 @@ class Chunk{
 			(($z & SubChunk::COORD_MASK) << SubChunk::COORD_BIT_SIZE) |
 			($x & SubChunk::COORD_MASK);
 	}
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/** @deprecated API 3: set a block by numeric id and meta */
+	public function setBlock(int $x, int $y, int $z, ?int $blockId = null, ?int $meta = null) : bool{
+		if($blockId === null){
+			return false;
+		}
+		$this->setBlockStateId($x, $y, $z, \pocketmine\plugin\compat\LegacyIds::stateId($blockId, $meta ?? 0));
+		return true;
+	}
+	/** @deprecated API 3: numeric block id */
+	public function setBlockId(int $x, int $y, int $z, int $id) : void{ $this->setBlockStateId($x, $y, $z, \pocketmine\plugin\compat\LegacyIds::stateId($id, 0)); }
+	/** @deprecated API 3: numeric block id */
+	public function getBlockId(int $x, int $y, int $z) : int{ return \pocketmine\plugin\compat\LegacyIds::blockId(\pocketmine\block\RuntimeBlockStateRegistry::getInstance()->fromStateId($this->getBlockStateId($x, $y, $z))); }
+	/** @deprecated API 3: block meta */
+	public function getBlockData(int $x, int $y, int $z) : int{ return \pocketmine\plugin\compat\LegacyIds::blockMeta(\pocketmine\block\RuntimeBlockStateRegistry::getInstance()->fromStateId($this->getBlockStateId($x, $y, $z))); }
+	/** API 3 chunks knew their position (setX/setZ/getX/getZ); kept for old plugins */
+	private int $legacyX = 0;
+	private int $legacyZ = 0;
+	/** @deprecated API 3 */
+	public function setX(int $x) : void{ $this->legacyX = $x; }
+	/** @deprecated API 3 */
+	public function setZ(int $z) : void{ $this->legacyZ = $z; }
+	/** @deprecated API 3 */
+	public function getX() : int{ return $this->legacyX; }
+	/** @deprecated API 3 */
+	public function getZ() : int{ return $this->legacyZ; }
+	/** @deprecated API 3: chunks given to a generator are always generated afterwards */
+	public function setGenerated(bool $value = true) : void{}
+	/** @deprecated API 3 */
+	public function isGenerated() : bool{ return true; }
 }
