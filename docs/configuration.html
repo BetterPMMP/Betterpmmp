@@ -55,6 +55,9 @@ mob-ai:
   pathfinding-ms-per-tick: 6   # main-thread budget for pathfinding
   async-pathfinding: true      # pathfinding in worker threads
 
+plugins:
+  legacy-api: true             # load plugins for API 3 and 4
+
 hand-swap:
   double-sneak: true           # sneak twice to swap hands</code></pre>
 <h2>Mob spawning</h2>
@@ -85,6 +88,9 @@ mob-spawning:
 mob-ai:
   pathfinding-ms-per-tick: 6   # Zeitbudget im Hauptthread für Wegfindung
   async-pathfinding: true      # Wegfindung in eigenen Threads
+
+plugins:
+  legacy-api: true             # Plugins für API 3 und 4 laden
 
 hand-swap:
   double-sneak: true           # zweimal schleichen tauscht die Hände</code></pre>

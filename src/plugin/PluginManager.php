@@ -150,7 +150,20 @@ class PluginManager{
 		}
 
 		$prefixed = $loader->getAccessProtocol() . $path;
-		$loader->loadPlugin($prefixed);
+		if(\pocketmine\plugin\compat\LegacyApi::isLegacy($description)){
+			//BetterPMMP: multi-API, the plugin was written for API 3 or 4
+			$this->server->getLogger()->notice("Loading " . $description->getFullName() . " (API " . implode(", ", $description->getCompatibleApis()) . ") in compatibility mode");
+			try{
+				$src = \pocketmine\plugin\compat\LegacyApi::prepare($path, $description, $this->server->getDataPath(), $this->server->getLogger());
+			}catch(\Throwable $e){
+				$this->server->getLogger()->critical("Could not prepare " . $description->getName() . " for compatibility mode: " . $e->getMessage());
+				return null;
+			}
+			$this->server->getLoader()->addPath($description->getSrcNamespacePrefix(), $src);
+			\pocketmine\plugin\compat\LegacyIds::warmUp();
+		}else{
+			$loader->loadPlugin($prefixed);
+		}
 
 		$mainClass = $description->getMain();
 		if(!class_exists($mainClass, true)){

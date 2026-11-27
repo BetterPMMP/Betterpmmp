@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/BetterPMMP/Betterpmmp/releases"><img src="https://img.shields.io/badge/version-5.85--vanilla--beta.1-3fb950?style=flat-square" alt="Version"></a>
+  <a href="https://github.com/BetterPMMP/Betterpmmp/releases"><img src="https://img.shields.io/badge/version-5.86--vanilla--beta.1-3fb950?style=flat-square" alt="Version"></a>
   <img src="https://img.shields.io/badge/Bedrock-1.26.60-2f81f7?style=flat-square" alt="Bedrock 1.26.60">
   <img src="https://img.shields.io/badge/API-5.51.0-8957e5?style=flat-square" alt="API 5.51.0">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-777bb4?style=flat-square" alt="PHP 8.1+">
@@ -56,7 +56,8 @@ the Nether and the End with their bosses, and Java Edition players can join the 
   server stays stable.
 - **Java and Bedrock together.** Java Edition players join the same world through the built-in bridge,
   no extra setup.
-- **Your plugins keep working.** BetterPMMP keeps the PocketMine-MP 5 API (5.51.0).
+- **Your plugins keep working, even old ones.** BetterPMMP keeps the PocketMine-MP 5 API (5.51.0), and plugins
+  written for API 3 and 4 load in a compatibility mode that adapts their code automatically.
 
 ## Features
 
@@ -101,13 +102,13 @@ Download the one for your system from
 [pmmp/PHP-Binaries](https://github.com/pmmp/PHP-Binaries/releases) and unpack it into an empty folder.
 You should end up with a `bin` folder.
 
-**2. Get BetterPMMP.** Download `BetterPMMP-5.85.phar` from the
+**2. Get BetterPMMP.** Download `BetterPMMP-5.86.phar` from the
 [latest release](https://github.com/BetterPMMP/Betterpmmp/releases) and put it next to the `bin` folder.
 
 ```
 my-server/
 ├── bin/
-└── BetterPMMP-5.85.phar
+└── BetterPMMP-5.86.phar
 ```
 
 **3. Start it.**
@@ -115,13 +116,13 @@ my-server/
 Linux and macOS:
 
 ```bash
-./bin/php7/bin/php BetterPMMP-5.85.phar
+./bin/php7/bin/php BetterPMMP-5.86.phar
 ```
 
 Windows (in the server folder):
 
 ```
-bin\php\php.exe BetterPMMP-5.85.phar
+bin\php\php.exe BetterPMMP-5.86.phar
 ```
 
 The setup wizard asks for the language, server name and port, like PocketMine-MP does. After that the server
@@ -211,6 +212,10 @@ Don't rename or remove a block or creature that already exists in a world. It wo
 or be deleted.
 
 ## What's new
+
+**5.86**
+- Multi-API: plugins for API 3 and 4 load in compatibility mode (`plugins.legacy-api`). Their code is adapted on
+  start (return types, `getLevel()`, `Item::get()` with numeric IDs, moved classes); see `plugin_cache/<Plugin>/changes.txt`
 
 **5.85**
 - 3D biomes in the Nether like vanilla: a cave can be a warped forest above a crimson forest

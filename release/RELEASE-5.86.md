@@ -1,10 +1,14 @@
-![BetterPMMP 5.85](https://raw.githubusercontent.com/BetterPMMP/Betterpmmp/v5.85-vanilla-beta.1/release/banner-5.84.png)
+![BetterPMMP 5.86](https://raw.githubusercontent.com/BetterPMMP/Betterpmmp/v5.86-vanilla-beta.1/release/banner-5.84.png)
 
-## BetterPMMP 5.85-vanilla-beta.1
+## BetterPMMP 5.86-vanilla-beta.1
 
-PocketMine-MP 5 (API 5.51.0) based server for Minecraft: Bedrock Edition 1.26.60, with Java Edition players through the built-in bridge. Download `BetterPMMP-5.85.phar` below and start it like PocketMine-MP.
+PocketMine-MP 5 (API 5.51.0) based server for Minecraft: Bedrock Edition 1.26.60, with Java Edition players through the built-in bridge. Download `BetterPMMP-5.86.phar` below and start it like PocketMine-MP.
 
 **Beta:** much of this release was only checked offline. Try it on a copy of your world first.
+
+### New in 5.86
+
+- **Multi-API: old plugins work again.** Plugins written for API 3 and 4 load in a compatibility mode. Their code is adapted on start: return types and parameters PHP 8 requires, `getLevel()` → `getWorld()` and other renamed methods, `Item::get()` / `ItemFactory` / `BlockFactory` / `ItemIds` with numeric IDs, `getId()` and `getMeta()`, moved classes like `pocketmine\Player`. Every change is listed in `plugin_cache/<Plugin>/changes.txt`; a plugin that still cannot load is skipped with an error instead of stopping the server. Switch: `plugins.legacy-api` in `betterpmmp.yml`.
 
 ### New in 5.85
 
