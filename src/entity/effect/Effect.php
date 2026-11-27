@@ -31,6 +31,83 @@ use pocketmine\utils\NotCloneable;
 use pocketmine\utils\NotSerializable;
 
 class Effect{
+	// ---- BetterPMMP: API 3 effect ids and lookups for plugins in compatibility mode ----
+	/** @deprecated API 3 */
+	public const SPEED = 1;
+	/** @deprecated API 3 */
+	public const SLOWNESS = 2;
+	/** @deprecated API 3 */
+	public const HASTE = 3;
+	/** @deprecated API 3 */
+	public const MINING_FATIGUE = 4;
+	/** @deprecated API 3 */
+	public const STRENGTH = 5;
+	/** @deprecated API 3 */
+	public const INSTANT_HEALTH = 6;
+	/** @deprecated API 3 */
+	public const INSTANT_DAMAGE = 7;
+	/** @deprecated API 3 */
+	public const JUMP_BOOST = 8;
+	/** @deprecated API 3 */
+	public const NAUSEA = 9;
+	/** @deprecated API 3 */
+	public const REGENERATION = 10;
+	/** @deprecated API 3 */
+	public const RESISTANCE = 11;
+	/** @deprecated API 3 */
+	public const FIRE_RESISTANCE = 12;
+	/** @deprecated API 3 */
+	public const WATER_BREATHING = 13;
+	/** @deprecated API 3 */
+	public const INVISIBILITY = 14;
+	/** @deprecated API 3 */
+	public const BLINDNESS = 15;
+	/** @deprecated API 3 */
+	public const NIGHT_VISION = 16;
+	/** @deprecated API 3 */
+	public const HUNGER = 17;
+	/** @deprecated API 3 */
+	public const WEAKNESS = 18;
+	/** @deprecated API 3 */
+	public const POISON = 19;
+	/** @deprecated API 3 */
+	public const WITHER = 20;
+	/** @deprecated API 3 */
+	public const HEALTH_BOOST = 21;
+	/** @deprecated API 3 */
+	public const ABSORPTION = 22;
+	/** @deprecated API 3 */
+	public const SATURATION = 23;
+	/** @deprecated API 3 */
+	public const LEVITATION = 24;
+	/** @deprecated API 3 */
+	public const FATAL_POISON = 25;
+	/** @deprecated API 3 */
+	public const CONDUIT_POWER = 26;
+	/** @deprecated API 3 */
+	public const SLOW_FALLING = 27;
+	/** @deprecated API 3 */
+	public const BAD_OMEN = 28;
+	/** @deprecated API 3 */
+	public const VILLAGE_HERO = 29;
+	/** @deprecated API 3 */
+	public const DARKNESS = 30;
+
+	/** @deprecated API 3: Effect::getEffect(Effect::SPEED) */
+	public static function getEffect(int $id) : ?Effect{
+		return \pocketmine\data\bedrock\EffectIdMap::getInstance()->fromId($id);
+	}
+
+	/** @deprecated API 3: Effect::getEffectByName("speed") */
+	public static function getEffectByName(string $name) : ?Effect{
+		return StringToEffectParser::getInstance()->parse($name);
+	}
+
+	/** @deprecated API 3: the numeric id of this effect */
+	public function getId() : int{
+		return \pocketmine\data\bedrock\EffectIdMap::getInstance()->toId($this);
+	}
+
 	use NotCloneable;
 	use NotSerializable;
 
