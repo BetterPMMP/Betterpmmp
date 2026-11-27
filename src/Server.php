@@ -2015,4 +2015,22 @@ class Server{
 			$this->nextTick += self::TARGET_SECONDS_PER_TICK;
 		}
 	}
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/** @deprecated API 3: use getPlayerByPrefix() */
+	public function getPlayer(string $name) : ?Player{ return $this->getPlayerByPrefix($name); }
+	/** @deprecated API 3: use getWorldManager() */
+	public function getDefaultLevel() : ?\pocketmine\world\World{ return $this->getWorldManager()->getDefaultWorld(); }
+	/** @deprecated API 3: use getWorldManager() */
+	public function getLevelByName(string $name) : ?\pocketmine\world\World{ return $this->getWorldManager()->getWorldByName($name); }
+	/**
+	 * @deprecated API 3: use getWorldManager()
+	 * @return \pocketmine\world\World[]
+	 */
+	public function getLevels() : array{ return $this->getWorldManager()->getWorlds(); }
+	/** @deprecated API 3: use getWorldManager() */
+	public function loadLevel(string $name) : bool{ return $this->getWorldManager()->loadWorld($name, true); }
+	/** @deprecated API 3: use getWorldManager() */
+	public function isLevelLoaded(string $name) : bool{ return $this->getWorldManager()->isWorldLoaded($name); }
 }

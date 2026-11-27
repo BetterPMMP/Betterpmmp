@@ -1114,4 +1114,11 @@ abstract class Living extends Entity{
 		);
 		parent::destroyCycles();
 	}
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/** @deprecated API 3: use getEffects()->add() */
+	public function addEffect(\pocketmine\entity\effect\EffectInstance $effect) : bool{ return $this->getEffects()->add($effect); }
+	/** @deprecated API 3: use getEffects()->clear() */
+	public function removeAllEffects() : void{ $this->getEffects()->clear(); }
 }

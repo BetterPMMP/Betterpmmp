@@ -4075,4 +4075,11 @@ class World implements ChunkManager{
 			}
 		}
 	}
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/** @deprecated API 3/4: Level::getName() */
+	public function getName() : string{
+		return $this->getDisplayName();
+	}
 }
