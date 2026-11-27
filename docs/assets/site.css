@@ -25,6 +25,7 @@ html[lang="en"] span[data-lang-block="en"],html[lang="de"] span[data-lang-block=
 .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.15rem;color:var(--text);letter-spacing:-.01em;white-space:nowrap}
 .logo:hover{text-decoration:none}
 .logo b{color:var(--green)}
+.logo img{width:34px;height:34px;border-radius:8px}
 .logo i{width:22px;height:22px;border-radius:4px;background:linear-gradient(#5dbb3f 0 35%,#7a5532 35% 100%);box-shadow:inset 0 -3px 0 rgba(0,0,0,.25);display:inline-block}
 .menu{display:flex;gap:4px;margin-left:8px;overflow-x:auto;scrollbar-width:none;flex:1}
 .menu::-webkit-scrollbar{display:none}
@@ -52,6 +53,7 @@ html[lang="en"] span[data-lang-block="en"],html[lang="de"] span[data-lang-block=
 .hero h1 b{color:var(--green)}
 .hero .lead{font-size:1.12rem;color:var(--muted);margin:0 0 26px;max-width:36em}
 .hero .by{margin:18px 0 0;color:var(--muted);font-size:.92rem}
+.hero-logo{display:block;width:100%;max-width:500px;margin:0 auto;border-radius:28px;box-shadow:0 0 120px rgba(40,190,255,.18),0 30px 80px rgba(0,0,0,.5)}
 .hero .shot{border-radius:var(--radius);border:1px solid var(--line);box-shadow:0 30px 80px rgba(0,0,0,.45)}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin:36px 0 0}
 .stats div{background:var(--bg2);padding:16px 18px}
