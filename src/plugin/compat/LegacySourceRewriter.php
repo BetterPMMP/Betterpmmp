@@ -150,6 +150,7 @@ final class LegacySourceRewriter{
 		foreach($ctx->classes as $class){
 			if(($class["kind"] ?? "") === "class"){
 				$this->fixClassBody($ctx, $class, $replace, $after, $file);
+				$this->fixGeneratorConstructor($ctx, $class, $replace, $after, $file);
 			}
 			foreach($class["methods"] as $method){
 				// "function x() : bool" that can end without a return: PHP 8 throws a TypeError there
@@ -336,6 +337,49 @@ final class LegacySourceRewriter{
 		}
 		$first = $ctx->next($open);
 		return $first !== null && in_array($ctx->tokens[$first]->id, [\T_RETURN, \T_THROW], true);
+	}
+
+	/**
+	 * API 3 generators were constructed with their settings array; PocketMine-MP 5 constructs them (also in the
+	 * generator threads) with the seed and the preset text. The constructor accepts both now, the settings come
+	 * from the preset (JSON, as Server::generateLevel() stores them).
+	 *
+	 * @param array<string, mixed> $class
+	 * @param array<int, string> $replace
+	 * @param array<int, string> $after
+	 */
+	private function fixGeneratorConstructor(RewriteContext $ctx, array $class, array &$replace, array &$after, string $file) : void{
+		$isGenerator = false;
+		for($c = $class["parent"]; $c !== null; ){
+			$key = strtolower(ltrim($c, "\\"));
+			if(isset($this->classes[$key])){
+				$c = $this->classes[$key]["parent"];
+				continue;
+			}
+			$isGenerator = is_a(LegacyApi::modernClass($c), \pocketmine\world\generator\Generator::class, true);
+			break;
+		}
+		if(!$isGenerator){
+			return;
+		}
+		foreach($class["methods"] as $method){
+			if(strtolower($method["name"]) !== "__construct" || $method["body"] === null || count($method["params"]) === 0){
+				continue;
+			}
+			$first = $method["params"][0];
+			$type = $first["type"] !== null ? strtolower(trim($ctx->text($first["type"][0], $first["type"][1]))) : "";
+			if($type !== "array" && $type !== "?array"){
+				return;
+			}
+			$var = $ctx->tokens[$first["var"]]->text;
+			for($k = $method["open"] + 1; $k < $method["close"]; ++$k){
+				$replace[$k] = "";
+			}
+			$replace[$method["open"] + 1] = 'int|array $__seed = 0, string $__preset = ""';
+			$after[$method["body"]] = ($after[$method["body"]] ?? "") . " $var = is_array(\$__seed) ? \$__seed : (json_decode(\$__preset, true) ?: []); if(is_int(\$__seed)){ \$this->seed = \$__seed; \$this->preset = \$__preset; \$this->random = new \\pocketmine\\utils\\Random(\$__seed); }";
+			$this->changes[] = "$file: " . $class["short"] . "::__construct() takes the seed and preset of PocketMine-MP 5";
+			return;
+		}
 	}
 
 	/**

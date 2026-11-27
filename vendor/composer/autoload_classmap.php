@@ -2528,6 +2528,7 @@ return array(
     'pocketmine\\plugin\\compat\\RewriteContext' => $baseDir . '/src/plugin/compat/RewriteContext.php',
     'pocketmine\\plugin\\compat\\LegacySourceRewriter' => $baseDir . '/src/plugin/compat/LegacySourceRewriter.php',
     'pocketmine\\plugin\\compat\\LegacyIds' => $baseDir . '/src/plugin/compat/LegacyIds.php',
+    'pocketmine\\plugin\\compat\\LegacyPluginCommand' => $baseDir . '/src/plugin/compat/LegacyPluginCommand.php',
     'pocketmine\\plugin\\compat\\LegacyApi' => $baseDir . '/src/plugin/compat/LegacyApi.php',
     'pocketmine\\plugin\\DisablePluginException' => $baseDir . '/src/plugin/DisablePluginException.php',
     'pocketmine\\plugin\\DiskResourceProvider' => $baseDir . '/src/plugin/DiskResourceProvider.php',
