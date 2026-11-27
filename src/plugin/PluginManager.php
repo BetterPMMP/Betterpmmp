@@ -281,7 +281,7 @@ class PluginManager{
 					)));
 					$loadErrorCount++;
 					continue;
-				}catch(\RuntimeException $e){ //TODO: more specific exception handling
+				}catch(\Throwable $e){ //BetterPMMP: a broken plugin.yml must never stop the server (was: RuntimeException only)
 					$this->server->getLogger()->critical($this->server->getLanguage()->translate(KnownTranslationFactory::pocketmine_plugin_loadError($file, $e->getMessage())));
 					$this->server->getLogger()->logException($e);
 					$loadErrorCount++;

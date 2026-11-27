@@ -143,13 +143,23 @@ class PluginDescription{
 	private function loadMap(array $plugin) : void{
 		$this->map = $plugin;
 
-		$this->name = $plugin[self::KEY_NAME];
+		//BetterPMMP: old plugin.yml files sometimes have lists where a text belongs ("version: - 1.0.0")
+		foreach([self::KEY_NAME, self::KEY_VERSION, self::KEY_MAIN, self::KEY_SRC_NAMESPACE_PREFIX] as $key){
+			if(isset($plugin[$key]) && is_array($plugin[$key])){
+				$first = reset($plugin[$key]);
+				$plugin[$key] = is_scalar($first) ? (string) $first : "";
+			}
+		}
+		if(!isset($plugin[self::KEY_NAME], $plugin[self::KEY_VERSION], $plugin[self::KEY_MAIN]) || !is_scalar($plugin[self::KEY_NAME]) || !is_scalar($plugin[self::KEY_MAIN])){
+			throw new PluginDescriptionParseException("Invalid plugin manifest: name, version and main are required");
+		}
+		$this->name = (string) $plugin[self::KEY_NAME];
 		if(preg_match('/^[A-Za-z0-9 _.-]+$/', $this->name) === 0){
 			throw new PluginDescriptionParseException("Invalid Plugin name");
 		}
 		$this->name = str_replace(" ", "_", $this->name);
 		$this->version = (string) $plugin[self::KEY_VERSION];
-		$this->main = $plugin[self::KEY_MAIN];
+		$this->main = (string) $plugin[self::KEY_MAIN];
 		if(stripos($this->main, "pocketmine\\") === 0){
 			throw new PluginDescriptionParseException("Invalid Plugin main, cannot start within the PocketMine namespace");
 		}
@@ -157,6 +167,10 @@ class PluginDescription{
 		$this->srcNamespacePrefix = $plugin[self::KEY_SRC_NAMESPACE_PREFIX] ?? "";
 
 		$this->api = array_map("\strval", (array) ($plugin[self::KEY_API] ?? []));
+		//BetterPMMP: old plugins wrote "3.9" or "3" for 3.9.0 / 3.0.0
+		$this->api = array_map(fn(string $v) : string => preg_match('/^\d+$/', $v) === 1 ? "$v.0.0" : (preg_match('/^\d+\.\d+$/', $v) === 1 ? "$v.0" : $v), $this->api);
+		$legacy = \pocketmine\plugin\compat\LegacyApi::isLegacy($this);
+		$openCommands = [];
 		$this->compatibleMcpeProtocols = array_map("\intval", (array) ($plugin[self::KEY_MCPE_PROTOCOL] ?? []));
 		$this->compatibleOperatingSystems = array_map("\strval", (array) ($plugin[self::KEY_OS] ?? []));
 
@@ -169,7 +183,12 @@ class PluginDescription{
 					throw new PluginDescriptionParseException("Command $commandName has invalid properties");
 				}
 				if(!isset($commandData[self::KEY_COMMAND_PERMISSION]) || !is_string($commandData[self::KEY_COMMAND_PERMISSION])){
-					throw new PluginDescriptionParseException("Command $commandName does not have a valid permission set");
+					if(!$legacy){
+						throw new PluginDescriptionParseException("Command $commandName does not have a valid permission set");
+					}
+					//BetterPMMP: API 3 commands without a permission were open to everyone
+					$commandData[self::KEY_COMMAND_PERMISSION] = strtolower(preg_replace('/[^A-Za-z0-9_.-]/', "", $this->name)) . ".command." . strtolower(preg_replace('/[^A-Za-z0-9_.-]/', "", $commandName));
+					$openCommands[] = $commandData[self::KEY_COMMAND_PERMISSION];
 				}
 				$this->commands[$commandName] = new PluginDescriptionCommandEntry(
 					$commandData[self::KEY_COMMAND_DESCRIPTION] ?? null,
@@ -232,12 +251,22 @@ class PluginDescription{
 
 		if(isset($plugin[self::KEY_PERMISSIONS])){
 			try{
-				$this->permissions = \pocketmine\plugin\compat\LegacyApi::isLegacy($this)
-					? \pocketmine\plugin\compat\LegacyApi::loadPermissions($plugin[self::KEY_PERMISSIONS]) //BetterPMMP: API 3/4 rules (default op, nested children)
-					: PermissionParser::loadPermissions($plugin[self::KEY_PERMISSIONS]);
+				if($legacy){
+					$this->permissions = \pocketmine\plugin\compat\LegacyApi::loadPermissions((array) $plugin[self::KEY_PERMISSIONS]); //BetterPMMP: API 3/4 rules (default op, nested children)
+				}else{
+					try{
+						$this->permissions = PermissionParser::loadPermissions($plugin[self::KEY_PERMISSIONS]);
+					}catch(PermissionParserException){
+						//BetterPMMP: nested permission declarations (children with their own default) are resolved instead of refusing the plugin
+						$this->permissions = \pocketmine\plugin\compat\LegacyApi::loadPermissions((array) $plugin[self::KEY_PERMISSIONS], PermissionParser::DEFAULT_FALSE);
+					}
+				}
 			}catch(PermissionParserException $e){
 				throw new PluginDescriptionParseException("Invalid Plugin \"" . self::KEY_PERMISSIONS . "\": " . $e->getMessage(), 0, $e);
 			}
+		}
+		foreach($openCommands as $permission){
+			$this->permissions[PermissionParser::DEFAULT_TRUE][] = new \pocketmine\permission\Permission($permission);
 		}
 	}
 
