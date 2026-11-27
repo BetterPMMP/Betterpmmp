@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="release/banner-5.84.png" alt="BetterPMMP" width="100%">
+  <img src="docs/assets/logo.png" alt="BetterPMMP" width="320">
 </p>
 
 <p align="center">

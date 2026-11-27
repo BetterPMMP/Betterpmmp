@@ -58,7 +58,8 @@ def page(name, title_en, title_de, desc, body, current=None):
 <meta property="og:url" content="{canonical}">
 <meta property="og:image" content="{BASE}banner.png">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/icon.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/icon-512.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -67,7 +68,7 @@ def page(name, title_en, title_de, desc, body, current=None):
 </head>
 <body>
 <header class="top"><div class="wrap">
-  <a class="logo" href="index.html"><i></i><span>Better<b>PMMP</b></span></a>
+  <a class="logo" href="index.html"><img src="assets/icon.png" alt="" width="34" height="34"><span>Better<b>PMMP</b></span></a>
   <nav class="menu" aria-label="Main">{links}</nav>
   <div class="lang" role="group" aria-label="Language">
     <button type="button" data-set-lang="de" title="Deutsch" aria-label="Deutsch">🇩🇪</button>
@@ -138,7 +139,7 @@ INDEX_EN = f'''
    </div>
    <p class="by">Free and open source · developed by <b style="color:var(--text)">Leon Development</b></p>
   </div>
-  <img class="shot" src="banner.png" alt="BetterPMMP banner" width="2560" height="1280">
+  <img class="hero-logo" src="assets/logo.png" alt="BetterPMMP logo" width="640" height="640">
  </div>
  <div class="stats">
   <div><b>1.26.60</b><span>Minecraft Bedrock</span></div>
@@ -162,7 +163,7 @@ INDEX_DE = f'''
    </div>
    <p class="by">Kostenlos und Open Source · entwickelt von <b style="color:var(--text)">Leon Development</b></p>
   </div>
-  <img class="shot" src="banner.png" alt="BetterPMMP Banner" width="2560" height="1280">
+  <img class="hero-logo" src="assets/logo.png" alt="BetterPMMP Logo" width="640" height="640">
  </div>
  <div class="stats">
   <div><b>1.26.60</b><span>Minecraft Bedrock</span></div>
