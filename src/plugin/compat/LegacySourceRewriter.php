@@ -279,7 +279,14 @@ final class LegacySourceRewriter{
 				$member = $tokens[$j]->text;
 				$isCall = ($c = $ctx->next($j)) !== null && $tokens[$c]->text === "(";
 				$lower = strtolower($class);
-				if($lower === "pocketmine\\item\\item" && $isCall && in_array(strtolower($member), ["get", "fromstring"], true)){
+				$prevToken = $ctx->prev($p);
+				$isStaticCallOnSingleton = $isCall && str_starts_with($lower, "pocketmine\\") && !in_array(strtolower($tokens[$p]->text), ["self", "static", "parent"], true)
+					&& ($prevToken === null || $tokens[$prevToken]->id !== T_NEW) && self::isInstanceMethodOfSingleton($class, $member);
+				if($isStaticCallOnSingleton){
+					// API 3: GeneratorManager::addGenerator(...) - PocketMine-MP 5 made it a singleton
+					$replace[$i] = "::getInstance()->";
+					$this->changes[] = "$file: $class::$member() -> getInstance()->$member()";
+				}elseif($lower === "pocketmine\\item\\item" && $isCall && in_array(strtolower($member), ["get", "fromstring"], true)){
 					$replace[$p] = "\\pocketmine\\item\\ItemFactory";
 					$this->changes[] = "$file: Item::$member() -> legacy ID lookup";
 				}elseif($lower === "pocketmine\\block\\block" && $isCall && strtolower($member) === "get"){
@@ -465,6 +472,22 @@ final class LegacySourceRewriter{
 			}
 		}
 		return null;
+	}
+
+	/** Whether $method of a PocketMine class is not static while the class has a static getInstance(). */
+	private static function isInstanceMethodOfSingleton(string $class, string $method) : bool{
+		try{
+			if(!class_exists($class)){
+				return false;
+			}
+			$reflection = new \ReflectionClass($class);
+			if(!$reflection->hasMethod($method) || $reflection->getMethod($method)->isStatic() || !$reflection->hasMethod("getInstance")){
+				return false;
+			}
+			return $reflection->getMethod("getInstance")->isStatic();
+		}catch(\Throwable){
+			return false;
+		}
 	}
 
 	/** Whether the class declaration starting at $start already has an attribute right before it. */
