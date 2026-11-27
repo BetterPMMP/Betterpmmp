@@ -211,7 +211,8 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Java: Trichter, Spender, Werfer, Truhen-/Trichterlore, Truhenboot | 🟡 ungetestet – öffnen als passende Java-Fenster |
 | Java: Schmiedetisch | 🟡 ungetestet – Netherit-Aufwertung (Vorlage + Diamantwerkzeug/-rüstung + Netheritbarren), Verzauberungen, Name und Abnutzung bleiben. Rüstungsbesätze fehlen |
 | Fix Java-Craften | 🟡 ungetestet – Bei der Rezeptsuche für Java wurden auch Steinsäge- und Kartentisch-Rezepte mit dem Werkbankraster verglichen: ein einzelner Block im Raster konnte ein Steinsägen-Ergebnis liefern statt des richtigen Rezepts (oder keins). Es zählen jetzt nur noch Werkbank-Rezepte |
-| Java: noch offen | ❌ Amboss, Zaubertisch, Schleifstein, Steinsäge, Webstuhl, Kartentisch, Crafter, Leuchtfeuer, Handel; Sonderrezepte ohne feste Zutatenliste (Feuerwerk, Rüstung färben, Karten/Bücher kopieren, Banner) |
+| Java: Amboss, Schleifstein, Kartentisch, Zaubertisch | 🟡 ungetestet (Bridge-Plugin 1.9.0) – öffnen als echte Java-Fenster. Ergebnis wird vom Server berechnet (dieselben Rechner wie für Bedrock: AnvilHelper, Schleifstein, Kartentisch) und als Vorschau gezeigt; Klick oder Shift-Klick aufs Ergebnis nimmt es und verbraucht die Zutaten über dieselben Transaktionen wie bei Bedrock (Plugins sehen sie, Amboss nutzt sich ab, Schleifstein gibt XP). Amboss: Namensfeld (Umbenennen), Levelkosten werden angezeigt, zu teuer = nicht nehmbar. Zaubertisch: die drei Optionen mit ihren Levelkosten, Klick verzaubert (Lapis und Level wie Vanilla). Shift-Klick sortiert in die passenden Felder |
+| Java: noch offen | ❌ Steinsäge, Webstuhl, Crafter, Leuchtfeuer, Handel |
 
 ## Neu in 5.68
 

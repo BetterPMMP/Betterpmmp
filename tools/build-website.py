@@ -444,8 +444,8 @@ f'''<h1>Java players</h1>
 <h2>Settings</h2>
 {code(JB, "yaml")}
 <h2>What Java players can do</h2>
-<p>Building, fighting, crafting, furnaces, brewing stands, hoppers, chests, dispensers and droppers, minecarts and boats with chests, the smithing table, fireworks and dyed armour. Names above mobs and holograms are shown, forms open as windows or as a chat menu.</p>
-<div class="note warn"><p>Not yet available for Java players: anvil, enchanting table, grindstone, stonecutter, loom, cartography table, crafter, beacon and villager trading.</p></div>
+<p>Building, fighting, crafting, furnaces, brewing stands, hoppers, chests, dispensers and droppers, minecarts and boats with chests, the smithing table, anvil, grindstone, cartography table and enchanting table, fireworks and dyed armour. Names above mobs and holograms are shown, forms open as windows or as a chat menu.</p>
+<div class="note warn"><p>Not yet available for Java players: stonecutter, loom, crafter, beacon and villager trading.</p></div>
 ''',
 f'''<h1>Java-Spieler</h1>
 <p class="intro">BetterPMMP hat eine eingebaute Bridge für Minecraft: Java Edition, auf Basis von <a href="https://github.com/ViaVersion/ViaProxy">ViaProxy</a> und ViaBedrock. Java- und Bedrock-Spieler spielen gleichzeitig in derselben Welt.</p>
@@ -463,8 +463,8 @@ f'''<h1>Java-Spieler</h1>
 <h2>Einstellungen</h2>
 {code(JB_DE, "yaml")}
 <h2>Was Java-Spieler können</h2>
-<p>Bauen, Kämpfen, Craften, Öfen, Braustände, Trichter, Truhen, Spender und Werfer, Loren und Boote mit Truhe, der Schmiedetisch, Feuerwerk und gefärbte Rüstung. Namen über Mobs und Hologramme werden angezeigt, Formulare öffnen sich als Fenster oder als Chat-Menü.</p>
-<div class="note warn"><p>Für Java-Spieler noch nicht verfügbar: Amboss, Zaubertisch, Schleifstein, Steinsäge, Webstuhl, Kartentisch, Crafter, Leuchtfeuer und Handel mit Dorfbewohnern.</p></div>
+<p>Bauen, Kämpfen, Craften, Öfen, Braustände, Trichter, Truhen, Spender und Werfer, Loren und Boote mit Truhe, Schmiedetisch, Amboss, Schleifstein, Kartentisch und Zaubertisch, Feuerwerk und gefärbte Rüstung. Namen über Mobs und Hologramme werden angezeigt, Formulare öffnen sich als Fenster oder als Chat-Menü.</p>
+<div class="note warn"><p>Für Java-Spieler noch nicht verfügbar: Steinsäge, Webstuhl, Crafter, Leuchtfeuer und Handel mit Dorfbewohnern.</p></div>
 ''')
 
 # ---------------------------------------------------------------- custom content

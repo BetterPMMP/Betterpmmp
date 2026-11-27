@@ -244,8 +244,7 @@ Every version since the start is listed in [`VANILLA-PARITY.md`](VANILLA-PARITY.
 
 - A redstone repeater problem was reported and is being looked into
 - Bows and crossbows held by players were reported to behave oddly; also being looked into
-- Java players can't open the anvil, enchanting table, grindstone, stonecutter, loom, cartography table,
-  crafter, beacon or villager trading yet
+- Java players can't open the stonecutter, loom, crafter, beacon or villager trading yet
 - Bundles, nautilus armour and pottery sherd patterns on decorated pots don't work yet
 
 [`AUDIT-ITEMS-BLOCKS.md`](AUDIT-ITEMS-BLOCKS.md) lists every block and item that is registered but has no

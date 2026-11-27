@@ -675,6 +675,10 @@ class InGamePacketHandler extends PacketHandler{
 			\pocketmine\network\mcpe\JavaInventoryClick::handle($this->player, $this->inventoryManager, $packet->getValue());
 		}elseif($packet->getMessageId() === "betterpmmp:java_creative" && \pocketmine\network\JavaBridge::isJavaPlayer($this->player)){
 			\pocketmine\network\mcpe\JavaInventoryClick::handleCreative($this->player, $packet->getValue());
+		}elseif($packet->getMessageId() === "betterpmmp:java_button" && \pocketmine\network\JavaBridge::isJavaPlayer($this->player)){
+			\pocketmine\network\mcpe\JavaInventoryClick::handleButton($this->player, $this->inventoryManager, $packet->getValue());
+		}elseif($packet->getMessageId() === "betterpmmp:java_rename" && \pocketmine\network\JavaBridge::isJavaPlayer($this->player)){
+			\pocketmine\network\mcpe\JavaInventoryClick::handleRename($this->player, $this->inventoryManager, $packet->getValue());
 		}
 		return true;
 	}
