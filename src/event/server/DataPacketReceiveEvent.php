@@ -43,4 +43,9 @@ class DataPacketReceiveEvent extends ServerEvent implements Cancellable{
 	public function getOrigin() : NetworkSession{
 		return $this->origin;
 	}
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/** @deprecated API 3: use getOrigin()->getPlayer() */
+	public function getPlayer() : ?\pocketmine\player\Player{ return $this->getOrigin()->getPlayer(); }
 }

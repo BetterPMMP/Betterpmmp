@@ -62,4 +62,9 @@ abstract class Task{
 	public function onCancel() : void{
 
 	}
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/** @deprecated API 3 */
+	public function getTaskId() : int{ return $this->getHandler()?->getTaskId() ?? -1; }
 }

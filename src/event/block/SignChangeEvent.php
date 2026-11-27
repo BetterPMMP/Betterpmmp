@@ -77,4 +77,25 @@ class SignChangeEvent extends BlockEvent implements Cancellable{
 	}
 
 	public function isFrontFace() : bool{ return $this->frontFace; }
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/**
+	 * @deprecated API 3/4: use getNewText()
+	 * @return string[]
+	 */
+	public function getLines() : array{ return $this->getNewText()->getLines(); }
+	/** @deprecated API 3/4: use getNewText() */
+	public function getLine(int $index) : string{ return $this->getNewText()->getLine($index); }
+	/**
+	 * @deprecated API 3/4: use setNewText()
+	 * @param string[] $lines
+	 */
+	public function setLines(array $lines) : void{ $this->setNewText(new \pocketmine\block\utils\SignText(array_values(array_map("strval", $lines)))); }
+	/** @deprecated API 3/4: use setNewText() */
+	public function setLine(int $index, string $line) : void{
+		$lines = $this->getNewText()->getLines();
+		$lines[$index] = $line;
+		$this->setLines($lines);
+	}
 }

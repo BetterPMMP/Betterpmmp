@@ -46,4 +46,11 @@ trait CancellableTrait{
 	public function uncancel() : void{
 		$this->isCancelled = false;
 	}
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/** @deprecated API 3/4: use cancel() or uncancel() */
+	public function setCancelled(bool $value = true) : void{
+		$value ? $this->cancel() : $this->uncancel();
+	}
 }

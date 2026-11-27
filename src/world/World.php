@@ -4082,4 +4082,37 @@ class World implements ChunkManager{
 	public function getName() : string{
 		return $this->getDisplayName();
 	}
+
+	/** @deprecated API 3: numeric block id */
+	public function getBlockIdAt(int $x, int $y, int $z) : int{ return \pocketmine\plugin\compat\LegacyIds::blockId($this->getBlockAt($x, $y, $z)); }
+	/** @deprecated API 3: block meta */
+	public function getBlockDataAt(int $x, int $y, int $z) : int{ return \pocketmine\plugin\compat\LegacyIds::blockMeta($this->getBlockAt($x, $y, $z)); }
+	/** @deprecated API 3: numeric block id */
+	public function setBlockIdAt(int $x, int $y, int $z, int $id) : void{ $this->setBlockAt($x, $y, $z, \pocketmine\plugin\compat\LegacyIds::block($id, 0)); }
+	/** @deprecated API 3: block meta */
+	public function setBlockDataAt(int $x, int $y, int $z, int $data) : void{
+		$this->setBlockAt($x, $y, $z, \pocketmine\plugin\compat\LegacyIds::block($this->getBlockIdAt($x, $y, $z), $data));
+	}
+	/**
+	 * @deprecated API 3: use getLoadedChunks()
+	 * @return \pocketmine\world\format\Chunk[]
+	 */
+	public function getChunks() : array{ return $this->getLoadedChunks(); }
+	/** @deprecated API 3: use isLoaded() */
+	public function isClosed() : bool{ return !$this->isLoaded(); }
+	/** @deprecated API 3 */
+	public function getTickRate() : int{ return 1; }
+	/**
+	 * @deprecated API 3: the tiles of all loaded chunks
+	 * @return \pocketmine\block\tile\Tile[]
+	 */
+	public function getTiles() : array{
+		$tiles = [];
+		foreach($this->getLoadedChunks() as $chunk){
+			foreach($chunk->getTiles() as $tile){
+				$tiles[] = $tile;
+			}
+		}
+		return $tiles;
+	}
 }

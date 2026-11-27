@@ -65,4 +65,11 @@ class DataPacketSendEvent extends ServerEvent implements Cancellable{
 		Utils::validateArrayValueType($packets, function(ClientboundPacket $_) : void{});
 		$this->packets = $packets;
 	}
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/** @deprecated API 3: use getPackets() */
+	public function getPacket() : ?\pocketmine\network\mcpe\protocol\ClientboundPacket{ return $this->getPackets()[0] ?? null; }
+	/** @deprecated API 3: use getTargets() */
+	public function getPlayer() : ?\pocketmine\player\Player{ return ($this->getTargets()[0] ?? null)?->getPlayer(); }
 }

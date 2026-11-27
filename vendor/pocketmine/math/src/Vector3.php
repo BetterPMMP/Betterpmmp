@@ -378,4 +378,9 @@ class Vector3{
 		}
 		return new Vector3($x, $y, $z);
 	}
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/** @deprecated API 3: the side opposite to $side */
+	public function getOppositeSide(int $side, int $step = 1) : Vector3{ return $this->getSide(Facing::opposite($side), $step); }
 }

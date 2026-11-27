@@ -3368,4 +3368,59 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 	public function addTitle(string $title, string $subtitle = "", int $fadeIn = -1, int $stay = -1, int $fadeOut = -1) : void{ $this->sendTitle($title, $subtitle, $fadeIn, $stay, $fadeOut); }
 	/** @deprecated API 3: use sendSubTitle() */
 	public function addSubTitle(string $subtitle) : void{ $this->sendSubTitle($subtitle); }
+
+	/** @deprecated API 3 */
+	public function isBanned() : bool{ return $this->server->getNameBans()->isBanned($this->getName()); }
+	/** @deprecated API 3 */
+	public function setBanned(bool $banned) : void{
+		if($banned){
+			$this->server->getNameBans()->addBan($this->getName(), null, null, null);
+			$this->kick("Banned");
+		}else{
+			$this->server->getNameBans()->remove($this->getName());
+		}
+	}
+	/** @deprecated API 3 */
+	public function isWhitelisted() : bool{ return $this->server->isWhitelisted($this->getName()); }
+	/** @deprecated API 3 */
+	public function setWhitelisted(bool $value) : void{ $value ? $this->server->addWhitelist($this->getName()) : $this->server->removeWhitelist($this->getName()); }
+	/** @deprecated API 3 (IPlayer::getPlayer()) */
+	public function getPlayer() : ?Player{ return $this; }
+	/** @deprecated API 3: use Server::isOp() */
+	public function isOp() : bool{ return $this->server->isOp($this->getName()); }
+	/** @deprecated API 3: use Server::addOp()/removeOp() */
+	public function setOp(bool $value) : void{ $value ? $this->server->addOp($this->getName()) : $this->server->removeOp($this->getName()); }
+	/** @deprecated API 3 */
+	public function getLowerCaseName() : string{ return strtolower($this->getName()); }
+	/** @deprecated API 3: use getNetworkSession()->getIp() */
+	public function getAddress() : string{ return $this->getNetworkSession()->getIp(); }
+	/** @deprecated API 3: use getNetworkSession()->getPort() */
+	public function getPort() : int{ return $this->getNetworkSession()->getPort(); }
+	/** @deprecated API 3: use getNetworkSession()->getPing() */
+	public function getPing() : int{ return $this->getNetworkSession()->getPing() ?? 0; }
+	/** @deprecated API 3: use getNetworkSession()->sendDataPacket() */
+	public function sendDataPacket(\pocketmine\network\mcpe\protocol\ClientboundPacket $packet, bool $immediate = false) : bool{ return $this->getNetworkSession()->sendDataPacket($packet, $immediate); }
+	/** @deprecated API 3: use getNetworkSession()->sendDataPacket() */
+	public function dataPacket(\pocketmine\network\mcpe\protocol\ClientboundPacket $packet) : bool{ return $this->getNetworkSession()->sendDataPacket($packet); }
+	/** @deprecated API 3: use getNetworkSession()->sendDataPacket() */
+	public function directDataPacket(\pocketmine\network\mcpe\protocol\ClientboundPacket $packet) : bool{ return $this->getNetworkSession()->sendDataPacket($packet, true); }
+	/** @deprecated API 3: use sendActionBarMessage() */
+	public function addActionBarMessage(string $message) : void{ $this->sendActionBarMessage($message); }
+	/**
+	 * @deprecated API 3/4: use sendMessage(new Translatable(...))
+	 * @param string[] $parameters
+	 */
+	public function sendTranslation(string $message, array $parameters = []) : void{ $this->sendMessage(new \pocketmine\lang\Translatable($message, $parameters)); }
+	/** @deprecated API 3 */
+	public function sendWhisper(string $sender, string $message) : void{ $this->sendMessage("[" . $sender . " -> " . $this->getName() . "] " . $message); }
+	/** @deprecated API 3: use setCurrentWindow() */
+	public function addWindow(\pocketmine\inventory\Inventory $inventory, ?int $forceId = null, bool $isPermanent = false) : int{ return $this->setCurrentWindow($inventory) ? 1 : -1; }
+	/** @deprecated API 3: use removeCurrentWindow() */
+	public function removeWindow(\pocketmine\inventory\Inventory $inventory, bool $force = false) : void{
+		if($this->getCurrentWindow() === $inventory){
+			$this->removeCurrentWindow();
+		}
+	}
+	/** @deprecated API 3: use removeCurrentWindow() */
+	public function removeAllWindows(bool $removePermanentWindows = false) : void{ $this->removeCurrentWindow(); }
 }

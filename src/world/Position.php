@@ -100,4 +100,20 @@ class Position extends Vector3{
 		}
 		return parent::equals($v);
 	}
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/** @deprecated API 3: use getWorld() */
+	public function getLevel() : ?World{ return $this->world; }
+	/** @deprecated API 3: use getWorld() */
+	public function getLevelNonNull() : World{ return $this->getWorld(); }
+	/** @deprecated API 3 */
+	public function setLevel(?World $world) : self{ $this->world = $world; return $this; }
+	/** @deprecated API 3: $position->level */
+	public function __get(string $name) : mixed{
+		if($name === "level"){
+			return $this->world;
+		}
+		throw new \Error("Undefined property: " . static::class . "::$" . $name);
+	}
 }

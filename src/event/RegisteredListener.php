@@ -70,7 +70,17 @@ class RegisteredListener{
 		}
 		$this->timings->startTiming();
 		try{
-			($this->handler)($event);
+			if(\pocketmine\plugin\compat\LegacyApi::isLegacyPlugin($this->plugin)){
+				//BetterPMMP: an event handler of an old plugin (API 3/4) that throws is logged, not a server crash
+				try{
+					($this->handler)($event);
+				}catch(\Throwable $e){
+					$this->plugin->getLogger()->error("Error in " . $event->getEventName() . " handler: " . $e->getMessage());
+					$this->plugin->getLogger()->logException($e);
+				}
+			}else{
+				($this->handler)($event);
+			}
 		}finally{
 			$this->timings->stopTiming();
 		}

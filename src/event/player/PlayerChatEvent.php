@@ -85,4 +85,11 @@ class PlayerChatEvent extends PlayerEvent implements Cancellable{
 		Utils::validateArrayValueType($recipients, function(CommandSender $_) : void{});
 		$this->recipients = $recipients;
 	}
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/** @deprecated API 3/4: chat formats are ChatFormatters now */
+	public function getFormat() : string{ return "chat.type.text"; }
+	/** @deprecated API 3/4: {%0} is the player name, {%1} the message */
+	public function setFormat(string $format) : void{ $this->setFormatter(new \pocketmine\player\chat\LegacyRawChatFormatter($format)); }
 }

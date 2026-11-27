@@ -1031,4 +1031,23 @@ class Block{
 	public function getY() : int{ return (int) $this->getPosition()->y; }
 	/** @deprecated API 3: use getPosition() */
 	public function getZ() : int{ return (int) $this->getPosition()->z; }
+
+	/** @deprecated API 3: use getBreakInfo() */
+	public function getHardness() : float{ return $this->getBreakInfo()->getHardness(); }
+	/** @deprecated API 3: use getBreakInfo() */
+	public function getBlastResistance() : float{ return $this->getBreakInfo()->getBlastResistance(); }
+	/** @deprecated API 3: use getBreakInfo() */
+	public function getToolType() : int{ return $this->getBreakInfo()->getToolType(); }
+	/** @deprecated API 3: use getBreakInfo() */
+	public function getToolHarvestLevel() : int{ return $this->getBreakInfo()->getToolHarvestLevel(); }
+	/** @deprecated API 3: use getBreakInfo() */
+	public function isBreakable() : bool{ return $this->getBreakInfo()->isBreakable(); }
+	/** @deprecated API 3: the numeric item id of this block */
+	public function getItemId() : int{ return \pocketmine\plugin\compat\LegacyIds::itemId($this->asItem()); }
+	/** @deprecated API 3: the meta value */
+	public function getDamage() : int{ return \pocketmine\plugin\compat\LegacyIds::blockMeta($this); }
+	/** @deprecated API 3: Block::get(id, meta) */
+	public static function get(int $id, int $meta = 0, ?\pocketmine\world\Position $pos = null) : Block{ return \pocketmine\plugin\compat\LegacyIds::block($id, $meta); }
+	/** @deprecated API 4: use hasSameTypeId() */
+	public function isSameType(Block $other) : bool{ return $this->hasSameTypeId($other); }
 }

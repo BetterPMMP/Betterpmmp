@@ -395,4 +395,12 @@ final class CompoundTag extends Tag implements \Countable, \IteratorAggregate{
 
 		return $new;
 	}
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/** @deprecated API 3: whether there is a tag with this name (and type) */
+	public function hasTag(string $name, ?string $expectedClass = null) : bool{
+		$tag = $this->getTag($name);
+		return $tag !== null && ($expectedClass === null || $tag instanceof $expectedClass);
+	}
 }

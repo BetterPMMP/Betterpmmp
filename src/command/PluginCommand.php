@@ -68,4 +68,9 @@ final class PluginCommand extends Command implements PluginOwned{
 	public function setExecutor(CommandExecutor $executor) : void{
 		$this->executor = $executor;
 	}
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/** @deprecated API 3/4: use getOwningPlugin() */
+	public function getPlugin() : Plugin{ return $this->getOwningPlugin(); }
 }

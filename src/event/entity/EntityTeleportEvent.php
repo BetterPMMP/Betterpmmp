@@ -55,4 +55,11 @@ class EntityTeleportEvent extends EntityEvent implements Cancellable{
 		Utils::checkVector3NotInfOrNaN($to);
 		$this->to = $to;
 	}
+
+	// ---- BetterPMMP: methods of API 3 and 4 for plugins in compatibility mode ----
+
+	/** @deprecated API 3 (EntityLevelChangeEvent): the world the entity leaves */
+	public function getOrigin() : ?\pocketmine\world\World{ return $this->getFrom()->getWorld(); }
+	/** @deprecated API 3 (EntityLevelChangeEvent): the world the entity enters */
+	public function getTarget() : ?\pocketmine\world\World{ return $this->getTo()->getWorld(); }
 }
