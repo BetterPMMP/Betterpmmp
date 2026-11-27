@@ -49,6 +49,8 @@ html[lang="en"] span[data-lang-block="en"],html[lang="de"] span[data-lang-block=
 .hero{padding:56px 0 28px;background:radial-gradient(900px 420px at 80% -10%,rgba(70,195,90,.16),transparent 60%),radial-gradient(700px 380px at 0% 0%,rgba(108,182,255,.08),transparent 60%)}
 .hero-grid{display:grid;grid-template-columns:1.05fr 1fr;gap:40px;align-items:center}
 .badge{display:inline-flex;gap:8px;align-items:center;font-size:.8rem;font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--green);background:var(--greenbg);border:1px solid rgba(70,195,90,.35);padding:4px 10px;border-radius:999px}
+.notice{margin:14px 0 0;color:var(--muted);font-size:.95rem}
+.notice b{color:var(--text)}
 .hero h1{font-size:clamp(2.3rem,5.2vw,3.6rem);line-height:1.08;margin:16px 0 14px;letter-spacing:-.025em}
 .hero h1 b{color:var(--green)}
 .hero .lead{font-size:1.12rem;color:var(--muted);margin:0 0 26px;max-width:36em}

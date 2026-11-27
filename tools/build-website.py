@@ -56,7 +56,7 @@ def page(name, title_en, title_de, desc, body, current=None):
 <meta property="og:title" content="{html.escape(title_en)}">
 <meta property="og:description" content="{html.escape(desc)}">
 <meta property="og:url" content="{canonical}">
-<meta property="og:image" content="{BASE}banner.png">
+<meta property="og:image" content="{BASE}assets/social-preview.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="assets/icon.png" type="image/png">
 <link rel="apple-touch-icon" href="assets/icon-512.png">
@@ -130,6 +130,7 @@ INDEX_EN = f'''
  <div class="hero-grid">
   <div>
    <span class="badge">Version {VERSION}</span>
+   <p class="notice">PocketMine-MP was discontinued in July 2026. <b>BetterPMMP keeps going.</b></p>
    <h1>Vanilla Minecraft.<br>On <b>PocketMine</b> speed.</h1>
    <p class="lead">BetterPMMP is server software for Minecraft: Bedrock Edition 1.26.60. It keeps the fast core and the plugin API of PocketMine-MP 5 and adds a real vanilla game engine on top: world generation, redstone, mob AI, the Nether and the End. Java Edition players can join too.</p>
    <div class="btns">
@@ -154,6 +155,7 @@ INDEX_DE = f'''
  <div class="hero-grid">
   <div>
    <span class="badge">Version {VERSION}</span>
+   <p class="notice">PocketMine-MP wurde im Juli 2026 eingestellt. <b>BetterPMMP geht weiter.</b></p>
    <h1>Vanilla-Minecraft.<br>Mit <b>PocketMine</b>-Tempo.</h1>
    <p class="lead">BetterPMMP ist Serversoftware für Minecraft: Bedrock Edition 1.26.60. Es behält den schnellen Kern und die Plugin-API von PocketMine-MP 5 und setzt eine echte Vanilla-Engine obendrauf: Weltgenerierung, Redstone, Mob-KI, Nether und End. Auch Java-Edition-Spieler können mitspielen.</p>
    <div class="btns">
@@ -201,10 +203,10 @@ def features(lang):
 
 
 COMPARE = {
-    "en": [("Plugin API (PocketMine-MP 5)", "✓", "✓"), ("Old plugins (API 3 and 4)", "✓ compatibility mode", "–"), ("Vanilla world generation (1.18+)", "✓", "flat / simple"), ("Structures (villages, strongholds, cities …)", "✓", "–"),
+    "en": [("Still developed", "✓", "– archived 2026"), ("Plugin API (PocketMine-MP 5)", "✓", "✓"), ("Old plugins (API 3 and 4)", "✓ compatibility mode", "–"), ("Vanilla world generation (1.18+)", "✓", "flat / simple"), ("Structures (villages, strongholds, cities …)", "✓", "–"),
            ("Redstone", "✓", "–"), ("Mob AI and natural spawning", "✓", "–"), ("Nether and End with bosses", "✓", "–"),
            ("Vanilla commands and game rules", "✓", "few"), ("Java Edition players", "✓ built in", "–"), ("Custom items, blocks, creatures", "✓ YAML", "plugin needed")],
-    "de": [("Plugin-API (PocketMine-MP 5)", "✓", "✓"), ("Alte Plugins (API 3 und 4)", "✓ Kompatibilitätsmodus", "–"), ("Vanilla-Weltgenerierung (ab 1.18)", "✓", "flach / einfach"), ("Strukturen (Dörfer, Festungen, Städte …)", "✓", "–"),
+    "de": [("Wird weiterentwickelt", "✓", "– eingestellt 2026"), ("Plugin-API (PocketMine-MP 5)", "✓", "✓"), ("Alte Plugins (API 3 und 4)", "✓ Kompatibilitätsmodus", "–"), ("Vanilla-Weltgenerierung (ab 1.18)", "✓", "flach / einfach"), ("Strukturen (Dörfer, Festungen, Städte …)", "✓", "–"),
            ("Redstone", "✓", "–"), ("Mob-KI und natürliches Spawnen", "✓", "–"), ("Nether und End mit Bossen", "✓", "–"),
            ("Vanilla-Befehle und Spielregeln", "✓", "wenige"), ("Java-Edition-Spieler", "✓ eingebaut", "–"), ("Eigene Items, Blöcke, Wesen", "✓ YAML", "Plugin nötig")],
 }

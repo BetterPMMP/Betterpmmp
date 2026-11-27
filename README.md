@@ -21,6 +21,10 @@
 
 ---
 
+> **PocketMine-MP was discontinued.** The official repository was archived on 9 July 2026 and gets no more
+> updates for new Minecraft versions. BetterPMMP keeps going: same plugin API, updated for Bedrock 1.26.60,
+> and actively developed.
+
 PocketMine-MP is fast and has a great plugin API, but as a game it is mostly empty: no redstone, a flat
 world generator, mobs that stand around, no structures, and a lot of blocks that do nothing when you
 right-click them. That is fine for minigames. It is not fine if you want people to play survival.
