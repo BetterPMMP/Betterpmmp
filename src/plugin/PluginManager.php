@@ -239,7 +239,18 @@ class PluginManager{
 		 * @var Plugin $plugin
 		 * @see Plugin::__construct()
 		 */
-		$plugin = new $mainClass($loader, $this->server, $description, $dataFolder, $prefixed, new DiskResourceProvider($prefixed . "/resources/"));
+		if(\pocketmine\plugin\compat\LegacyApi::isLegacy($description)){
+			//BetterPMMP: onLoad() of an old plugin that throws skips the plugin instead of crashing the server
+			try{
+				$plugin = new $mainClass($loader, $this->server, $description, $dataFolder, $prefixed, new DiskResourceProvider($prefixed . "/resources/"));
+			}catch(\Throwable $e){
+				$this->server->getLogger()->critical("Could not load " . $description->getName() . " (compatibility mode): " . $e->getMessage());
+				$this->server->getLogger()->logException($e);
+				return null;
+			}
+		}else{
+			$plugin = new $mainClass($loader, $this->server, $description, $dataFolder, $prefixed, new DiskResourceProvider($prefixed . "/resources/"));
+		}
 		$this->plugins[$plugin->getDescription()->getName()] = $plugin;
 
 		return $plugin;
@@ -479,6 +490,14 @@ class PluginManager{
 			try{
 				$plugin->onEnableStateChange(true);
 			}catch(DisablePluginException){
+				$this->disablePlugin($plugin);
+			}catch(\Throwable $e){
+				if(!\pocketmine\plugin\compat\LegacyApi::isLegacy($plugin->getDescription())){
+					throw $e;
+				}
+				//BetterPMMP: onEnable() of an old plugin that throws disables the plugin instead of crashing the server
+				$this->server->getLogger()->critical("Could not enable " . $plugin->getDescription()->getName() . " (compatibility mode): " . $e->getMessage());
+				$this->server->getLogger()->logException($e);
 				$this->disablePlugin($plugin);
 			}
 
