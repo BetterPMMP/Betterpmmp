@@ -9,7 +9,11 @@ declare(strict_types=1);
 
 namespace pocketmine\network\mcpe;
 
+use pocketmine\block\inventory\AnvilInventory;
 use pocketmine\block\inventory\BrewingStandInventory;
+use pocketmine\block\inventory\CartographyTableInventory;
+use pocketmine\block\inventory\EnchantInventory;
+use pocketmine\block\inventory\GrindstoneInventory;
 use pocketmine\block\inventory\CraftingTableInventory;
 use pocketmine\block\inventory\FurnaceInventory;
 use pocketmine\block\inventory\SmithingTableInventory;
@@ -33,6 +37,9 @@ use pocketmine\network\mcpe\protocol\types\inventory\ContainerIds;
 use pocketmine\network\mcpe\protocol\types\inventory\ItemStackWrapper;
 use pocketmine\player\Player;
 use function count;
+use function implode;
+use function in_array;
+use function mb_substr;
 use function explode;
 use function intdiv;
 use function max;
@@ -59,6 +66,8 @@ final class JavaInventoryClick{
 	private const INV_OFFHAND = 45;
 	private const OUTSIDE = -999;
 	private const CREATED_OUTPUT_SLOT = 50;
+	/** Java anvil, grindstone and cartography screens: 0 and 1 inputs, 2 result */
+	private const STATION_RESULT = 2;
 	/** Java smithing screen: 0 template, 1 base item, 2 material, 3 result */
 	private const SMITHING_RESULT = 3;
 	/** Java brewing stand: 0-2 bottles, 3 ingredient, 4 fuel => BetterPMMP slot */
@@ -101,6 +110,13 @@ final class JavaInventoryClick{
 		if($slot === self::SMITHING_RESULT && $this->container() instanceof SmithingTableInventory){
 			if($action === "PICKUP" || $action === "QUICK_MOVE"){
 				$this->smithResult($action === "QUICK_MOVE");
+			}
+			$this->commit();
+			return;
+		}
+		if($slot === self::STATION_RESULT && self::hasResultSlot($this->container())){
+			if($action === "PICKUP" || $action === "QUICK_MOVE"){
+				$this->stationResult($action === "QUICK_MOVE");
 			}
 			$this->commit();
 			return;
@@ -159,6 +175,15 @@ final class JavaInventoryClick{
 				default => null,
 			};
 		}
+		if(self::hasResultSlot($container)){
+			// Java anvil, grindstone, cartography table: 0-1 inputs, 2 result, 3-29 inventory, 30-38 hotbar
+			return match(true){
+				$javaSlot === 0 || $javaSlot === 1 => [$container, $javaSlot],
+				$javaSlot >= 3 && $javaSlot < 30 => [$inventory, $javaSlot - 3 + 9],
+				$javaSlot >= 30 && $javaSlot < 39 => [$inventory, $javaSlot - 30],
+				default => null,
+			};
+		}
 		$size = $container->getSize();
 		if($container instanceof BrewingStandInventory && $javaSlot >= 0 && $javaSlot < $size){
 			return [$container, self::BREWING_JAVA_TO_SLOT[$javaSlot]];
@@ -193,6 +218,7 @@ final class JavaInventoryClick{
 			$container === null => 0,
 			$container instanceof CraftingTableInventory => 10,
 			$container instanceof SmithingTableInventory => 4,
+			self::hasResultSlot($container) => 3,
 			default => $container->getSize(),
 		};
 	}
@@ -223,6 +249,16 @@ final class JavaInventoryClick{
 				return [[$container, BrewingStandInventory::SLOT_BOTTLE_LEFT], [$container, BrewingStandInventory::SLOT_BOTTLE_MIDDLE], [$container, BrewingStandInventory::SLOT_BOTTLE_RIGHT]];
 			}
 			return [[$container, BrewingStandInventory::SLOT_INGREDIENT]];
+		}
+		if($container instanceof AnvilInventory || $container instanceof GrindstoneInventory){
+			return [[$container, 0], [$container, 1]];
+		}
+		if($container instanceof CartographyTableInventory){
+			$name = \pocketmine\crafting\SmithingRecipes::nameOf($item);
+			return $name === "minecraft:filled_map" ? [[$container, 0]] : (in_array($name, ["minecraft:paper", "minecraft:empty_map", "minecraft:map", "minecraft:glass_pane"], true) ? [[$container, 1]] : []);
+		}
+		if($container instanceof EnchantInventory){
+			return $item->getTypeId() === \pocketmine\item\ItemTypeIds::LAPIS_LAZULI ? [[$container, EnchantInventory::SLOT_LAPIS]] : [[$container, EnchantInventory::SLOT_INPUT]];
 		}
 		if($container instanceof SmithingTableInventory){
 			$name = \pocketmine\crafting\SmithingRecipes::nameOf($item);
@@ -558,9 +594,17 @@ final class JavaInventoryClick{
 		}
 		if($actions !== []){
 			try{
-				$transaction = $this->craftRecipe !== null
-					? new CraftingTransaction($this->player, $this->player->getServer()->getCraftingManager(), $actions, $this->craftRecipe, $this->craftRepetitions)
-					: new InventoryTransaction($this->player, $actions);
+				if($this->transactionFactory !== null){
+					// anvil, grindstone, cartography and enchanting table: the same transactions as for Bedrock players
+					$transaction = ($this->transactionFactory)();
+					foreach($actions as $action){
+						$transaction->addAction($action);
+					}
+				}else{
+					$transaction = $this->craftRecipe !== null
+						? new CraftingTransaction($this->player, $this->player->getServer()->getCraftingManager(), $actions, $this->craftRecipe, $this->craftRepetitions)
+						: new InventoryTransaction($this->player, $actions);
+				}
 				$transaction->execute();
 			}catch(TransactionException $e){
 				$this->player->getServer()->getLogger()->debug("[Java-Bridge] click of " . $this->player->getName() . " rejected: " . $e->getMessage());
@@ -587,6 +631,8 @@ final class JavaInventoryClick{
 			self::sendCraftingResult($this->player, $this->manager, $grid, $this->windowId);
 		}elseif($container instanceof SmithingTableInventory){
 			self::sendSmithingResult($this->player, $container, $this->windowId);
+		}elseif($container !== null){
+			self::sendStationState($this->player, $container, $this->windowId);
 		}
 	}
 
@@ -832,5 +878,184 @@ final class JavaInventoryClick{
 		}elseif($slot === 45){
 			$player->getOffHandInventory()->setItem(0, $item);
 		}
+	}
+
+	// ------------------------------------------- anvil, grindstone, cartography and enchanting table
+
+	/** @var (\Closure() : InventoryTransaction)|null transaction that performs the changes of this click */
+	private ?\Closure $transactionFactory = null;
+
+	/** @var array<int, array{int, string}> player id => [anvil window id, name typed into the anvil] */
+	private static array $renames = [];
+
+	/** Java screens with two inputs and a result slot. */
+	private static function hasResultSlot(?Inventory $container) : bool{
+		return $container instanceof AnvilInventory || $container instanceof GrindstoneInventory || $container instanceof CartographyTableInventory;
+	}
+
+	private static function renameFor(Player $player, Inventory $anvil) : ?string{
+		$entry = self::$renames[spl_object_id($player)] ?? null;
+		return $entry !== null && $entry[0] === spl_object_id($anvil) ? $entry[1] : null;
+	}
+
+	/**
+	 * What the station in front of the player would make now.
+	 * @return array{Item, array<int, int>, \Closure() : InventoryTransaction, int}|null result, slot => items used up, transaction, anvil level cost
+	 */
+	private static function stationCalculation(Player $player, Inventory $container) : ?array{
+		if($container instanceof AnvilInventory){
+			$calculated = \pocketmine\block\utils\AnvilHelper::calculate($container->getItem(AnvilInventory::SLOT_INPUT), $container->getItem(AnvilInventory::SLOT_MATERIAL), self::renameFor($player, $container), $player->isCreative());
+			if($calculated === null){
+				return null;
+			}
+			[$result, $cost, $used] = $calculated;
+			return [$result, [AnvilInventory::SLOT_INPUT => 1, AnvilInventory::SLOT_MATERIAL => $used], fn() => new \pocketmine\inventory\transaction\AnvilTransaction($player, $container, $result, $cost, $used), $cost];
+		}
+		if($container instanceof GrindstoneInventory){
+			$calculated = GrindstoneInventory::calculate($container->getItem(0), $container->getItem(1));
+			if($calculated === null){
+				return null;
+			}
+			[$result, $xp] = $calculated;
+			$used = [];
+			foreach([0, 1] as $slot){
+				if(!$container->getItem($slot)->isNull()){
+					$used[$slot] = 1;
+				}
+			}
+			return [$result, $used, fn() => new \pocketmine\inventory\transaction\GrindstoneTransaction($player, $container, $result, $xp), 0];
+		}
+		if($container instanceof CartographyTableInventory){
+			$calculated = \pocketmine\inventory\transaction\CartographyTransaction::calculate($container->getItem(0), $container->getItem(1), null);
+			if($calculated === null){
+				return null;
+			}
+			[$result, $used] = $calculated;
+			return [$result, [0 => 1, 1 => $used], fn() => new \pocketmine\inventory\transaction\CartographyTransaction($player, $container, $result, $used), 0];
+		}
+		return null;
+	}
+
+	/** Clicking the result: takes it (shift-click: into the inventory) and uses up the inputs, like vanilla. */
+	private function stationResult(bool $intoInventory) : void{
+		$container = $this->container();
+		if($container === null || ($calculation = self::stationCalculation($this->player, $container)) === null){
+			return;
+		}
+		[$result, $used, $factory, $cost] = $calculation;
+		if($cost > 0 && !$this->player->isCreative() && $this->player->getXpManager()->getXpLevel() < $cost){
+			return; // too expensive
+		}
+		if($intoInventory){
+			$targets = [];
+			$inventory = $this->player->getInventory();
+			for($i = 8; $i >= 0; --$i){
+				$targets[] = [$inventory, $i];
+			}
+			for($i = 35; $i >= 9; --$i){
+				$targets[] = [$inventory, $i];
+			}
+			$output = clone $result;
+			$this->insert($output, $targets);
+			if(!$output->isNull()){
+				$this->changes = [];
+				return; // no room
+			}
+		}else{
+			if(!$this->cursor()->isNull()){
+				return;
+			}
+			$this->setCursor(clone $result);
+		}
+		foreach($used as $slot => $count){
+			if($count > 0){
+				$item = $this->get($container, $slot);
+				$item->pop(min($count, $item->getCount()));
+				$this->set($container, $slot, $item);
+			}
+		}
+		$this->transactionFactory = $factory;
+	}
+
+	/**
+	 * Result slot and screen data of a station for the Java screen: the result as the "created output" UI slot,
+	 * the level cost of the anvil, the costs of the three enchanting options.
+	 */
+	public static function sendStationState(Player $player, Inventory $container, int $windowId) : void{
+		$session = $player->getNetworkSession();
+		$data = null;
+		if(self::hasResultSlot($container)){
+			$calculation = self::stationCalculation($player, $container);
+			$session->sendDataPacket(InventorySlotPacket::create(
+				ContainerIds::UI,
+				self::CREATED_OUTPUT_SLOT,
+				null,
+				null,
+				new ItemStackWrapper(0, $session->getTypeConverter()->coreItemStackToNet($calculation[0] ?? VanillaItems::AIR()))
+			));
+			if($container instanceof AnvilInventory){
+				$data = "0=" . ($calculation[3] ?? 0);
+			}
+		}elseif($container instanceof EnchantInventory){
+			$values = [];
+			for($i = 0; $i < 3; ++$i){
+				$option = $container->getInput()->isNull() ? null : $container->getOption($i);
+				$values[] = $i . "=" . ($option?->getRequiredXpLevel() ?? 0);
+			}
+			$values[] = "3=" . ($player->getEnchantmentSeed() & 0x7fff);
+			for($i = 4; $i < 10; ++$i){
+				$values[] = $i . "=-1"; // no hint which enchantment the option gives
+			}
+			$data = implode(",", $values);
+		}else{
+			return;
+		}
+		if($data !== null){
+			$session->sendDataPacket(ScriptMessagePacket::create("betterpmmp:container_data", $windowId . ";" . $data));
+		}
+		$session->sendDataPacket(ScriptMessagePacket::create("betterpmmp:craft_result", (string) $windowId));
+	}
+
+	/** The name field of the Java anvil screen ("betterpmmp:java_rename"). */
+	public static function handleRename(Player $player, InventoryManager $manager, string $name) : void{
+		$anvil = $player->getCurrentWindow();
+		if(!$anvil instanceof AnvilInventory){
+			return;
+		}
+		self::$renames[spl_object_id($player)] = [spl_object_id($anvil), mb_substr($name, 0, 50)];
+		$windowId = $manager->getWindowId($anvil);
+		if($windowId !== null){
+			self::sendStationState($player, $anvil, $windowId);
+		}
+	}
+
+	/** A button of a Java screen ("window;button"): the three options of the enchanting table. */
+	public static function handleButton(Player $player, InventoryManager $manager, string $value) : void{
+		$parts = explode(";", $value);
+		if(count($parts) !== 2){
+			return;
+		}
+		[$window, $button] = [(int) $parts[0], (int) $parts[1]];
+		$click = new self($player, $manager, $window);
+		$table = $click->container();
+		if(!$table instanceof EnchantInventory || $button < 0 || $button > 2){
+			return;
+		}
+		$option = $table->getOption($button);
+		$input = $table->getInput();
+		if($option === null || $input->isNull()){
+			return;
+		}
+		$cost = $button + 1;
+		$lapis = $table->getLapis();
+		if(!$player->isCreative()){
+			if($lapis->getCount() < $cost || $player->getXpManager()->getXpLevel() < $option->getRequiredXpLevel()){
+				return;
+			}
+			$click->set($table, EnchantInventory::SLOT_LAPIS, (clone $lapis)->setCount($lapis->getCount() - $cost));
+		}
+		$click->set($table, EnchantInventory::SLOT_INPUT, \pocketmine\item\enchantment\EnchantingHelper::enchantItem($input, $option->getEnchantments()));
+		$click->transactionFactory = fn() => new \pocketmine\inventory\transaction\EnchantingTransaction($player, $option, $cost);
+		$click->commit();
 	}
 }

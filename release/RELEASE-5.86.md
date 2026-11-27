@@ -10,6 +10,8 @@ PocketMine-MP 5 (API 5.51.0) based server for Minecraft: Bedrock Edition 1.26.60
 
 - **Multi-API: old plugins work again.** Plugins written for API 3 and 4 load in a compatibility mode. Their code is adapted on start: return types and parameters PHP 8 requires, `getLevel()` → `getWorld()` and other renamed methods, `Item::get()` / `ItemFactory` / `BlockFactory` / `ItemIds` with numeric IDs, `getId()` and `getMeta()`, moved classes like `pocketmine\Player`. Undeclared command permissions are created automatically, dynamic properties are allowed, game modes as numbers work. Every change is listed in `plugin_cache/<Plugin>/changes.txt`; a plugin that still cannot load is skipped with an error instead of stopping the server. Switch: `plugins.legacy-api` in `betterpmmp.yml`.
 
+- **Java players: anvil, grindstone, cartography table and enchanting table** open as real Java screens (bridge plugin 1.9.0): result preview, renaming, level costs, enchanting options.
+
 ### New in 5.85
 
 - **3D biomes in the Nether**, like vanilla: a cave can be a warped forest above a crimson forest. Floors, plants, fungus trees and vines follow the biome at their height. Nether chunks that already exist stay as they are.
@@ -52,7 +54,7 @@ PocketMine-MP 5 (API 5.51.0) based server for Minecraft: Bedrock Edition 1.26.60
 
 ### Known issues
 - Redstone repeater problem reported, still being investigated
-- Java players: anvil, enchanting table, grindstone, stonecutter, loom, cartography table, crafter, beacon and trading do not open yet
+- Java players: stonecutter, loom, crafter, beacon and trading do not open yet
 - Bundles, nautilus armour, pottery sherd patterns on pots not implemented
 
 Details for every version: `VANILLA-PARITY.md`.

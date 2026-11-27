@@ -46,7 +46,8 @@ import java.util.logging.Level;
 /**
  * Fills gaps of ViaBedrock for BetterPMMP servers:
  * <ul>
- *     <li>furnaces, hoppers, dispensers, droppers, brewing stands and smithing tables as Java screens,</li>
+ *     <li>furnaces, hoppers, dispensers, droppers, brewing stands, smithing tables, anvils, grindstones,
+ *     cartography and enchanting tables as Java screens,</li>
  *     <li>chest windows of every size (BetterPMMP announces 54-slot menus before opening them),</li>
  *     <li>no block check for chest menus (menu plugins open them without a real chest block),</li>
  *     <li>screen titles shown as the heading of an open chest window (Java hides titles behind open screens),</li>
@@ -65,6 +66,9 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
     public static final String HIDE_NAMETAG_MESSAGE = "betterpmmp:hide_nametag";
     public static final String CREATIVE_MESSAGE = "betterpmmp:java_creative";
     public static final String LIGHT_MESSAGE = "betterpmmp:light";
+    public static final String CONTAINER_DATA_MESSAGE = "betterpmmp:container_data";
+    public static final String BUTTON_MESSAGE = "betterpmmp:java_button";
+    public static final String RENAME_MESSAGE = "betterpmmp:java_rename";
 
     @Override
     public void onEnable() {
@@ -91,7 +95,7 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
         final PacketWrapper setData = PacketWrapper.create(ClientboundPackets26_3.CONTAINER_SET_DATA, user);
         setData.write(Types.VAR_INT, (int) containerId); // container id
         setData.write(Types.SHORT, (short) property); // property
-        setData.write(Types.SHORT, (short) Math.max(0, Math.min(Short.MAX_VALUE, value))); // value
+        setData.write(Types.SHORT, (short) Math.max(-1, Math.min(Short.MAX_VALUE, value))); // value (-1: no enchantment hint)
         setData.send(BedrockProtocol.class);
     }
 
@@ -189,9 +193,31 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
                     setSlot.send(BedrockProtocol.class);
                 } else {
                     final Container container = inventoryTracker.getCurrentContainer();
-                    if ((container instanceof BridgeWorkbenchContainer || container instanceof BridgeSmithingContainer) && (container.containerId() & 0xFF) == windowId) {
+                    if ((container instanceof BridgeWorkbenchContainer || container instanceof BridgeSmithingContainer || container instanceof BridgeStationContainer) && (container.containerId() & 0xFF) == windowId) {
                         PacketFactory.sendJavaContainerSetContent(wrapper.user(), container);
                     }
+                }
+                return;
+            }
+            if (CONTAINER_DATA_MESSAGE.equals(id)) {
+                // "window;property=value,property=value": anvil level cost, enchanting table costs ...
+                final String[] parts = value.split(";", 2);
+                if (parts.length != 2) {
+                    return;
+                }
+                try {
+                    final int windowId = Integer.parseInt(parts[0]);
+                    final Container container = wrapper.user().get(InventoryTracker.class).getCurrentContainer();
+                    if (!(container instanceof BridgeStationContainer) || (container.containerId() & 0xFF) != windowId) {
+                        return;
+                    }
+                    for (final String entry : parts[1].split(",")) {
+                        final int eq = entry.indexOf('=');
+                        if (eq > 0) {
+                            sendContainerData(wrapper.user(), container.containerId(), Integer.parseInt(entry.substring(0, eq)), Integer.parseInt(entry.substring(eq + 1)));
+                        }
+                    }
+                } catch (NumberFormatException ignored) {
                 }
                 return;
             }
@@ -301,6 +327,22 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
                     wrapper.write(Types.TAG, TextUtil.textComponentToNbt(smithing.title())); // title
                     return;
                 }
+                case ANVIL, GRINDSTONE, CARTOGRAPHY, ENCHANTMENT -> {
+                    final boolean named = (announced != null && !announced.name().isEmpty()) || (blockEntity != null && blockEntity.tag().get("CustomName") instanceof StringTag);
+                    final TextComponent stationTitle = named ? title : new TranslationComponent(BridgeStationContainer.titleKey(type));
+                    final BridgeStationContainer station = BridgeStationContainer.create(wrapper.user(), containerId, type, stationTitle, position);
+                    final Integer javaType = BedrockProtocol.MAPPINGS.getBedrockToJavaContainers().get(type);
+                    if (station == null || javaType == null) {
+                        wrapper.cancel();
+                        PacketFactory.sendBedrockContainerClose(wrapper.user(), containerId, ContainerType.NONE);
+                        return;
+                    }
+                    inventoryTracker.setCurrentContainer(station);
+                    wrapper.write(Types.VAR_INT, (int) containerId); // container id
+                    wrapper.write(Types.VAR_INT, javaType); // type
+                    wrapper.write(Types.TAG, TextUtil.textComponentToNbt(stationTitle)); // title
+                    return;
+                }
                 case NONE, CAULDRON, JUKEBOX, ARMOR, HAND, HUD, DECORATED_POT -> {
                     wrapper.cancel();
                     return;
@@ -397,6 +439,27 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
             final PacketWrapper message = PacketWrapper.create(ServerboundBedrockPackets.SCRIPT_MESSAGE, wrapper.user());
             message.write(BedrockTypes.STRING, CLICK_MESSAGE);
             message.write(BedrockTypes.STRING, containerId + ";" + slot + ";" + button + ";" + action);
+            message.sendToServer(BedrockProtocol.class);
+        });
+
+        protocol.replaceServerbound(ServerboundPackets26_3.CONTAINER_BUTTON_CLICK, wrapper -> {
+            // enchanting table options (0-2), stonecutter and loom recipes, lectern pages
+            wrapper.cancel();
+            final int containerId = wrapper.read(Types.VAR_INT); // container id
+            final int button = wrapper.read(Types.VAR_INT); // button id
+            final PacketWrapper message = PacketWrapper.create(ServerboundBedrockPackets.SCRIPT_MESSAGE, wrapper.user());
+            message.write(BedrockTypes.STRING, BUTTON_MESSAGE);
+            message.write(BedrockTypes.STRING, containerId + ";" + button);
+            message.sendToServer(BedrockProtocol.class);
+        });
+
+        protocol.replaceServerbound(ServerboundPackets26_3.RENAME_ITEM, wrapper -> {
+            // the name field of the anvil
+            wrapper.cancel();
+            final String name = wrapper.read(Types.STRING); // name
+            final PacketWrapper message = PacketWrapper.create(ServerboundBedrockPackets.SCRIPT_MESSAGE, wrapper.user());
+            message.write(BedrockTypes.STRING, RENAME_MESSAGE);
+            message.write(BedrockTypes.STRING, name);
             message.sendToServer(BedrockProtocol.class);
         });
 
