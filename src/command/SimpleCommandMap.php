@@ -173,7 +173,7 @@ class SimpleCommandMap implements CommandMap{
 	}
 
 	public function register(string $fallbackPrefix, Command $command, ?string $label = null) : bool{
-		if(count($command->getPermissions()) === 0){
+		if(count($command->getPermissions()) === 0 && !\pocketmine\plugin\compat\LegacyApi::giveOpenPermission($command, $fallbackPrefix)){ //BetterPMMP: API 3 commands without permission were open to everyone
 			throw new \InvalidArgumentException("Commands must have a permission set");
 		}
 
