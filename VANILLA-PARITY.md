@@ -476,6 +476,8 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 |---|---|
 | Java-Bridge: Kisten-Menüs und Inventar | ✅ eigenes ViaProxy-Plugin „BetterPMMP-Bridge“ (Quellcode in `tools/java-bridge-plugin`, wird automatisch nach `java-bridge/plugins/` installiert): Kisten-Fenster in jeder Größe (auch 54 Plätze), keine Block-Prüfung bei Menüs ohne echte Kiste, und Inventar-Klicks, die ViaBedrock noch gar nicht übersetzt, werden an BetterPMMP weitergeleitet. BetterPMMP führt sie wie ein Java-Server aus (Links-/Rechtsklick, Shift, Zahlentasten, F, Q, Doppelklick, Ziehen) – als normale Inventar-Transaktion, Menü-Plugins sehen die Klicks also wie bei Bedrock |
 | ViaProxy-Version | ⚙️ fest auf den getesteten Dev-Build 964 (`viaproxy-build`), „latest“ = immer der neueste |
+| Java-Bridge: Villager-Handel | ✅ Java-Spieler handeln im echten Java-Händlerfenster: Angebotsliste mit Preisen, Rabatt durch „Held des Dorfes“, ausverkaufte Angebote, Stufe und Fortschrittsbalken des Dorfbewohners. Ein Klick auf ein Angebot legt die Bezahlung aus dem Inventar in die Plätze, Shift-Klick auf das Ergebnis handelt so oft wie möglich. Der Server prüft jeden Handel wie bei Bedrock. BetterPMMP-Bridge 1.10.0 |
+| Java-Bridge: alle Java-Versionen | ✅ Java 1.7.2 bis zur neuesten Version können joinen (ViaVersion, ViaBackwards, ViaRewind). Kleine Übersetzungsfehler alter Versionen kicken nicht mehr (`java-bridge: all-java-versions: true`) |
 | Noch offen für Java | Ressourcenpakete, eigene Skins/Modelle, NPCs mit eigenen Modellen (hängt an ViaBedrock) |
 
 ## Neu in 5.31

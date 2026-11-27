@@ -353,6 +353,9 @@ class InventoryManager{
 				$this->session->sendDataPacket($this->createTradePacket($windowId, $inventory));
 				$this->currentWindowType = WindowTypes::TRADING;
 				$this->syncContents($inventory);
+				if(\pocketmine\network\JavaBridge::isJavaPlayer($this->player)){
+					\pocketmine\network\mcpe\JavaInventoryClick::sendStationState($this->player, $inventory, $windowId); //BetterPMMP: empty result slot of the Java screen
+				}
 				return;
 			}
 
@@ -394,6 +397,9 @@ class InventoryManager{
 		$root = \pocketmine\nbt\tag\CompoundTag::create()
 			->setTag("Recipes", $recipes)
 			->setTag("TierExpRequirements", $tiers);
+		if($villager instanceof \pocketmine\entity\Villager && \pocketmine\network\JavaBridge::isJavaPlayer($this->player)){
+			$root->setInt("BetterPMMPXp", $villager->getTradeExperience()); //BetterPMMP: progress bar of the Java trade screen
+		}
 		return \pocketmine\network\mcpe\protocol\UpdateTradePacket::create(
 			$windowId,
 			WindowTypes::TRADING,

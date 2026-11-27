@@ -47,7 +47,7 @@ import java.util.logging.Level;
  * Fills gaps of ViaBedrock for BetterPMMP servers:
  * <ul>
  *     <li>furnaces, hoppers, dispensers, droppers, brewing stands, smithing tables, anvils, grindstones,
- *     cartography and enchanting tables as Java screens,</li>
+ *     cartography and enchanting tables and villager trading as Java screens,</li>
  *     <li>chest windows of every size (BetterPMMP announces 54-slot menus before opening them),</li>
  *     <li>no block check for chest menus (menu plugins open them without a real chest block),</li>
  *     <li>screen titles shown as the heading of an open chest window (Java hides titles behind open screens),</li>
@@ -69,6 +69,7 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
     public static final String CONTAINER_DATA_MESSAGE = "betterpmmp:container_data";
     public static final String BUTTON_MESSAGE = "betterpmmp:java_button";
     public static final String RENAME_MESSAGE = "betterpmmp:java_rename";
+    public static final String TRADE_MESSAGE = "betterpmmp:java_trade";
 
     @Override
     public void onEnable() {
@@ -193,7 +194,7 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
                     setSlot.send(BedrockProtocol.class);
                 } else {
                     final Container container = inventoryTracker.getCurrentContainer();
-                    if ((container instanceof BridgeWorkbenchContainer || container instanceof BridgeSmithingContainer || container instanceof BridgeStationContainer) && (container.containerId() & 0xFF) == windowId) {
+                    if ((container instanceof BridgeWorkbenchContainer || container instanceof BridgeSmithingContainer || container instanceof BridgeStationContainer || container instanceof BridgeMerchantContainer) && (container.containerId() & 0xFF) == windowId) {
                         PacketFactory.sendJavaContainerSetContent(wrapper.user(), container);
                     }
                 }
@@ -359,6 +360,61 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
             wrapper.write(Types.VAR_INT, (int) containerId); // container id
             wrapper.write(Types.VAR_INT, rows - 1); // type: generic_9x1 ... generic_9x6
             wrapper.write(Types.TAG, TextUtil.textComponentToNbt(title)); // title
+        });
+
+        protocol.replaceClientbound(ClientboundBedrockPackets.UPDATE_TRADE, wrapper -> {
+            // villager trading: Bedrock opens the trade screen with this packet (ViaBedrock drops it)
+            wrapper.cancel();
+            final byte containerId = wrapper.read(Types.BYTE); // container id
+            wrapper.read(Types.BYTE); // container type
+            wrapper.read(BedrockTypes.VAR_INT); // size
+            final int tradeTier = wrapper.read(BedrockTypes.VAR_INT); // trade tier
+            wrapper.read(BedrockTypes.VAR_LONG); // villager unique id
+            wrapper.read(BedrockTypes.VAR_LONG); // player unique id
+            final String displayName = wrapper.read(BedrockTypes.STRING); // display name
+            wrapper.read(Types.BOOLEAN); // new trade screen
+            wrapper.read(Types.BOOLEAN); // economy trading
+            final com.viaversion.nbt.tag.CompoundTag offers = wrapper.read(BedrockTypes.NETWORK_TAG) instanceof com.viaversion.nbt.tag.CompoundTag tag ? tag : null;
+
+            final InventoryTracker inventoryTracker = wrapper.user().get(InventoryTracker.class);
+            if (inventoryTracker.getCurrentContainer() instanceof BridgeMerchantContainer merchant && merchant.containerId() == containerId) {
+                merchant.sendOffers(offers, tradeTier); // after a trade, level up or restock
+                return;
+            }
+            if (inventoryTracker.isAnyScreenOpen()) {
+                PacketFactory.sendBedrockContainerClose(wrapper.user(), (byte) -1, ContainerType.NONE);
+                return;
+            }
+            final Integer javaType = BedrockProtocol.MAPPINGS.getBedrockToJavaContainers().get(ContainerType.TRADE);
+            if (javaType == null) {
+                PacketFactory.sendBedrockContainerClose(wrapper.user(), containerId, ContainerType.NONE);
+                return;
+            }
+            final TextComponent title = displayName.isEmpty()
+                ? new TranslationComponent("entity.minecraft.villager")
+                : TextUtil.stringToTextComponent(wrapper.user().get(ResourcePackStorage.class).getTexts().translate(displayName));
+            final BridgeMerchantContainer merchant = new BridgeMerchantContainer(wrapper.user(), containerId, title);
+            inventoryTracker.setCurrentContainer(merchant);
+            final PacketWrapper openScreen = PacketWrapper.create(ClientboundPackets26_3.OPEN_SCREEN, wrapper.user());
+            openScreen.write(Types.VAR_INT, (int) containerId); // container id
+            openScreen.write(Types.VAR_INT, javaType); // type: merchant
+            openScreen.write(Types.TAG, TextUtil.textComponentToNbt(title)); // title
+            openScreen.send(BedrockProtocol.class);
+            merchant.sendOffers(offers, tradeTier);
+            PacketFactory.sendJavaContainerSetContent(wrapper.user(), merchant);
+        });
+
+        protocol.replaceServerbound(ServerboundPackets26_3.SELECT_TRADE, wrapper -> {
+            // a trade picked in the list: BetterPMMP fills the payment slots like a vanilla Java server
+            wrapper.cancel();
+            final int index = wrapper.read(Types.VAR_INT); // offer index
+            if (!(wrapper.user().get(InventoryTracker.class).getCurrentContainer() instanceof BridgeMerchantContainer merchant) || merchant.netId(index) < 0) {
+                return;
+            }
+            final PacketWrapper message = PacketWrapper.create(ServerboundBedrockPackets.SCRIPT_MESSAGE, wrapper.user());
+            message.write(BedrockTypes.STRING, TRADE_MESSAGE);
+            message.write(BedrockTypes.STRING, (merchant.containerId() & 0xFF) + ";" + merchant.netId(index));
+            message.sendToServer(BedrockProtocol.class);
         });
 
         protocol.replaceClientbound(ClientboundBedrockPackets.CONTAINER_SET_DATA, wrapper -> {
