@@ -1,6 +1,68 @@
 {
   "plugins": [
     {
+      "id": "bettermultiworld",
+      "name": "BetterMultiWorld",
+      "author": "Leon Development",
+      "version": "1.0.0",
+      "api": "5.51.0",
+      "categories": ["world", "admin"],
+      "betterpmmp_only": true,
+      "updated": "2026-11-28",
+      "summary": {
+        "en": "Create, load and visit worlds: normal, flat, nether, end and empty void worlds.",
+        "de": "Welten erstellen, laden und besuchen: normal, flach, Nether, End und leere Void-Welten."
+      },
+      "description": {
+        "en": "BetterMultiWorld manages the worlds of your server. Create normal, flat, nether, end or completely empty void worlds with an optional seed, load and unload them, set their spawn and teleport there. Every world it creates loads again after a restart. Normal and nether worlds are entered as farm worlds in betterpmmp.yml, so natural mobs spawn there; a backup of the file is made first. For OPs only.",
+        "de": "BetterMultiWorld verwaltet die Welten deines Servers. Erstelle normale, flache, Nether-, End- oder komplett leere Void-Welten mit optionalem Seed, lade und entlade sie, setze ihren Spawn und teleportiere dich hin. Jede erstellte Welt lädt nach einem Neustart wieder. Normale Welten und Nether-Welten werden als Farmwelten in die betterpmmp.yml eingetragen, damit dort natürliche Mobs spawnen; vorher wird eine Sicherung der Datei angelegt. Nur für OPs."
+      },
+      "commands": [
+        ["/mw create <name> [normal|flat|nether|end|void] [seed]", "Create a world", "Welt erstellen"],
+        ["/mw list", "List all worlds", "Alle Welten anzeigen"],
+        ["/mw tp <world> | /mwtp <world>", "Teleport to a world", "In eine Welt teleportieren"],
+        ["/mw load | unload <world>", "Load or unload a world", "Welt laden oder entladen"],
+        ["/mw setspawn", "Set the spawn of the current world", "Spawn der aktuellen Welt setzen"],
+        ["/mw farm <world>", "Enable natural mob spawning", "Natürliches Mob-Spawning einschalten"],
+        ["/mw info | save <world>", "World info, save the world", "Welt-Infos, Welt speichern"]
+      ],
+      "download": "files/BetterMultiWorld.phar",
+      "source": "https://github.com/BetterPMMP/Betterpmmp/tree/HEAD/examples/plugins/BetterMultiWorld"
+    },
+    {
+      "id": "betterwe",
+      "name": "BetterWE",
+      "author": "Leon Development",
+      "version": "1.0.0",
+      "api": "5.51.0",
+      "categories": ["world", "admin"],
+      "betterpmmp_only": true,
+      "updated": "2026-11-28",
+      "summary": {
+        "en": "WorldEdit for BetterPMMP: select, fill, copy, paste, rotate, build shapes and undo.",
+        "de": "WorldEdit für BetterPMMP: auswählen, füllen, kopieren, einfügen, drehen, Formen bauen und rückgängig machen."
+      },
+      "description": {
+        "en": "BetterWE is a WorldEdit for OPs. Select an area with the wooden axe or //pos1 and //pos2, then fill it, replace blocks, build walls or outlines, copy and paste it into any world, rotate and flip the clipboard and build spheres and cylinders. Block mixes like 70%stone,30%cobblestone work everywhere. Every job runs in small steps per tick, so the server does not lag, and the last three changes can be undone. Chests keep their contents when copied. /id shows the ID of the item in your hand.",
+        "de": "BetterWE ist ein WorldEdit für OPs. Wähle einen Bereich mit der Holzaxt oder //pos1 und //pos2 aus, fülle ihn, ersetze Blöcke, baue Wände oder Umrisse, kopiere ihn und füge ihn in jeder Welt ein, drehe und spiegle die Zwischenablage und baue Kugeln und Zylinder. Block-Mischungen wie 70%stone,30%cobblestone gehen überall. Jeder Auftrag läuft in kleinen Schritten pro Tick, damit der Server nicht laggt, und die letzten drei Änderungen lassen sich rückgängig machen. Kisten behalten beim Kopieren ihren Inhalt. /id zeigt die ID des Items in deiner Hand."
+      },
+      "commands": [
+        ["//wand | //pos1 | //pos2", "Select an area", "Bereich auswählen"],
+        ["//set <block>", "Fill the selection", "Auswahl füllen"],
+        ["//replace <from> <to>", "Replace blocks", "Blöcke ersetzen"],
+        ["//walls | //outline <block>", "Walls or outline", "Wände oder Umriss"],
+        ["//copy | //cut | //paste [-a]", "Copy and paste", "Kopieren und einfügen"],
+        ["//rotate 90 | //flip x|y|z", "Turn the clipboard", "Zwischenablage drehen"],
+        ["//sphere | //hsphere <block> <radius>", "Spheres", "Kugeln"],
+        ["//cyl | //hcyl <block> <radius> <height>", "Cylinders", "Zylinder"],
+        ["//expand | //contract | //shift <n> <direction>", "Change the selection", "Auswahl ändern"],
+        ["//undo | //redo | //cancel", "Undo, redo, stop", "Rückgängig, wiederholen, stoppen"],
+        ["/id", "Item ID in your hand", "Item-ID in der Hand"]
+      ],
+      "download": "files/BetterWE.phar",
+      "source": "https://github.com/BetterPMMP/Betterpmmp/tree/HEAD/examples/plugins/BetterWE"
+    },
+    {
       "id": "betterplots",
       "name": "BetterPlots",
       "author": "Leon Development",

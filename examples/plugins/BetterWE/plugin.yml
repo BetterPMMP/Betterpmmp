@@ -1,0 +1,101 @@
+name: BetterWE
+main: leondev\betterwe\Main
+src-namespace-prefix: leondev\betterwe
+version: 1.0.0
+api: 5.51.0
+author: Leon Development
+description: WorldEdit for BetterPMMP. Select with the wooden axe, fill, replace, copy, paste, rotate, build shapes and undo, in small steps without lag.
+
+commands:
+  "/wand":
+    description: Get the selection axe
+    permission: betterwe.use
+  "/pos1":
+    description: Set position 1
+    aliases: [pos1]
+    permission: betterwe.use
+  "/pos2":
+    description: Set position 2
+    aliases: [pos2]
+    permission: betterwe.use
+  "/desel":
+    description: Clear the selection
+    permission: betterwe.use
+  "/size":
+    description: Show the selection size
+    permission: betterwe.use
+  "/set":
+    description: Fill the selection
+    permission: betterwe.use
+  "/replace":
+    description: Replace blocks in the selection
+    permission: betterwe.use
+  "/walls":
+    description: Build walls around the selection
+    permission: betterwe.use
+  "/outline":
+    description: Build the outline of the selection
+    permission: betterwe.use
+  "/copy":
+    description: Copy the selection
+    aliases: [copy]
+    permission: betterwe.use
+  "/cut":
+    description: Cut the selection
+    permission: betterwe.use
+  "/paste":
+    description: Paste the clipboard
+    aliases: [paste]
+    permission: betterwe.use
+  "/rotate":
+    description: Rotate the clipboard
+    permission: betterwe.use
+  "/flip":
+    description: Flip the clipboard
+    permission: betterwe.use
+  "/sphere":
+    description: Build a sphere
+    permission: betterwe.use
+  "/hsphere":
+    description: Build a hollow sphere
+    permission: betterwe.use
+  "/cyl":
+    description: Build a cylinder
+    permission: betterwe.use
+  "/hcyl":
+    description: Build a hollow cylinder
+    permission: betterwe.use
+  "/expand":
+    description: Expand the selection
+    permission: betterwe.use
+  "/contract":
+    description: Contract the selection
+    permission: betterwe.use
+  "/shift":
+    description: Move the selection
+    permission: betterwe.use
+  "/undo":
+    description: Undo the last change
+    permission: betterwe.use
+  "/redo":
+    description: Redo the last undo
+    permission: betterwe.use
+  "/cancel":
+    description: Stop the running job
+    permission: betterwe.use
+  "/togglewand":
+    description: Turn the selection axe on or off
+    permission: betterwe.use
+  "/help":
+    description: Show the WorldEdit commands
+    permission: betterwe.use
+  itemid:
+    description: Show the name and ID of the item in your hand
+    aliases: [id]
+    permission: betterwe.itemid
+
+permissions:
+  betterwe.use:
+    default: op
+  betterwe.itemid:
+    default: true

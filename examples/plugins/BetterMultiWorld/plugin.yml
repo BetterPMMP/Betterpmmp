@@ -1,0 +1,22 @@
+name: BetterMultiWorld
+main: leondev\bettermultiworld\Main
+src-namespace-prefix: leondev\bettermultiworld
+version: 1.0.0
+api: 5.51.0
+author: Leon Development
+description: Create, load, unload and visit worlds, with farm worlds for natural mob spawning on BetterPMMP.
+
+commands:
+  mw:
+    description: Manage worlds
+    usage: "/mw help"
+    aliases: [mb, multiworld]
+    permission: bettermultiworld.command
+  mwtp:
+    description: Teleport to a world
+    usage: "/mwtp <world>"
+    permission: bettermultiworld.command
+
+permissions:
+  bettermultiworld.command:
+    default: op
