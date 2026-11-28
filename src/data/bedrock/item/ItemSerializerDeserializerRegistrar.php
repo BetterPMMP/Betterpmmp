@@ -467,10 +467,6 @@ final class ItemSerializerDeserializerRegistrar{
 	 * indexed by their base type ID.
 	 */
 	private function register1ToNItemMappings() : void{
-		$this->map1ToNItem(Ids::ARROW, [
-			0 => Items::ARROW(),
-			//TODO: tipped arrows
-		]);
 		$this->map1ToNItem(Ids::COMPOUND, [
 			CompoundTypeIds::SALT => Items::CHEMICAL_SALT(),
 			CompoundTypeIds::SODIUM_OXIDE => Items::CHEMICAL_SODIUM_OXIDE(),
@@ -566,6 +562,18 @@ final class ItemSerializerDeserializerRegistrar{
 				$item->setType(MedicineTypeIdMap::getInstance()->fromId($meta) ?? throw new ItemTypeDeserializeException("Unknown medicine type ID $meta"));
 			},
 			fn(Medicine $item) => MedicineTypeIdMap::getInstance()->toId($item->getType())
+		);
+		//BetterPMMP: tipped arrows are arrows with the potion id + 1 as meta
+		$this->map1to1ItemWithMeta(
+			Ids::ARROW,
+			Items::ARROW(),
+			function(\pocketmine\item\Arrow $item, int $meta) : void{
+				if($meta !== 0 && PotionTypeIdMap::getInstance()->fromId($meta - 1) === null){
+					throw new ItemTypeDeserializeException("Unknown tipped arrow potion ID " . ($meta - 1));
+				}
+				$item->setArrowMeta($meta);
+			},
+			fn(\pocketmine\item\Arrow $item) => $item->getArrowMeta()
 		);
 		$this->map1to1ItemWithMeta(
 			Ids::POTION,

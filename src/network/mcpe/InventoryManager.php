@@ -457,6 +457,10 @@ class InventoryManager{
 			};
 			return [ContainerOpenPacket::blockInv($id, $windowType, $blockPosition)];
 		}
+		if($inv instanceof \pocketmine\entity\riding\MountInventory){
+			//BetterPMMP: horse, donkey, mule and llama inventory
+			return [ContainerOpenPacket::entityInv($id, WindowTypes::HORSE, $inv->getHolder()->getId())];
+		}
 		if($inv instanceof \pocketmine\entity\object\MinecartInventory){
 			//BetterPMMP: minecarts with chest / hopper are entity containers
 			return [ContainerOpenPacket::entityInv($id, $inv->getHolder()->getWindowType(), $inv->getHolder()->getId())];

@@ -753,6 +753,13 @@ class InGamePacketHandler extends PacketHandler{
 			\pocketmine\entity\riding\RidingManager::dismount($this->player);
 			return true;
 		}
+		$vehicle = \pocketmine\entity\riding\RidingManager::getVehicle($this->player);
+		if($packet->action === InteractPacket::ACTION_OPEN_INVENTORY && $vehicle !== null && ($target === $vehicle || $target === $this->player) && $vehicle instanceof \pocketmine\entity\Entity && method_exists($vehicle, "canShowMountInventory") && $vehicle->canShowMountInventory()){
+			$target = $vehicle;
+			//BetterPMMP: inventory key while riding a horse, donkey, mule or llama
+			$target->openMountInventory($this->player);
+			return true;
+		}
 		if($packet->action === InteractPacket::ACTION_OPEN_INVENTORY && $target === $this->player){
 			$this->inventoryManager->onClientOpenMainInventory();
 			return true;

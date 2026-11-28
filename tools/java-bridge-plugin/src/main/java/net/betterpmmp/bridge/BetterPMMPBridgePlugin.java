@@ -272,7 +272,7 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
                 return;
             }
             final BlockPosition position = wrapper.read(BedrockTypes.BLOCK_POSITION); // position
-            wrapper.read(BedrockTypes.VAR_LONG); // entity unique id
+            final long entityUniqueId = wrapper.read(BedrockTypes.VAR_LONG); // entity unique id
 
             if (inventoryTracker.isAnyScreenOpen()) {
                 PacketFactory.sendBedrockContainerClose(wrapper.user(), (byte) -1, ContainerType.NONE);
@@ -342,6 +342,25 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
                     wrapper.write(Types.VAR_INT, (int) containerId); // container id
                     wrapper.write(Types.VAR_INT, javaType); // type
                     wrapper.write(Types.TAG, TextUtil.textComponentToNbt(stationTitle)); // title
+                    return;
+                }
+                case HORSE -> {
+                    // horse, donkey, mule and llama: saddle, armor/carpet, then the chest (3 rows of columns)
+                    final net.raphimc.viabedrock.api.model.entity.Entity mount = wrapper.user().get(EntityTracker.class).getEntityByUid(entityUniqueId);
+                    final int size = Math.max(2, announced == null ? 2 : announced.size());
+                    if (mount == null) {
+                        wrapper.cancel();
+                        PacketFactory.sendBedrockContainerClose(wrapper.user(), containerId, ContainerType.NONE);
+                        return;
+                    }
+                    final BridgeSimpleContainer horse = new BridgeSimpleContainer(wrapper.user(), containerId, type, title, position, size);
+                    inventoryTracker.setCurrentContainer(horse);
+                    wrapper.cancel();
+                    final PacketWrapper mountScreen = PacketWrapper.create(ClientboundPackets26_3.MOUNT_SCREEN_OPEN, wrapper.user());
+                    mountScreen.write(Types.VAR_INT, (int) containerId); // container id
+                    mountScreen.write(Types.VAR_INT, (size - 2) / 3); // inventory columns
+                    mountScreen.write(Types.INT, mount.javaId()); // entity id
+                    mountScreen.send(BedrockProtocol.class);
                     return;
                 }
                 case NONE, CAULDRON, JUKEBOX, ARMOR, HAND, HUD, DECORATED_POT -> {

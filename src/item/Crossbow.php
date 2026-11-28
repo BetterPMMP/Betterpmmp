@@ -97,16 +97,17 @@ class Crossbow extends SimpleDurableItem implements Releasable{
 			$player->getWorld()->addSound($player->getPosition(), new VanillaSound(LevelSoundEvent::CROSSBOW_LOADING_END));
 			return ItemUseResult::SUCCESS;
 		}
-		if($player->hasFiniteResources()){
-			$inventory = match(true){
-				$player->getOffHandInventory()->contains($arrow) => $player->getOffHandInventory(),
-				$player->getInventory()->contains($arrow) => $player->getInventory(),
-				default => null
-			};
-			if($inventory === null){
-				return ItemUseResult::FAIL;
+		//BetterPMMP: any arrow (also tipped ones), off hand first, then the inventory in slot order
+		$ammo = Arrow::findAmmo($player);
+		if($ammo !== null){
+			$stack = $ammo[0]->getItem($ammo[1]);
+			$arrow = (clone $stack)->setCount(1);
+			if($player->hasFiniteResources()){
+				$stack->pop();
+				$ammo[0]->setItem($ammo[1], $stack);
 			}
-			$inventory->removeItem($arrow);
+		}elseif($player->hasFiniteResources()){
+			return ItemUseResult::FAIL;
 		}
 		$this->setCharged($arrow);
 		$quick = $this->getEnchantmentLevel(ExtraEnchantments::get("quick_charge")) > 0;
@@ -145,6 +146,9 @@ class Crossbow extends SimpleDurableItem implements Releasable{
 				$entity->setMotion($direction->multiply(1.6));
 			}else{
 				$entity = new ArrowEntity($location, $player, false);
+				if($projectile instanceof Arrow){
+					$entity->setTippedArrow($projectile);
+				}
 				$entity->setMotion($direction->multiply(self::SPEED));
 				$entity->setPiercing($piercing);
 				if($index > 0 || !$player->hasFiniteResources() || $piercing > 0){

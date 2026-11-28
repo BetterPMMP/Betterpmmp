@@ -2167,6 +2167,8 @@ class LlamaMob extends GenericAnimalMob{
 	protected const SPAWN_EGG_GETTER = "LLAMA_SPAWN_EGG";
 	protected const HEIGHT = 0.9;
 	protected const WIDTH = 1.87;
+	/** BetterPMMP: taming, chest (3 slots per strength), carpet, inventory */
+	use \pocketmine\entity\riding\LlamaCarrierTrait;
 	/** BetterPMMP: llamas spit at whoever hurt them (1 damage, every 2 s, up to 12 blocks) */
 	use \pocketmine\entity\ai\AnimalCombatAI { tickWandering as private combatTickWandering; }
 	private int $spitCooldown = 0;
@@ -3035,6 +3037,8 @@ class TraderLlamaMob extends GenericAnimalMob{
 	protected const SPAWN_EGG_GETTER = "TRADER_LLAMA_SPAWN_EGG";
 	protected const HEIGHT = 1.8;
 	protected const WIDTH = 0.6;
+	/** BetterPMMP: taming, chest (3 slots per strength), carpet, inventory */
+	use \pocketmine\entity\riding\LlamaCarrierTrait;
 	/** BetterPMMP: llamas spit at whoever hurt them (1 damage, every 2 s, up to 12 blocks) */
 	use \pocketmine\entity\ai\AnimalCombatAI { tickWandering as private combatTickWandering; }
 	private int $spitCooldown = 0;

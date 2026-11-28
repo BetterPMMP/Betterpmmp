@@ -37,7 +37,10 @@ use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\world\BlockTransaction;
 use pocketmine\world\sound\ClickSound;
+use function array_search;
 use function count;
+use function str_contains;
+use function str_replace;
 use function mt_rand;
 
 /**
@@ -199,6 +202,9 @@ class VanillaDispenser extends GenericBedrockBlock{
 			$entity->setMotion((new Vector3($dx, $dy + ($dy === 0 ? 0.1 : 0), $dz))->normalize()->multiply($power));
 			if($entity instanceof ArrowEntity){
 				$entity->setPickupMode(ArrowEntity::PICKUP_ANY);
+				if($item instanceof Arrow){
+					$entity->setTippedArrow($item);
+				}
 			}
 			$entity->spawnToAll();
 			return [$rest, null];
@@ -261,7 +267,94 @@ class VanillaDispenser extends GenericBedrockBlock{
 			}
 			return [$rest, null];
 		}
+		//BetterPMMP: armor, boats and minecarts like vanilla
+		$equipped = $this->equipArmor($item, $front);
+		if($equipped !== null){
+			return [$rest, null];
+		}
+		if($item instanceof \pocketmine\item\Boat || $item instanceof \pocketmine\item\VehicleBoatItem){
+			return $this->placeBoat($item, $front) ? [$rest, null] : $this->drop($item);
+		}
+		if($item instanceof \pocketmine\item\Minecart || $item instanceof \pocketmine\item\VariantMinecart){
+			return $this->placeMinecart($item, $front) ? [$rest, null] : $this->drop($item);
+		}
 		$this->dropItem((clone $item)->setCount(1));
 		return [$rest, null];
+	}
+
+	/**
+	 * Puts armor (also pumpkins, heads and elytra) on a player or mob standing in front, into an empty slot.
+	 * @return true|null
+	 */
+	private function equipArmor(Item $item, Vector3 $front) : ?bool{
+		$slot = match(true){
+			$item instanceof \pocketmine\item\Armor => $item->getArmorSlot(),
+			$item->getTypeId() === \pocketmine\item\ItemTypeIds::fromBlockTypeId(BlockTypeIds::CARVED_PUMPKIN),
+			$item->getTypeId() === \pocketmine\item\ItemTypeIds::fromBlockTypeId(BlockTypeIds::MOB_HEAD) => \pocketmine\inventory\ArmorInventory::SLOT_HEAD,
+			default => null,
+		};
+		if($slot === null){
+			return null;
+		}
+		$box = new \pocketmine\math\AxisAlignedBB($front->x, $front->y, $front->z, $front->x + 1, $front->y + 1, $front->z + 1);
+		foreach($this->position->getWorld()->getNearbyEntities($box) as $entity){
+			if(!$entity instanceof \pocketmine\entity\Living || !$entity->isAlive() || ($entity instanceof Player && $entity->isSpectator())){
+				continue;
+			}
+			$armor = $entity->getArmorInventory();
+			if($armor->getItem($slot)->isNull()){
+				$armor->setItem($slot, (clone $item)->setCount(1));
+				return true;
+			}
+		}
+		return null;
+	}
+
+	/** Boats go onto water in front (or water below an empty block in front), like vanilla. */
+	private function placeBoat(Item $item, Vector3 $front) : bool{
+		$world = $this->position->getWorld();
+		$block = $world->getBlock($front);
+		$below = $world->getBlock($front->down());
+		if($block instanceof Water){
+			$y = $front->getFloorY() + 1;
+			while($world->getBlockAt($front->getFloorX(), $y, $front->getFloorZ()) instanceof Water && $y < $front->getFloorY() + 8){
+				++$y;
+			}
+		}elseif($block->canBeReplaced() && $below instanceof Water){
+			$y = $front->getFloorY();
+		}else{
+			return false;
+		}
+		if($item instanceof \pocketmine\item\Boat){
+			$variant = array_search($item->getType(), \pocketmine\item\BoatType::cases(), true);
+			$chest = false;
+		}else{
+			$name = str_replace("minecraft:", "", $item instanceof \pocketmine\item\GenericBedrockItem ? $item->getBedrockName() : "oak_boat");
+			$chest = str_contains($name, "chest");
+			$variant = array_search(str_replace(["_chest_boat", "_boat", "_chest_raft", "_raft"], "", $name), \pocketmine\entity\object\BoatEntity::WOODS, true);
+		}
+		$yaw = match($this->getFacing()){
+			Facing::NORTH => 180.0, Facing::EAST => 270.0, Facing::WEST => 90.0, default => 0.0,
+		};
+		$boat = new \pocketmine\entity\object\BoatEntity(Location::fromObject(new Vector3($front->x + 0.5, $y, $front->z + 0.5), $world, $yaw, 0.0), null, $variant === false ? 0 : (int) $variant, $chest);
+		$boat->spawnToAll();
+		return true;
+	}
+
+	/** Minecarts are put onto a rail in front, like vanilla (otherwise dropped). */
+	private function placeMinecart(Item $item, Vector3 $front) : bool{
+		$world = $this->position->getWorld();
+		if(!$world->getBlock($front) instanceof BaseRail){
+			return false;
+		}
+		$class = !$item instanceof \pocketmine\item\VariantMinecart ? \pocketmine\entity\object\MinecartEntity::class : match($item->getBedrockName()){
+			"minecraft:tnt_minecart" => \pocketmine\entity\object\TntMinecartEntity::class,
+			"minecraft:chest_minecart" => \pocketmine\entity\object\ChestMinecartEntity::class,
+			"minecraft:hopper_minecart" => \pocketmine\entity\object\HopperMinecartEntity::class,
+			default => \pocketmine\entity\object\MinecartEntity::class,
+		};
+		$cart = new $class(Location::fromObject($front->add(0.5, 0.0625, 0.5), $world, 0.0, 0.0));
+		$cart->spawnToAll();
+		return true;
 	}
 }

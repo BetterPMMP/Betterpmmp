@@ -151,6 +151,19 @@ class Arrow extends Projectile{
 
 	public function setHitEffect(?\pocketmine\entity\effect\EffectInstance $effect) : void{ $this->hitEffect = $effect; }
 
+	/** BetterPMMP: the arrow item it was shot from (tipped arrows give their effects and are picked up as they are) */
+	private ?\pocketmine\item\Arrow $arrowItem = null;
+	/** @var \pocketmine\entity\effect\EffectInstance[] */
+	private array $tippedEffects = [];
+
+	public function setTippedArrow(\pocketmine\item\Arrow $item) : void{
+		if(!$item->isTipped()){
+			return;
+		}
+		$this->arrowItem = (clone $item)->setCount(1);
+		$this->tippedEffects = $item->getHitEffects();
+	}
+
 	/** BetterPMMP: Piercing - passes through this many mobs (crossbow) */
 	protected int $piercing = 0;
 	/** @var array<int, true> */
@@ -173,6 +186,13 @@ class Arrow extends Projectile{
 		parent::onHitEntity($entityHit, $hitResult);
 		if($this->hitEffect !== null && $entityHit instanceof \pocketmine\entity\Living && $entityHit->isAlive()){
 			$entityHit->getEffects()->add(clone $this->hitEffect);
+		}
+		if($entityHit instanceof \pocketmine\entity\Living && $entityHit->isAlive()){
+			foreach($this->tippedEffects as $effect){
+				$effect->getType() instanceof \pocketmine\entity\effect\InstantEffect
+					? $effect->getType()->applyEffect($entityHit, $effect, 1.0, $this)
+					: $entityHit->getEffects()->add(clone $effect);
+			}
 		}
 		if(!$this->despawnsOnEntityHit()){
 			// keep flying through the mob (the hit handler only zeroes an unchanged motion)
@@ -200,7 +220,7 @@ class Arrow extends Projectile{
 			return;
 		}
 
-		$item = VanillaItems::ARROW();
+		$item = $this->arrowItem !== null ? clone $this->arrowItem : VanillaItems::ARROW();
 		$playerInventory = match(true){
 			!$player->hasFiniteResources() => null, //arrows are not picked up in creative
 			$player->getOffHandInventory()->getItem(0)->canStackWith($item) && $player->getOffHandInventory()->canAddItem($item) => $player->getOffHandInventory(),

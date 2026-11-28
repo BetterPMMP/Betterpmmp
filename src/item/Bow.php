@@ -45,15 +45,14 @@ class Bow extends Tool implements Releasable{
 	}
 
 	public function onReleaseUsing(Player $player, array &$returnedItems) : ItemUseResult{
-		$arrow = VanillaItems::ARROW();
-		$inventory = match(true){
-			$player->getOffHandInventory()->contains($arrow) => $player->getOffHandInventory(),
-			$player->getInventory()->contains($arrow) => $player->getInventory(),
-			default => null
-		};
-
-		if($player->hasFiniteResources() && $inventory === null){
+		//BetterPMMP: any arrow (also tipped ones), off hand first, then the inventory in slot order
+		$ammo = Arrow::findAmmo($player);
+		if($player->hasFiniteResources() && $ammo === null){
 			return ItemUseResult::FAIL;
+		}
+		$arrow = $ammo !== null ? $ammo[0]->getItem($ammo[1]) : VanillaItems::ARROW();
+		if(!$arrow instanceof Arrow){
+			$arrow = VanillaItems::ARROW();
 		}
 
 		$location = $player->getLocation();
@@ -70,7 +69,9 @@ class Bow extends Tool implements Releasable{
 		), $player, $baseForce >= 1);
 		$entity->setMotion($player->getDirectionVector());
 
-		$infinity = $this->hasEnchantment(VanillaEnchantments::INFINITY());
+		$entity->setTippedArrow($arrow);
+		//vanilla: Infinity does not save tipped arrows
+		$infinity = $this->hasEnchantment(VanillaEnchantments::INFINITY()) && !$arrow->isTipped();
 		if($infinity){
 			$entity->setPickupMode(ArrowEntity::PICKUP_CREATIVE);
 		}
@@ -115,8 +116,10 @@ class Bow extends Tool implements Releasable{
 		}
 
 		if($player->hasFiniteResources()){
-			if(!$infinity){ //TODO: tipped arrows are still consumed when Infinity is applied
-				$inventory?->removeItem($arrow);
+			if(!$infinity && $ammo !== null){
+				$stack = $ammo[0]->getItem($ammo[1]);
+				$stack->pop();
+				$ammo[0]->setItem($ammo[1], $stack);
 			}
 			$this->applyDamage(1);
 		}
@@ -125,6 +128,6 @@ class Bow extends Tool implements Releasable{
 	}
 
 	public function canStartUsingItem(Player $player) : bool{
-		return !$player->hasFiniteResources() || $player->getOffHandInventory()->contains($arrow = VanillaItems::ARROW()) || $player->getInventory()->contains($arrow);
+		return !$player->hasFiniteResources() || Arrow::findAmmo($player) !== null;
 	}
 }
