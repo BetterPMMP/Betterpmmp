@@ -50,9 +50,9 @@ final class Beacon extends Spawnable{
 
 	public function getPrimaryEffect() : int{ return $this->primaryEffect; }
 
-	public function setPrimaryEffect(int $primaryEffect) : void{ $this->primaryEffect = $primaryEffect; }
+	public function setPrimaryEffect(int $primaryEffect) : void{ $this->primaryEffect = $primaryEffect; $this->clearSpawnCompoundCache(); }
 
 	public function getSecondaryEffect() : int{ return $this->secondaryEffect; }
 
-	public function setSecondaryEffect(int $secondaryEffect) : void{ $this->secondaryEffect = $secondaryEffect; }
+	public function setSecondaryEffect(int $secondaryEffect) : void{ $this->secondaryEffect = $secondaryEffect; $this->clearSpawnCompoundCache(); }
 }

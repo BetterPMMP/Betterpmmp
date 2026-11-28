@@ -7,6 +7,7 @@ package net.betterpmmp.bridge;
 import com.viaversion.nbt.tag.StringTag;
 import com.viaversion.viaversion.api.Via;
 import com.viaversion.viaversion.api.minecraft.BlockPosition;
+import com.viaversion.viaversion.api.minecraft.item.Item;
 import com.viaversion.viaversion.api.protocol.packet.PacketWrapper;
 import com.viaversion.viaversion.api.type.Types;
 import com.viaversion.viaversion.api.type.types.version.VersionedTypes;
@@ -70,6 +71,10 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
     public static final String BUTTON_MESSAGE = "betterpmmp:java_button";
     public static final String RENAME_MESSAGE = "betterpmmp:java_rename";
     public static final String TRADE_MESSAGE = "betterpmmp:java_trade";
+    public static final String STONECUTTER_RECIPES_MESSAGE = "betterpmmp:stonecutter_recipes";
+    public static final String STONECUT_MESSAGE = "betterpmmp:java_stonecut";
+    public static final String BEACON_MESSAGE = "betterpmmp:java_beacon";
+    public static final String CRAFTER_SLOT_MESSAGE = "betterpmmp:java_crafter_slot";
 
     @Override
     public void onEnable() {
@@ -200,6 +205,15 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
                 }
                 return;
             }
+            if (STONECUTTER_RECIPES_MESSAGE.equals(id)) {
+                BridgeStonecutterRecipes recipes = wrapper.user().get(BridgeStonecutterRecipes.class);
+                if (recipes == null) {
+                    recipes = new BridgeStonecutterRecipes();
+                    wrapper.user().put(recipes);
+                }
+                recipes.load(wrapper.user(), value);
+                return;
+            }
             if (CONTAINER_DATA_MESSAGE.equals(id)) {
                 // "window;property=value,property=value": anvil level cost, enchanting table costs ...
                 final String[] parts = value.split(";", 2);
@@ -209,7 +223,7 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
                 try {
                     final int windowId = Integer.parseInt(parts[0]);
                     final Container container = wrapper.user().get(InventoryTracker.class).getCurrentContainer();
-                    if (!(container instanceof BridgeStationContainer) || (container.containerId() & 0xFF) != windowId) {
+                    if (!(container instanceof BridgeStationContainer || container instanceof BridgeSimpleContainer) || (container.containerId() & 0xFF) != windowId) {
                         return;
                     }
                     for (final String entry : parts[1].split(",")) {
@@ -309,7 +323,7 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
                     return;
                 }
                 case MINECART_CHEST, CHEST_BOAT -> container = new BridgeChestContainer(wrapper.user(), containerId, title, position, rows * 9);
-                case FURNACE, BLAST_FURNACE, SMOKER, HOPPER, MINECART_HOPPER, BREWING_STAND, DISPENSER, DROPPER -> {
+                case FURNACE, BLAST_FURNACE, SMOKER, HOPPER, MINECART_HOPPER, BREWING_STAND, DISPENSER, DROPPER, CRAFTER -> {
                     // a custom name of the block (anvil) wins, otherwise the title a vanilla Java server shows
                     final boolean named = (announced != null && !announced.name().isEmpty()) || (blockEntity != null && blockEntity.tag().get("CustomName") instanceof StringTag);
                     final TextComponent simpleTitle = named ? title : new TranslationComponent(BridgeSimpleContainer.titleKey(type));
@@ -328,7 +342,7 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
                     wrapper.write(Types.TAG, TextUtil.textComponentToNbt(smithing.title())); // title
                     return;
                 }
-                case ANVIL, GRINDSTONE, CARTOGRAPHY, ENCHANTMENT -> {
+                case ANVIL, GRINDSTONE, CARTOGRAPHY, ENCHANTMENT, STONECUTTER, BEACON, LOOM -> {
                     final boolean named = (announced != null && !announced.name().isEmpty()) || (blockEntity != null && blockEntity.tag().get("CustomName") instanceof StringTag);
                     final TextComponent stationTitle = named ? title : new TranslationComponent(BridgeStationContainer.titleKey(type));
                     final BridgeStationContainer station = BridgeStationContainer.create(wrapper.user(), containerId, type, stationTitle, position);
@@ -522,9 +536,50 @@ public final class BetterPMMPBridgePlugin extends ViaProxyPlugin {
             wrapper.cancel();
             final int containerId = wrapper.read(Types.VAR_INT); // container id
             final int button = wrapper.read(Types.VAR_INT); // button id
+            final Container current = wrapper.user().get(InventoryTracker.class).getCurrentContainer();
+            if (current instanceof BridgeStationContainer station && station.type() == ContainerType.STONECUTTER) {
+                // the n-th recipe shown for the input: BetterPMMP needs its own recipe index
+                final BridgeStonecutterRecipes recipes = wrapper.user().get(BridgeStonecutterRecipes.class);
+                final Item input = station.getJavaItems()[0];
+                final int index = recipes == null || input == null || input.isEmpty() ? -1 : recipes.serverIndex(input.identifier(), button);
+                if (index >= 0) {
+                    final PacketWrapper message = PacketWrapper.create(ServerboundBedrockPackets.SCRIPT_MESSAGE, wrapper.user());
+                    message.write(BedrockTypes.STRING, STONECUT_MESSAGE);
+                    message.write(BedrockTypes.STRING, containerId + ";" + index);
+                    message.sendToServer(BedrockProtocol.class);
+                }
+                return;
+            }
             final PacketWrapper message = PacketWrapper.create(ServerboundBedrockPackets.SCRIPT_MESSAGE, wrapper.user());
             message.write(BedrockTypes.STRING, BUTTON_MESSAGE);
             message.write(BedrockTypes.STRING, containerId + ";" + button);
+            message.sendToServer(BedrockProtocol.class);
+        });
+
+        protocol.replaceServerbound(ServerboundPackets26_3.CONTAINER_SLOT_STATE_CHANGED, wrapper -> {
+            // a crafter slot switched on or off
+            wrapper.cancel();
+            final int slot = wrapper.read(Types.VAR_INT); // slot
+            final int containerId = wrapper.read(Types.VAR_INT); // container id
+            final boolean enabled = wrapper.read(Types.BOOLEAN); // new state
+            final PacketWrapper message = PacketWrapper.create(ServerboundBedrockPackets.SCRIPT_MESSAGE, wrapper.user());
+            message.write(BedrockTypes.STRING, CRAFTER_SLOT_MESSAGE);
+            message.write(BedrockTypes.STRING, containerId + ";" + slot + ";" + (enabled ? 1 : 0));
+            message.sendToServer(BedrockProtocol.class);
+        });
+
+        protocol.replaceServerbound(ServerboundPackets26_3.SET_BEACON, wrapper -> {
+            // "Done" in the beacon screen: Java effect ids (Bedrock id - 1), each optional
+            wrapper.cancel();
+            final int primary = wrapper.read(Types.BOOLEAN) ? wrapper.read(Types.VAR_INT) + 1 : 0;
+            final int secondary = wrapper.read(Types.BOOLEAN) ? wrapper.read(Types.VAR_INT) + 1 : 0;
+            final Container current = wrapper.user().get(InventoryTracker.class).getCurrentContainer();
+            if (!(current instanceof BridgeStationContainer station) || station.type() != ContainerType.BEACON) {
+                return;
+            }
+            final PacketWrapper message = PacketWrapper.create(ServerboundBedrockPackets.SCRIPT_MESSAGE, wrapper.user());
+            message.write(BedrockTypes.STRING, BEACON_MESSAGE);
+            message.write(BedrockTypes.STRING, (station.containerId() & 0xFF) + ";" + primary + ";" + secondary);
             message.sendToServer(BedrockProtocol.class);
         });
 

@@ -55,7 +55,7 @@ public final class BridgeSimpleContainer extends Container {
         return switch (type) {
             case FURNACE, BLAST_FURNACE, SMOKER -> 3;
             case HOPPER, MINECART_HOPPER, BREWING_STAND -> 5;
-            case DISPENSER, DROPPER -> 9;
+            case DISPENSER, DROPPER, CRAFTER -> 9;
             default -> -1;
         };
     }
@@ -71,6 +71,7 @@ public final class BridgeSimpleContainer extends Container {
             case BREWING_STAND -> "container.brewing";
             case DISPENSER -> "container.dispenser";
             case DROPPER -> "container.dropper";
+            case CRAFTER -> "container.crafter";
             default -> "container.chest";
         };
     }
