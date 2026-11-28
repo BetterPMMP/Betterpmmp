@@ -679,6 +679,12 @@ class InGamePacketHandler extends PacketHandler{
 			\pocketmine\network\mcpe\JavaInventoryClick::handleButton($this->player, $this->inventoryManager, $packet->getValue());
 		}elseif($packet->getMessageId() === "betterpmmp:java_rename" && \pocketmine\network\JavaBridge::isJavaPlayer($this->player)){
 			\pocketmine\network\mcpe\JavaInventoryClick::handleRename($this->player, $this->inventoryManager, $packet->getValue());
+		}elseif($packet->getMessageId() === "betterpmmp:java_crafter_slot" && \pocketmine\network\JavaBridge::isJavaPlayer($this->player)){
+			\pocketmine\network\mcpe\JavaInventoryClick::handleCrafterSlot($this->player, $this->inventoryManager, $packet->getValue());
+		}elseif($packet->getMessageId() === "betterpmmp:java_beacon" && \pocketmine\network\JavaBridge::isJavaPlayer($this->player)){
+			\pocketmine\network\mcpe\JavaInventoryClick::handleBeacon($this->player, $this->inventoryManager, $packet->getValue());
+		}elseif($packet->getMessageId() === "betterpmmp:java_stonecut" && \pocketmine\network\JavaBridge::isJavaPlayer($this->player)){
+			\pocketmine\network\mcpe\JavaInventoryClick::handleStonecut($this->player, $this->inventoryManager, $packet->getValue());
 		}elseif($packet->getMessageId() === "betterpmmp:java_trade" && \pocketmine\network\JavaBridge::isJavaPlayer($this->player)){
 			\pocketmine\network\mcpe\JavaInventoryClick::handleTradeSelect($this->player, $this->inventoryManager, $packet->getValue());
 		}

@@ -23,6 +23,9 @@ import net.raphimc.viabedrock.protocol.storage.InventoryTracker;
  * grindstone         0 top, 1 bottom, 2 result       16, 17, 50
  * cartography table  0 map, 1 additional, 2 result   12, 13, 50
  * enchanting table   0 item, 1 lapis                 14, 15
+ * stonecutter        0 input, 1 result               3, 50
+ * beacon             0 payment                       27
+ * loom               0 banner, 1 dye, 2 pattern, 3 result   9, 10, 11, 50
  * </pre>
  */
 public final class BridgeStationContainer extends Container {
@@ -41,6 +44,9 @@ public final class BridgeStationContainer extends Container {
             case GRINDSTONE -> new int[]{16, 17, BridgeWorkbenchContainer.RESULT_SLOT};
             case CARTOGRAPHY -> new int[]{12, 13, BridgeWorkbenchContainer.RESULT_SLOT};
             case ENCHANTMENT -> new int[]{14, 15};
+            case STONECUTTER -> new int[]{3, BridgeWorkbenchContainer.RESULT_SLOT};
+            case BEACON -> new int[]{27};
+            case LOOM -> new int[]{9, 10, 11, BridgeWorkbenchContainer.RESULT_SLOT};
             default -> null;
         };
         return slots == null ? null : new BridgeStationContainer(user, containerId, type, title, position, slots);
@@ -53,6 +59,9 @@ public final class BridgeStationContainer extends Container {
             case GRINDSTONE -> "container.grindstone_title";
             case CARTOGRAPHY -> "container.cartography_table";
             case ENCHANTMENT -> "container.enchant";
+            case STONECUTTER -> "container.stonecutter";
+            case BEACON -> "container.beacon";
+            case LOOM -> "container.loom";
             default -> "container.chest";
         };
     }

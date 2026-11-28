@@ -115,6 +115,20 @@ final class JavaInventoryClick{
 			$this->commit();
 			return;
 		}
+		if($slot === self::LOOM_RESULT && $this->container() instanceof \pocketmine\block\inventory\LoomInventory){
+			if($action === "PICKUP" || $action === "QUICK_MOVE"){
+				$this->loomResult($action === "QUICK_MOVE");
+			}
+			$this->commit();
+			return;
+		}
+		if($slot === self::STONECUTTER_RESULT && $this->container() instanceof \pocketmine\block\inventory\StonecutterInventory){
+			if($action === "PICKUP" || $action === "QUICK_MOVE"){
+				$this->stonecutResult($action === "QUICK_MOVE");
+			}
+			$this->commit();
+			return;
+		}
 		if($slot === self::STATION_RESULT && self::hasResultSlot($this->container())){
 			if($action === "PICKUP" || $action === "QUICK_MOVE"){
 				$this->stationResult($action === "QUICK_MOVE");
@@ -176,6 +190,24 @@ final class JavaInventoryClick{
 				default => null,
 			};
 		}
+		if($container instanceof \pocketmine\block\inventory\LoomInventory){
+			// Java loom: 0 banner, 1 dye, 2 pattern, 3 result, 4-30 inventory, 31-39 hotbar
+			return match(true){
+				$javaSlot >= 0 && $javaSlot <= 2 => [$container, $javaSlot],
+				$javaSlot >= 4 && $javaSlot < 31 => [$inventory, $javaSlot - 4 + 9],
+				$javaSlot >= 31 && $javaSlot < 40 => [$inventory, $javaSlot - 31],
+				default => null,
+			};
+		}
+		if($container instanceof \pocketmine\block\inventory\StonecutterInventory){
+			// Java stonecutter: 0 input, 1 result, 2-28 inventory, 29-37 hotbar
+			return match(true){
+				$javaSlot === 0 => [$container, 0],
+				$javaSlot >= 2 && $javaSlot < 29 => [$inventory, $javaSlot - 2 + 9],
+				$javaSlot >= 29 && $javaSlot < 38 => [$inventory, $javaSlot - 29],
+				default => null,
+			};
+		}
 		if(self::hasResultSlot($container)){
 			// Java anvil, grindstone, cartography table: 0-1 inputs, 2 result, 3-29 inventory, 30-38 hotbar
 			return match(true){
@@ -219,6 +251,8 @@ final class JavaInventoryClick{
 			$container === null => 0,
 			$container instanceof CraftingTableInventory => 10,
 			$container instanceof SmithingTableInventory => 4,
+			$container instanceof \pocketmine\block\inventory\StonecutterInventory => 2,
+			$container instanceof \pocketmine\block\inventory\LoomInventory => 4,
 			self::hasResultSlot($container) => 3,
 			default => $container->getSize(),
 		};
@@ -257,6 +291,20 @@ final class JavaInventoryClick{
 		if($container instanceof CartographyTableInventory){
 			$name = \pocketmine\crafting\SmithingRecipes::nameOf($item);
 			return $name === "minecraft:filled_map" ? [[$container, 0]] : (in_array($name, ["minecraft:paper", "minecraft:empty_map", "minecraft:map", "minecraft:glass_pane"], true) ? [[$container, 1]] : []);
+		}
+		if($container instanceof \pocketmine\block\inventory\StonecutterInventory){
+			return [[$container, 0]];
+		}
+		if($container instanceof \pocketmine\block\inventory\LoomInventory){
+			return match(true){
+				$item instanceof \pocketmine\item\Banner => [[$container, 0]],
+				$item instanceof \pocketmine\item\Dye => [[$container, 1]],
+				\pocketmine\inventory\transaction\LoomTransaction::patternOfItem($item) !== null => [[$container, 2]],
+				default => [],
+			};
+		}
+		if($container instanceof \pocketmine\block\inventory\BeaconInventory){
+			return \pocketmine\block\Beacon::isPayment($item) ? [[$container, 0]] : [];
 		}
 		if($container instanceof TradeInventory){
 			return []; // vanilla: shift-click moves between the inventory rows and the hotbar, not into the payment slots
@@ -1004,7 +1052,25 @@ final class JavaInventoryClick{
 	public static function sendStationState(Player $player, Inventory $container, int $windowId) : void{
 		$session = $player->getNetworkSession();
 		$data = null;
-		if(self::hasResultSlot($container)){
+		if($container instanceof \pocketmine\block\inventory\LoomInventory){
+			$type = self::loomPattern($player, $container);
+			$session->sendDataPacket(InventorySlotPacket::create(
+				ContainerIds::UI,
+				self::CREATED_OUTPUT_SLOT,
+				null,
+				null,
+				new ItemStackWrapper(0, $session->getTypeConverter()->coreItemStackToNet(($type !== null ? \pocketmine\inventory\transaction\LoomTransaction::calculate($container, $type) : null) ?? VanillaItems::AIR()))
+			));
+		}elseif($container instanceof \pocketmine\block\inventory\StonecutterInventory){
+			$recipe = self::stonecutRecipe($player, $container);
+			$session->sendDataPacket(InventorySlotPacket::create(
+				ContainerIds::UI,
+				self::CREATED_OUTPUT_SLOT,
+				null,
+				null,
+				new ItemStackWrapper(0, $session->getTypeConverter()->coreItemStackToNet($recipe?->getResults()[0] ?? VanillaItems::AIR()))
+			));
+		}elseif(self::hasResultSlot($container)){
 			$calculation = self::stationCalculation($player, $container);
 			$session->sendDataPacket(InventorySlotPacket::create(
 				ContainerIds::UI,
@@ -1016,6 +1082,21 @@ final class JavaInventoryClick{
 			if($container instanceof AnvilInventory){
 				$data = "0=" . ($calculation[3] ?? 0);
 			}
+		}elseif($container instanceof \pocketmine\block\inventory\CrafterInventory){
+			//Java crafter: 0-8 slot states (1 = disabled), 9 triggered
+			$values = [];
+			for($i = 0; $i < 9; ++$i){
+				$values[] = $i . "=" . ($container->isSlotDisabled($i) ? 1 : 0);
+			}
+			$data = implode(",", $values);
+		}elseif($container instanceof \pocketmine\block\inventory\BeaconInventory){
+			$beacon = $container->getHolder()->getWorld()->getBlock($container->getHolder());
+			if(!$beacon instanceof \pocketmine\block\Beacon){
+				return;
+			}
+			//Java: 0 levels, 1 and 2 the powers (Java effect id = Bedrock id - 1, -1 = none)
+			[$levels, $primary, $secondary] = $beacon->getScreenData();
+			$data = "0=" . $levels . ",1=" . ($primary > 0 ? $primary - 1 : -1) . ",2=" . ($secondary > 0 ? $secondary - 1 : -1);
 		}elseif($container instanceof EnchantInventory){
 			$values = [];
 			for($i = 0; $i < 3; ++$i){
@@ -1058,6 +1139,12 @@ final class JavaInventoryClick{
 		[$window, $button] = [(int) $parts[0], (int) $parts[1]];
 		$click = new self($player, $manager, $window);
 		$table = $click->container();
+		if($table instanceof \pocketmine\block\inventory\LoomInventory){
+			//Java loom: the n-th pattern of the list (patterns without item, or the one of the pattern item)
+			self::$loomPicks[spl_object_id($player)] = [spl_object_id($table), $button];
+			self::sendStationState($player, $table, $window);
+			return;
+		}
 		if(!$table instanceof EnchantInventory || $button < 0 || $button > 2){
 			return;
 		}
@@ -1231,5 +1318,205 @@ final class JavaInventoryClick{
 			}
 		}
 		$click->commit();
+	}
+
+	// ------------------------------------------------------------- stonecutter
+
+	private const STONECUTTER_RESULT = 1;
+
+	/** @var array<int, array{int, int}> player id => [stonecutter inventory id, recipe index] picked in the Java screen */
+	private static array $stonecuts = [];
+
+	/** The recipe picked in the Java stonecutter, if it still fits the input. */
+	private static function stonecutRecipe(Player $player, Inventory $stonecutter) : ?\pocketmine\crafting\ShapelessRecipe{
+		$picked = self::$stonecuts[spl_object_id($player)] ?? null;
+		if($picked === null || $picked[0] !== spl_object_id($stonecutter)){
+			return null;
+		}
+		$recipe = $player->getServer()->getCraftingManager()->getCraftingRecipeFromIndex($picked[1]);
+		$input = $stonecutter->getItem(0);
+		if(!$recipe instanceof \pocketmine\crafting\ShapelessRecipe || $recipe->getType() !== \pocketmine\crafting\ShapelessRecipeType::STONECUTTER || $input->isNull()){
+			return null;
+		}
+		$ingredient = $recipe->getIngredientList()[0] ?? null;
+		return $ingredient !== null && $ingredient->accepts($input) ? $recipe : null;
+	}
+
+	/** A recipe picked in the Java stonecutter list ("window;recipe index"). */
+	public static function handleStonecut(Player $player, InventoryManager $manager, string $value) : void{
+		$parts = explode(";", $value);
+		if(count($parts) !== 2){
+			return;
+		}
+		$click = new self($player, $manager, (int) $parts[0]);
+		$stonecutter = $click->container();
+		if(!$stonecutter instanceof \pocketmine\block\inventory\StonecutterInventory){
+			return;
+		}
+		self::$stonecuts[spl_object_id($player)] = [spl_object_id($stonecutter), (int) $parts[1]];
+		self::sendStationState($player, $stonecutter, (int) $parts[0]);
+	}
+
+	/** Taking the stonecutter result (shift-click: as many as the input and the inventory allow). */
+	private function stonecutResult(bool $intoInventory) : void{
+		$stonecutter = $this->container();
+		if($stonecutter === null || ($recipe = self::stonecutRecipe($this->player, $stonecutter)) === null){
+			return;
+		}
+		$result = $recipe->getResults()[0];
+		$input = $this->get($stonecutter, 0);
+		$times = 1;
+		if($intoInventory){
+			for($times = $input->getCount(); $times > 0; --$times){
+				$this->changes = [];
+				$output = (clone $result)->setCount($result->getCount() * $times);
+				$this->insert($output, $this->playerSlots());
+				if($output->isNull()){
+					break;
+				}
+			}
+			if($times === 0){
+				$this->changes = [];
+				return;
+			}
+		}else{
+			$cursor = $this->cursor();
+			if($cursor->isNull()){
+				$this->setCursor(clone $result);
+			}elseif($cursor->canStackWith($result) && $cursor->getCount() + $result->getCount() <= self::maxStack($result, $this->player->getCursorInventory())){
+				$this->setCursor($cursor->setCount($cursor->getCount() + $result->getCount()));
+			}else{
+				return;
+			}
+		}
+		$input = $this->get($stonecutter, 0);
+		$input->pop($times);
+		$this->set($stonecutter, 0, $input);
+		$this->craftRecipe = $recipe;
+		$this->craftRepetitions = $times;
+	}
+
+	/**
+	 * The stonecutter recipes for the Java bridge, one per line: "recipe index|input name|input meta|result name|result meta|count".
+	 * Java shows the recipe list of the stonecutter from this.
+	 */
+	public static function stonecutterRecipeList(\pocketmine\Server $server) : string{
+		static $cached = null;
+		if($cached !== null){
+			return $cached;
+		}
+		$serializer = \pocketmine\world\format\io\GlobalItemDataHandlers::getSerializer();
+		$lines = [];
+		foreach($server->getCraftingManager()->getCraftingRecipeIndex() as $index => $recipe){
+			if(!$recipe instanceof \pocketmine\crafting\ShapelessRecipe || $recipe->getType() !== \pocketmine\crafting\ShapelessRecipeType::STONECUTTER){
+				continue;
+			}
+			$ingredient = $recipe->getIngredientList()[0] ?? null;
+			$result = $recipe->getResults()[0] ?? null;
+			if($result === null){
+				continue;
+			}
+			try{
+				if($ingredient instanceof \pocketmine\crafting\ExactRecipeIngredient){
+					$in = $serializer->serializeType($ingredient->getItem());
+					[$inName, $inMeta] = [$in->getName(), $in->getMeta()];
+				}elseif($ingredient instanceof \pocketmine\crafting\MetaWildcardRecipeIngredient){
+					[$inName, $inMeta] = [$ingredient->getItemId(), 0];
+				}else{
+					continue;
+				}
+				$out = $serializer->serializeType($result);
+			}catch(\Throwable){
+				continue;
+			}
+			$lines[] = $index . "|" . $inName . "|" . $inMeta . "|" . $out->getName() . "|" . $out->getMeta() . "|" . $result->getCount();
+		}
+		return $cached = implode("\n", $lines);
+	}
+
+	/** The "Done" button of the Java beacon screen ("window;primary;secondary", Bedrock effect ids, 0 = none). */
+	public static function handleBeacon(Player $player, InventoryManager $manager, string $value) : void{
+		$parts = explode(";", $value);
+		if(count($parts) !== 3){
+			return;
+		}
+		$click = new self($player, $manager, (int) $parts[0]);
+		$beacon = $click->container();
+		if(!$beacon instanceof \pocketmine\block\inventory\BeaconInventory){
+			return;
+		}
+		$payment = $beacon->getItem(0);
+		if(!\pocketmine\block\Beacon::isPayment($payment)){
+			return;
+		}
+		$click->set($beacon, 0, (clone $payment)->setCount($payment->getCount() - 1));
+		$click->transactionFactory = fn() => new \pocketmine\inventory\transaction\BeaconTransaction($player, $beacon, (int) $parts[1], (int) $parts[2]);
+		$click->commit();
+	}
+
+	/** A slot of the Java crafter screen switched on or off ("window;slot;enabled"). */
+	public static function handleCrafterSlot(Player $player, InventoryManager $manager, string $value) : void{
+		$parts = explode(";", $value);
+		if(count($parts) !== 3){
+			return;
+		}
+		$click = new self($player, $manager, (int) $parts[0]);
+		$crafter = $click->container();
+		if(!$crafter instanceof \pocketmine\block\inventory\CrafterInventory){
+			return;
+		}
+		$tile = $crafter->getHolder()->getWorld()->getTile($crafter->getHolder());
+		if($tile instanceof \pocketmine\block\tile\Crafter){
+			$tile->toggleSlot((int) $parts[1], $parts[2] !== "1");
+		}
+		self::sendStationState($player, $crafter, (int) $parts[0]);
+	}
+
+	// -------------------------------------------------------------------- loom
+
+	private const LOOM_RESULT = 3;
+
+	/** @var array<int, array{int, int}> player id => [loom inventory id, button picked in the Java pattern list] */
+	private static array $loomPicks = [];
+
+	/** The pattern picked in the Java loom for the items in it now. */
+	private static function loomPattern(Player $player, Inventory $loom) : ?\pocketmine\block\utils\BannerPatternType{
+		$pick = self::$loomPicks[spl_object_id($player)] ?? null;
+		if($pick === null || $pick[0] !== spl_object_id($loom)){
+			return null;
+		}
+		$fromItem = \pocketmine\inventory\transaction\LoomTransaction::patternOfItem($loom->getItem(\pocketmine\block\inventory\LoomInventory::SLOT_PATTERN));
+		if($fromItem !== null){
+			return $pick[1] === 0 ? $fromItem : null;
+		}
+		$name = \pocketmine\inventory\transaction\LoomTransaction::JAVA_FREE_PATTERNS[$pick[1]] ?? null;
+		return $name === null ? null : constant(\pocketmine\block\utils\BannerPatternType::class . "::" . $name);
+	}
+
+	/** Taking the woven banner. */
+	private function loomResult(bool $intoInventory) : void{
+		$loom = $this->container();
+		if(!$loom instanceof \pocketmine\block\inventory\LoomInventory || ($type = self::loomPattern($this->player, $loom)) === null || ($result = \pocketmine\inventory\transaction\LoomTransaction::calculate($loom, $type)) === null){
+			return;
+		}
+		if($intoInventory){
+			$output = clone $result;
+			$this->insert($output, $this->playerSlots());
+			if(!$output->isNull()){
+				$this->changes = [];
+				return;
+			}
+		}elseif($this->cursor()->isNull()){
+			$this->setCursor(clone $result);
+		}else{
+			return;
+		}
+		foreach([\pocketmine\block\inventory\LoomInventory::SLOT_BANNER, \pocketmine\block\inventory\LoomInventory::SLOT_DYE] as $slot){
+			$item = $this->get($loom, $slot);
+			$item->pop();
+			$this->set($loom, $slot, $item);
+		}
+		$player = $this->player;
+		$this->transactionFactory = fn() => new \pocketmine\inventory\transaction\LoomTransaction($player, $result);
 	}
 }

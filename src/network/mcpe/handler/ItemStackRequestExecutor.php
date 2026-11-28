@@ -321,7 +321,7 @@ class ItemStackRequestExecutor{
 	private function assertDoingCrafting() : void{
 		if(!$this->specialTransaction instanceof CraftingTransaction && !$this->specialTransaction instanceof EnchantingTransaction && !$this->specialTransaction instanceof \pocketmine\inventory\transaction\TradingTransaction
 			&& !$this->specialTransaction instanceof \pocketmine\inventory\transaction\AnvilTransaction && !$this->specialTransaction instanceof \pocketmine\inventory\transaction\GrindstoneTransaction
-			&& !$this->specialTransaction instanceof \pocketmine\inventory\transaction\CartographyTransaction){
+			&& !$this->specialTransaction instanceof \pocketmine\inventory\transaction\CartographyTransaction && !$this->specialTransaction instanceof \pocketmine\inventory\transaction\BeaconTransaction && !$this->specialTransaction instanceof \pocketmine\inventory\transaction\LoomTransaction){
 			if($this->specialTransaction === null){
 				throw new ItemStackRequestProcessException("Expected CraftRecipe or CraftRecipeAuto action to precede this action");
 			}else{
@@ -444,6 +444,24 @@ class ItemStackRequestExecutor{
 			}
 			[$result, $xp] = $calculated;
 			$this->specialTransaction = new \pocketmine\inventory\transaction\GrindstoneTransaction($this->player, $grindstone, $result, $xp);
+			$this->setNextCreatedItem($result);
+		}elseif($action instanceof \pocketmine\network\mcpe\protocol\types\inventory\stackrequest\BeaconPaymentStackRequestAction && ($beacon = $this->player->getCurrentWindow()) instanceof \pocketmine\block\inventory\BeaconInventory){
+			//BetterPMMP: paying a beacon and choosing its powers
+			if($this->specialTransaction !== null){
+				throw new ItemStackRequestProcessException("Another special transaction is already in progress");
+			}
+			$this->specialTransaction = new \pocketmine\inventory\transaction\BeaconTransaction($this->player, $beacon, $action->getPrimaryEffectId(), $action->getSecondaryEffectId());
+		}elseif($action instanceof \pocketmine\network\mcpe\protocol\types\inventory\stackrequest\LoomStackRequestAction && ($loom = $this->player->getCurrentWindow()) instanceof \pocketmine\block\inventory\LoomInventory){
+			//BetterPMMP: weaving a banner pattern
+			if($this->specialTransaction !== null){
+				throw new ItemStackRequestProcessException("Another special transaction is already in progress");
+			}
+			$type = \pocketmine\data\bedrock\BannerPatternTypeIdMap::getInstance()->fromId($action->getPatternId());
+			$result = $type === null ? null : \pocketmine\inventory\transaction\LoomTransaction::calculate($loom, $type);
+			if($result === null){
+				throw new ItemStackRequestProcessException("This pattern cannot be woven with these items");
+			}
+			$this->specialTransaction = new \pocketmine\inventory\transaction\LoomTransaction($this->player, $result);
 			$this->setNextCreatedItem($result);
 		}elseif($action instanceof CraftingConsumeInputStackRequestAction){
 			$this->assertDoingCrafting();

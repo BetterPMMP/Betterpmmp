@@ -330,6 +330,7 @@ class InventoryManager{
 			$inventory instanceof EnchantInventory => UIInventorySlotOffset::ENCHANTING_TABLE,
 			$inventory instanceof LoomInventory => UIInventorySlotOffset::LOOM,
 			$inventory instanceof StonecutterInventory => [UIInventorySlotOffset::STONE_CUTTER_INPUT => StonecutterInventory::SLOT_INPUT],
+			$inventory instanceof \pocketmine\block\inventory\BeaconInventory => [UIInventorySlotOffset::BEACON_PAYMENT => \pocketmine\block\inventory\BeaconInventory::SLOT_PAYMENT],
 			$inventory instanceof CraftingTableInventory => UIInventorySlotOffset::CRAFTING3X3_INPUT,
 			$inventory instanceof CartographyTableInventory => UIInventorySlotOffset::CARTOGRAPHY_TABLE,
 			$inventory instanceof SmithingTableInventory => UIInventorySlotOffset::SMITHING_TABLE,
@@ -371,18 +372,30 @@ class InventoryManager{
 								//BetterPMMP: tell the bridge plugin the window size (Java needs it when opening, e.g. 54-slot menus)
 								$name = $this->session->getJavaContainerName($pk->blockPosition) ?? "";
 								$this->session->sendDataPacket(\pocketmine\network\mcpe\protocol\ScriptMessagePacket::create("betterpmmp:container_size", $windowId . ":" . $inventory->getSize() . ":" . $name));
+								if($inventory instanceof StonecutterInventory && !$this->javaStonecutterRecipesSent){
+									//BetterPMMP: Java shows the stonecutter recipe list itself, it needs the recipes once
+									$this->javaStonecutterRecipesSent = true;
+									$this->session->sendDataPacket(\pocketmine\network\mcpe\protocol\ScriptMessagePacket::create("betterpmmp:stonecutter_recipes", \pocketmine\network\mcpe\JavaInventoryClick::stonecutterRecipeList($this->player->getServer())));
+								}
 							}
 						}
 						$this->session->sendDataPacket($pk);
 					}
 					$this->currentWindowType = $windowType ?? WindowTypes::CONTAINER;
 					$this->syncContents($inventory);
+					if(\pocketmine\network\JavaBridge::isJavaPlayer($this->player)){
+						//BetterPMMP: result slot and screen data (beacon levels, anvil cost ...) right away for Java screens
+						\pocketmine\network\mcpe\JavaInventoryClick::sendStationState($this->player, $inventory, $windowId);
+					}
 					return;
 				}
 			}
 			throw new \LogicException("Unsupported inventory type");
 		});
 	}
+
+	/** BetterPMMP: whether the Java bridge already got the stonecutter recipes for this player */
+	private bool $javaStonecutterRecipesSent = false;
 
 	private function createTradePacket(int $windowId, \pocketmine\inventory\TradeInventory $inventory) : \pocketmine\network\mcpe\protocol\UpdateTradePacket{
 		$villager = $inventory->getVillager();
@@ -451,6 +464,7 @@ class InventoryManager{
 				$inv instanceof \pocketmine\block\inventory\DispenserInventory => $inv->isDropper() ? WindowTypes::DROPPER : WindowTypes::DISPENSER,
 				$inv instanceof CraftingTableInventory => WindowTypes::WORKBENCH,
 				$inv instanceof StonecutterInventory => WindowTypes::STONECUTTER,
+				$inv instanceof \pocketmine\block\inventory\BeaconInventory => WindowTypes::BEACON,
 				$inv instanceof CartographyTableInventory => WindowTypes::CARTOGRAPHY,
 				$inv instanceof SmithingTableInventory => WindowTypes::SMITHING_TABLE,
 				default => WindowTypes::CONTAINER
