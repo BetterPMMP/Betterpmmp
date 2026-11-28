@@ -40,6 +40,7 @@ use const M_PI;
  *  - terrain from continentalness / erosion / weirdness with 3D noise
  *  - world height -64..319, deepslate below y=0, bedrock floor
  *  - cheese, spaghetti and noodle caves, lava below y=-55
+ *  - aquifers: flooded caves with their own water level, lava pockets deep down
  *  - cave biomes (lush caves, dripstone caves, deep dark)
  *  - biome surface rules, 1.18 ore distribution, vegetation and villages
  *
@@ -64,6 +65,7 @@ class Overworld extends Generator{
 	private Simplex $entrance;
 	private Simplex $surfaceNoise;
 	private OverworldPopulator $populator;
+	private Aquifer $aquifer;
 
 	/** @var int[] terracotta band state ids, indexed by y & 63 */
 	private array $terracottaBands = [];
@@ -143,6 +145,7 @@ class Overworld extends Generator{
 
 		$this->buildTerracottaBands(new Random($seed ^ 0x7E44AC07));
 		$this->populator = new OverworldPopulator($seed, $this->climate);
+		$this->aquifer = new Aquifer($seed);
 	}
 
 	public function getClimate() : OverworldClimate{
@@ -284,6 +287,7 @@ class Overworld extends Generator{
 		}
 
 		$random = new Random($this->seed ^ ($chunkX * 341873128712) ^ ($chunkZ * 132897987541));
+		$this->aquifer->reset();
 		for($cx = 0; $cx < 4; ++$cx){
 			for($cz = 0; $cz < 4; ++$cz){
 				$d00 = $density[$cx][$cz];
@@ -331,6 +335,14 @@ class Overworld extends Generator{
 									$state = $this->water;
 								}elseif($y <= self::LAVA_LEVEL){
 									$state = $this->lava;
+								}elseif($y < $colH[$x][$z] - 6){
+									//BetterPMMP: aquifers - flooded caves with their own water level, lava deep down
+									$state = match($this->aquifer->at($baseX + $x, $y, $baseZ + $z)){
+										Aquifer::WATER => $y < $colH[$x][$z] - 10 ? $this->water : $this->stone, //close to the surface the water stays inside rock
+										Aquifer::LAVA => $y < $colH[$x][$z] - 10 ? $this->lava : $this->stone,
+										Aquifer::BARRIER => $y < 0 ? $this->deepslate : $this->stone,
+										default => $this->air,
+									};
 								}else{
 									$state = $this->air;
 								}
@@ -416,6 +428,17 @@ class Overworld extends Generator{
 		}
 	}
 
+	private function touchesWater(Chunk $chunk, int $x, int $y, int $z) : bool{
+		foreach([[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], [0, 1, 0]] as [$dx, $dy, $dz]){
+			$nx = $x + $dx;
+			$nz = $z + $dz;
+			if($nx >= 0 && $nx < 16 && $nz >= 0 && $nz < 16 && $chunk->getBlockStateId($nx, $y + $dy, $nz) === $this->water){
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/** @param float[][] $colH */
 	private function carveEllipsoid(Chunk $chunk, int $minX, int $minZ, float $cx, float $cy, float $cz, float $h, float $v, array $colH) : void{
 		$x1 = max(0, (int) floor($cx - $h) - $minX);
@@ -443,6 +466,9 @@ class Overworld extends Generator{
 					$id = $chunk->getBlockStateId($lx, $y, $lz);
 					if($id === $this->water || $id === $this->lava || $id === $this->bedrock || $id === $this->air){
 						continue;
+					}
+					if($y > self::LAVA_LEVEL && $this->touchesWater($chunk, $lx, $y, $lz)){
+						continue; //BetterPMMP: keep a wall to flooded caves (aquifers), like vanilla carvers
 					}
 					$chunk->setBlockStateId($lx, $y, $lz, $y <= self::LAVA_LEVEL ? $this->lava : $this->air);
 				}

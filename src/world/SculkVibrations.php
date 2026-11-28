@@ -64,8 +64,19 @@ final class SculkVibrations{
 		unset(self::$lastSteps[$player->getId()]);
 	}
 
-	/** A vibration at a position: the nearest idle sensor in range activates. */
-	public static function emit(World $world, Vector3 $at) : void{
+	/** Vibration frequencies like vanilla (what a comparator reads, what a calibrated sensor listens to). */
+	public const STEP = 1;
+	public const PROJECTILE_LAND = 2;
+	public const ENTITY_DAMAGE = 7;
+	public const BLOCK_OPEN = 10;
+	public const BLOCK_DESTROY = 12;
+	public const BLOCK_PLACE = 13;
+
+	/**
+	 * A vibration at a position: the nearest idle sensor in range activates. Calibrated sensors that get a
+	 * redstone signal on their input side only listen to the frequency equal to that signal.
+	 */
+	public static function emit(World $world, Vector3 $at, int $frequency = self::STEP) : void{
 		$best = null;
 		$bestDistance = 0.0;
 		$minCx = (int) floor($at->x - 16) >> Chunk::COORD_BIT_SIZE;
@@ -101,7 +112,7 @@ final class SculkVibrations{
 								}
 								$pos = new Vector3(($cx << 4) + $bx, ($sy << 4) + $by, ($cz << 4) + $bz);
 								$block = $world->getBlock($pos);
-								if(!$block instanceof VanillaSculkSensor || !$block->isIdle()){
+								if(!$block instanceof VanillaSculkSensor || !$block->isIdle() || !$block->listensTo($frequency)){
 									continue;
 								}
 								$d = sqrt($pos->add(0.5, 0.5, 0.5)->distanceSquared($at));
@@ -115,6 +126,6 @@ final class SculkVibrations{
 				}
 			}
 		}
-		$best?->activate(max(1, 15 - (int) floor(15 * $bestDistance / $best->getRange())));
+		$best?->activate(max(1, 15 - (int) floor(15 * $bestDistance / $best->getRange())), $frequency);
 	}
 }

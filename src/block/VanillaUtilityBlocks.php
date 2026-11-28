@@ -29,6 +29,8 @@ use pocketmine\utils\TextFormat;
 use pocketmine\world\BlockTransaction;
 use pocketmine\world\World;
 use function array_map;
+use function assert;
+use function count;
 use function floor;
 use function max;
 use function min;
@@ -41,6 +43,10 @@ use function substr;
 /**
  * Shelves: three item slots. Using a shelf swaps the item in your hand with
  * the slot you look at; breaking it drops the items.
+ *
+ * Powered by redstone, shelves next to each other that face the same way join into rows of up to
+ * three. Using a powered row swaps all its items with the rightmost hotbar slots: one shelf with
+ * the last 3, two with the last 6, three with the whole hotbar - from whichever shelf of the row.
  */
 class VanillaShelf extends GenericBedrockBlock{
 	use BedrockShapeStates;
@@ -80,10 +86,142 @@ class VanillaShelf extends GenericBedrockBlock{
 		return max(0, min(2, (int) floor($u * 3)));
 	}
 
+	/** powered_shelf_type: 0 alone, 1 right end, 2 centre, 3 left end (seen from the front) */
+	private const ALONE = 0;
+	private const RIGHT = 1;
+	private const CENTER = 2;
+	private const LEFT = 3;
+	private const MAX_ROW = 3;
+
+	public function isPowered() : bool{
+		$tag = $this->getStateData()->getStates()["powered_bit"] ?? null;
+		return $tag !== null && (int) $tag->getValue() !== 0;
+	}
+
+	private function shelfType() : int{
+		$tag = $this->getStateData()->getStates()["powered_shelf_type"] ?? null;
+		return $tag === null ? self::ALONE : (int) $tag->getValue();
+	}
+
+	/** Direction to the left of the shelf, seen from its front. */
+	private function leftDirection() : int{
+		return Facing::rotateY($this->facing(), true);
+	}
+
+	private function joinsWith(Block $other) : bool{
+		return $other instanceof VanillaShelf && $other->isPowered() && $other->facing() === $this->facing();
+	}
+
+	public function onNearbyBlockChange() : void{
+		$powered = RedstonePower::isPowered($this);
+		if($powered !== $this->isPowered()){
+			$this->position->getWorld()->setBlock($this->position, $this->withProperties(["powered_bit" => $powered, "powered_shelf_type" => self::ALONE]));
+			return; //the new block updates its neighbours, the rows are worked out from there
+		}
+		$this->updateRow();
+	}
+
+	/**
+	 * Splits the run of powered shelves this one belongs to into rows of up to three (from the left)
+	 * and gives every shelf its place in the row.
+	 */
+	private function updateRow() : void{
+		$world = $this->position->getWorld();
+		$left = $this->leftDirection();
+		$right = Facing::opposite($left);
+		//leftmost shelf of the run
+		$start = $this;
+		for($i = 0; $i < 64; ++$i){
+			$next = $world->getBlock($start->getPosition()->getSide($left));
+			if(!$this->joinsWith($next)){
+				break;
+			}
+			$start = $next;
+		}
+		$run = [];
+		if($this->isPowered()){
+			for($shelf = $start, $i = 0; $i < 64 && $this->joinsWith($shelf); ++$i){
+				$run[] = $shelf;
+				$shelf = $world->getBlock($shelf->getPosition()->getSide($right));
+			}
+		}else{
+			$run = [$this];
+		}
+		foreach($run as $index => $shelf){
+			assert($shelf instanceof VanillaShelf);
+			$rowStart = $index - $index % self::MAX_ROW;
+			$size = min(self::MAX_ROW, count($run) - $rowStart);
+			$place = $index - $rowStart;
+			$type = !$shelf->isPowered() || $size === 1 ? self::ALONE : ($place === 0 ? self::LEFT : ($place === $size - 1 ? self::RIGHT : self::CENTER));
+			if($shelf->shelfType() !== $type){
+				$world->setBlock($shelf->getPosition(), $shelf->withProperties(["powered_shelf_type" => $type]), false);
+			}
+		}
+	}
+
+	/** @return list<VanillaShelf> the shelves of this shelf's powered row, from left to right */
+	private function row() : array{
+		$world = $this->position->getWorld();
+		$type = $this->shelfType();
+		if(!$this->isPowered() || $type === self::ALONE){
+			return [$this];
+		}
+		$left = $this->leftDirection();
+		$right = Facing::opposite($left);
+		$start = $this;
+		for($i = 0; $i < self::MAX_ROW - 1 && $start->shelfType() !== self::LEFT; ++$i){
+			$next = $world->getBlock($start->getPosition()->getSide($left));
+			if(!$this->joinsWith($next)){
+				break;
+			}
+			$start = $next;
+		}
+		$row = [$start];
+		for($i = 0; $i < self::MAX_ROW - 1 && $row[count($row) - 1]->shelfType() !== self::RIGHT; ++$i){
+			$next = $world->getBlock($row[count($row) - 1]->getPosition()->getSide($right));
+			if(!$this->joinsWith($next)){
+				break;
+			}
+			$row[] = $next;
+		}
+		return $row;
+	}
+
+	/** A powered row swaps all its items with the rightmost hotbar slots. */
+	private function swapRow(Player $player) : bool{
+		$world = $this->position->getWorld();
+		$row = $this->row();
+		$inventory = $player->getInventory();
+		$first = 9 - self::MAX_ROW * count($row);
+		$changed = false;
+		foreach($row as $i => $shelf){
+			$tile = $world->getTile($shelf->getPosition());
+			if(!$tile instanceof TileShelf){
+				continue;
+			}
+			for($slot = 0; $slot < TileShelf::SLOTS; ++$slot){
+				$hotbar = $first + $i * TileShelf::SLOTS + $slot;
+				$stored = $tile->getItem($slot);
+				$held = $inventory->getItem($hotbar);
+				if($stored->isNull() && $held->isNull()){
+					continue;
+				}
+				$tile->setItem($slot, $held);
+				$inventory->setItem($hotbar, $stored);
+				$changed = true;
+			}
+			$world->setBlock($shelf->getPosition(), $shelf, false);
+		}
+		return $changed;
+	}
+
 	public function onInteract(Item $item, int $face, Vector3 $clickVector, ?Player $player = null, array &$returnedItems = []) : bool{
 		$tile = $this->position->getWorld()->getTile($this->position);
 		if(!$tile instanceof TileShelf || $player === null){
 			return false;
+		}
+		if($this->isPowered()){
+			return $this->swapRow($player);
 		}
 		$slot = $this->slotAt($clickVector);
 		$stored = $tile->getItem($slot);

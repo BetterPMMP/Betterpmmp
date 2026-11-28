@@ -2035,7 +2035,7 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 			$oldItem = clone $item;
 			$returnedItems = [];
 			if($this->getWorld()->useBreakOn($pos, $item, $this, true, $returnedItems)){
-				\pocketmine\world\SculkVibrations::emit($this->getWorld(), $pos->add(0.5, 0.5, 0.5)); //BetterPMMP
+				\pocketmine\world\SculkVibrations::emit($this->getWorld(), $pos->add(0.5, 0.5, 0.5), \pocketmine\world\SculkVibrations::BLOCK_DESTROY); //BetterPMMP
 				$this->returnItemsFromAction($oldItem, $item, $returnedItems);
 				$this->hungerManager->exhaust(0.005, PlayerExhaustEvent::CAUSE_MINING);
 				return true;
@@ -2066,7 +2066,8 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 			$oldItem = clone $item;
 			$returnedItems = [];
 			if($this->getWorld()->useItemOn($pos, $item, $face, $clickOffset, $this, true, $returnedItems)){
-				\pocketmine\world\SculkVibrations::emit($this->getWorld(), $pos->add(0.5, 0.5, 0.5)); //BetterPMMP
+				//BetterPMMP: placing a block vibrates with frequency 13, using a block (door, lever, chest ...) with 10
+				\pocketmine\world\SculkVibrations::emit($this->getWorld(), $pos->add(0.5, 0.5, 0.5), $oldItem instanceof \pocketmine\item\ItemBlock || $oldItem instanceof \pocketmine\item\ItemBlockWallOrFloor ? \pocketmine\world\SculkVibrations::BLOCK_PLACE : \pocketmine\world\SculkVibrations::BLOCK_OPEN);
 				$this->returnItemsFromAction($oldItem, $item, $returnedItems);
 				return true;
 			}
