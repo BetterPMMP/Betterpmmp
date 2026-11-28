@@ -45,8 +45,8 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Bereich | Offen |
 |---|---|
 | Kern | Nautilus-Rüstung, Befehlsblöcke, Strukturblöcke |
-| Blöcke ohne Funktion | Sculk-Ader (eigene Ausbreitung) |
-| Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel) |
+| Blöcke ohne Funktion | Strukturblock (Speichern/Laden über `/structure` geht) |
+| Mobs mit Standard-KI | Schwefelwürfel |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Kolben-Startverzögerung (in Bedrock selbst uneinheitlich) |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
 
@@ -480,6 +480,8 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Werfer: Rüstung, Boote, Loren | ✅ ungetestet – legt Rüstung, Kürbis, Köpfe und Elytren Spielern und Mobs vor ihm an (freier Platz), setzt Boote (auch Truhenboote) auf Wasser und Loren (auch TNT-, Truhen-, Trichterloren) auf Schienen, sonst fallen sie heraus |
 | Getränkte Pfeile | ✅ ungetestet – Pfeile mit Trank-Wirkung (alle Tränke), Rezept 8 Pfeile + Verweiltrank, Wirkung 1/8 der Trankdauer wie Vanilla. Bogen und Armbrust nehmen jeden Pfeil (Nebenhand zuerst, dann Inventar der Reihe nach), Unendlichkeit spart getränkte Pfeile nicht (wie Vanilla), aufgehobene Pfeile bleiben getränkt, Werfer verschießen sie mit Wirkung |
 | Esel, Maultier, Lama mit Truhe | ✅ ungetestet – gezähmte erwachsene Esel und Maultiere nehmen eine Truhe (15 Plätze), Lamas 3 × Stärke (Stärke 1–5). Schleichen + Benutzen oder die Inventar-Taste beim Reiten öffnet das Tier-Inventar (Sattel, Rüstung/Teppich, Truhe) – auch für Pferde. Lamas zähmen: Weizen/Heu erhöht das Temperament, mit leerer Hand aufsteigen versuchen; gezähmte tragen Teppiche. Truhe und Inhalt fallen beim Tod. Java-Spieler sehen das Java-Pferdefenster (BetterPMMP-Bridge 1.11.0) |
+| Neue Mobs (Mounts of Mayhem) | ✅ ungetestet – **Nautilus**: lebt in allen Ozeanen, mit Kugelfisch zähmen (1 zu 3), Sattel, unter Wasser reiten, der Reiter kann atmen. **Zombie-Nautilus**: einige Ertrunkene im Ozean reiten einen (Jockey), der Ertrunkene lenkt. **Kamel-Wüstenzombie**: etwa 10 % der Wüstenzombies spawnen als Jockey – Wüstenzombie mit Eisenspeer vorne, Parched hinten. **Parched**: brennt nicht in der Sonne, Pfeile geben Schwäche. **Wüstenzombie**: Treffer machen hungrig. Noch offen: Schwefelwürfel (Quellen widersprechen sich), Nautilus-Rüstung |
+| Sculk-Ausbreitung | ✅ ungetestet – Sculk-Katalysator: weiter entfernte Ladungen lassen manchmal Sculk-Sensoren wachsen (selten Kreischer, die keinen Wächter rufen), Adern kriechen auf Nachbarblöcke |
 | Grundwasser (Aquifere) | ✅ offline geprüft – Höhlen sind wie seit 1.18 teilweise geflutet: Der Untergrund ist in Zellen (16 × 12 × 16) geteilt, jede mit eigenem Wasserspiegel (trocken, Wasser, tief unten auch Lava). Zwischen verschiedenen Spiegeln bleibt eine dünne Steinwand, nichts läuft aus (3 Seeds geprüft: 1 von 37.000 Flüssigkeitsblöcken berührt Luft). Schluchten schneiden geflutete Höhlen nicht auf. Gleich schnell wie vorher |
 | Regale mit Redstone | ✅ offline geprüft – versorgte Regale nebeneinander (gleiche Richtung) bilden Reihen bis 3 (links/Mitte/rechts). Benutzen tauscht die ganze Reihe mit den rechten Hotbar-Plätzen: 1 Regal 3, 2 Regale 6, 3 Regale alle 9 |
 | Sculk-Sensor: Frequenzen | ✅ ungetestet – Schritte 1, Geschoss landet 2, Schaden 7, Block benutzen 10, abbauen 12, setzen 13. Der Komparator liest die letzte Frequenz, der kalibrierte Sensor hört mit Redstone-Signal an der Eingangsseite nur auf diese Frequenz |

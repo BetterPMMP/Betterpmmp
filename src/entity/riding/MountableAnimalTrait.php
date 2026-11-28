@@ -43,7 +43,7 @@ trait MountableAnimalTrait{
 	}
 
 	protected function canOpenMountInventory() : bool{
-		return $this->tamed && !$this->isBaby() && in_array($this->mountKind(), ["horse", "skeleton_horse"], true);
+		return $this->tamed && !$this->isBaby() && in_array($this->mountKind(), ["horse", "skeleton_horse", "nautilus"], true);
 	}
 
 	protected function currentMountEquipment() : array{
@@ -139,6 +139,7 @@ trait MountableAnimalTrait{
 			"strider" => new Vector3(0, 2.82, -0.2),
 			"camel" => new Vector3(0, 3.125, $seat === 0 ? 0.5 : -0.5),
 			"skeleton_horse" => new Vector3(0, 2.25, -0.2),
+			"nautilus" => new Vector3(0, 1.1, 0),
 			default => new Vector3(0, 2.32, -0.2),
 		};
 	}
@@ -179,6 +180,9 @@ trait MountableAnimalTrait{
 		if(in_array($this->mountKind(), ["pig", "strider", "camel"], true) && !$this->saddled){
 			return "";
 		}
+		if($this->mountKind() === "nautilus" && !$this->tamed){
+			return "";
+		}
 		return in_array($this->mountKind(), ["horse", "skeleton_horse"], true) ? "action.interact.ride.horse" : "action.interact.mount";
 	}
 
@@ -212,6 +216,22 @@ trait MountableAnimalTrait{
 		if(RidingManager::getVehicle($player) !== $this && $this->chestCarrierInteract($player, $held)){
 			return true;
 		}
+		//BetterPMMP: nautilus - tamed with pufferfish (1 in 3 per fish), hearts on success, smoke otherwise
+		if($this->mountKind() === "nautilus" && !$this->tamed && !$baby && $held->getTypeId() === \pocketmine\item\VanillaItems::PUFFERFISH()->getTypeId()){
+			if($player->hasFiniteResources()){
+				$held->pop();
+				$player->getInventory()->setItemInHand($held);
+			}
+			$tamed = mt_rand(0, 2) === 0;
+			if($tamed){
+				$this->tamed = true;
+				$this->networkPropertiesDirty = true;
+			}
+			for($i = 0; $i < 7; ++$i){
+				$this->getWorld()->addParticle($this->getPosition()->add(mt_rand(-10, 10) / 10, 1.0, mt_rand(-10, 10) / 10), $tamed ? new HeartParticle() : new SmokeParticle());
+			}
+			return true;
+		}
 		// feeding an untamed horse makes it calmer (vanilla temper)
 		if($this->mountKind() === "horse" && !$this->tamed){
 			$temper = match($held->getTypeId()){
@@ -239,6 +259,9 @@ trait MountableAnimalTrait{
 		if(in_array($this->mountKind(), ["pig", "strider", "camel"], true) && !$this->saddled){
 			return false;
 		}
+		if($this->mountKind() === "nautilus" && !$this->tamed){
+			return false; //untamed nautili cannot be ridden
+		}
 		return RidingManager::mount($player, $this);
 	}
 
@@ -254,6 +277,10 @@ trait MountableAnimalTrait{
 			return;
 		}
 		$this->getNavigator()->stop();
+		//BetterPMMP: riding a nautilus lets the rider breathe under water
+		if($this->mountKind() === "nautilus" && $driver instanceof \pocketmine\entity\Living && $driver->isUnderwater()){
+			$driver->getEffects()->add(new \pocketmine\entity\effect\EffectInstance(\pocketmine\entity\effect\VanillaEffects::WATER_BREATHING(), 40, 0, false));
+		}
 		if($this->mountKind() === "horse" && !$this->tamed && $driver instanceof Player){
 			$this->tickTaming($driver, $tickDiff);
 			return;
