@@ -138,6 +138,7 @@ final class ExtraVanillaBlocks{
 		"minecraft:warped_shelf" => [VanillaShelf::class, \pocketmine\block\tile\Shelf::class],
 		"minecraft:poplar_shelf" => [VanillaShelf::class, \pocketmine\block\tile\Shelf::class],
 		"minecraft:command_block" => [VanillaCommandBlock::class, \pocketmine\block\tile\CommandBlock::class],
+		"minecraft:structure_block" => [VanillaStructureBlock::class, \pocketmine\block\tile\StructureBlock::class],
 		"minecraft:repeating_command_block" => [VanillaCommandBlock::class, \pocketmine\block\tile\CommandBlock::class],
 		"minecraft:chain_command_block" => [VanillaCommandBlock::class, \pocketmine\block\tile\CommandBlock::class],
 		"minecraft:poplar_standing_sign" => [VanillaGenericSign::class, \pocketmine\block\tile\Sign::class],

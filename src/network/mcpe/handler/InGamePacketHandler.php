@@ -647,6 +647,22 @@ class InGamePacketHandler extends PacketHandler{
 		return false;
 	}
 
+	public function handleStructureBlockUpdate(\pocketmine\network\mcpe\protocol\StructureBlockUpdatePacket $packet) : bool{
+		//BetterPMMP: structure block screen (operators in creative mode)
+		if(!$this->player->isCreative() || !$this->player->getServer()->isOp($this->player->getName())){
+			return true;
+		}
+		$pos = new Vector3($packet->blockPosition->getX(), $packet->blockPosition->getY(), $packet->blockPosition->getZ());
+		if($pos->distanceSquared($this->player->getLocation()) > 10000){
+			return true;
+		}
+		$block = $this->player->getWorld()->getBlock($pos);
+		if($block instanceof \pocketmine\block\VanillaStructureBlock){
+			$block->applySettings($this->player, $packet->structureEditorData, $packet->isPowered);
+		}
+		return true;
+	}
+
 	public function handleCommandBlockUpdate(\pocketmine\network\mcpe\protocol\CommandBlockUpdatePacket $packet) : bool{
 		//BetterPMMP: command block screen (operators in creative mode)
 		if(!$packet->isBlock || !\pocketmine\block\VanillaCommandBlock::canEdit($this->player)){

@@ -61,7 +61,7 @@ trait MountableAnimalTrait{
 				$this->networkPropertiesDirty = true;
 			}
 		}elseif($slot === MountInventory::SLOT_ARMOR){
-			$this->horseArmor = self::horseArmorPoints($item) > 0 ? (clone $item)->setCount(1) : null;
+			$this->horseArmor = $this->horseArmorPoints($item) > 0 ? (clone $item)->setCount(1) : null;
 			$this->broadcastEquipment();
 		}
 	}
@@ -82,12 +82,21 @@ trait MountableAnimalTrait{
 
 	private const HORSE_ARMOR_POINTS = ["leather" => 3, "copper" => 4, "iron" => 5, "golden" => 7, "diamond" => 11, "netherite" => 19];
 
-	private static function horseArmorPoints(?Item $item) : int{
+	/** Armor points of horse armor on a horse, nautilus armor on a nautilus (same materials and values), 0 otherwise. */
+	private function horseArmorPoints(?Item $item) : int{
 		if(!$item instanceof \pocketmine\item\GenericBedrockItem){
 			return 0;
 		}
+		$kind = match($this->mountKind()){
+			"horse" => "horse",
+			"nautilus" => "nautilus",
+			default => null,
+		};
+		if($kind === null){
+			return 0;
+		}
 		foreach(self::HORSE_ARMOR_POINTS as $material => $points){
-			if($item->getBedrockName() === "minecraft:{$material}_horse_armor"){
+			if($item->getBedrockName() === "minecraft:{$material}_{$kind}_armor"){
 				return $points;
 			}
 		}
@@ -99,7 +108,7 @@ trait MountableAnimalTrait{
 	}
 
 	public function getArmorPoints() : int{
-		return parent::getArmorPoints() + self::horseArmorPoints($this->horseArmor);
+		return parent::getArmorPoints() + $this->horseArmorPoints($this->horseArmor);
 	}
 
 	abstract protected function mountKind() : string;
@@ -189,7 +198,7 @@ trait MountableAnimalTrait{
 	public function onInteract(Player $player, Vector3 $clickPos) : bool{
 		$held = $player->getInventory()->getItemInHand();
 		$baby = $this->isBaby();
-		if(!$baby && $this->tamed && $this->mountKind() === "horse" && self::horseArmorPoints($held) > 0){
+		if(!$baby && $this->tamed && $this->horseArmorPoints($held) > 0){
 			if($this->horseArmor !== null){
 				$this->getWorld()->dropItem($this->getPosition(), $this->horseArmor);
 			}
