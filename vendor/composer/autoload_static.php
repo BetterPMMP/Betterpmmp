@@ -2783,6 +2783,7 @@ class ComposerStaticInit01c34b5648e4177bfa963b48f7da5526
         'pocketmine\\world\\Explosion' => __DIR__ . '/../..' . '/src/world/Explosion.php',
         'pocketmine\\world\\GameRules' => __DIR__ . '/../..' . '/src/world/GameRules.php',
         'pocketmine\\world\\Position' => __DIR__ . '/../..' . '/src/world/Position.php',
+        'pocketmine\\world\\ScheduledTickQueue' => __DIR__ . '/../..' . '/src/world/ScheduledTickQueue.php',
         'pocketmine\\world\\SimpleChunkManager' => __DIR__ . '/../..' . '/src/world/SimpleChunkManager.php',
         'pocketmine\\world\\World' => __DIR__ . '/../..' . '/src/world/World.php',
         'pocketmine\\world\\WorldCreationOptions' => __DIR__ . '/../..' . '/src/world/WorldCreationOptions.php',

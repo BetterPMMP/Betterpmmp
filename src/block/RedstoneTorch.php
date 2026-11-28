@@ -29,6 +29,8 @@ use pocketmine\block\utils\RedstoneSignalEmitter;
 use pocketmine\block\utils\RedstonePower;
 use pocketmine\math\Facing;
 use pocketmine\data\runtime\RuntimeDataDescriber;
+use function count;
+use function mt_rand;
 
 class RedstoneTorch extends Torch implements Lightable, RedstoneSignalEmitter{
 	use LightableTrait;
@@ -52,6 +54,18 @@ class RedstoneTorch extends Torch implements Lightable, RedstoneSignalEmitter{
 		return $support === null || RedstonePower::conductorInput($support) === 0;
 	}
 
+	/** vanilla: a torch that turned off 8 times within 60 game ticks burns out */
+	private const BURNOUT_TOGGLES = 8;
+	private const BURNOUT_WINDOW = 60;
+	private const BURNOUT_RECOVERY = 160;
+
+	/**
+	 * Game ticks at which torches turned off, per world and position.
+	 * @var int[][][]
+	 * @phpstan-var array<int, array<int, list<int>>>
+	 */
+	private static array $toggles = [];
+
 	public function onNearbyBlockChange() : void{
 		parent::onNearbyBlockChange();
 		if(!$this->position->getWorld()->getBlock($this->position)->hasSameTypeId($this)){
@@ -62,11 +76,47 @@ class RedstoneTorch extends Torch implements Lightable, RedstoneSignalEmitter{
 		}
 	}
 
+	/** Records a turn-off (if $add) and tells whether the torch toggled too often recently. */
+	private function toggledTooOften(bool $add) : bool{
+		$world = $this->position->getWorld();
+		$worldId = $world->getId();
+		$key = \pocketmine\world\World::blockHash($this->position->getFloorX(), $this->position->getFloorY(), $this->position->getFloorZ());
+		$now = $world->getServer()->getTick();
+		$recent = [];
+		foreach(self::$toggles[$worldId][$key] ?? [] as $tick){
+			if($now - $tick <= self::BURNOUT_WINDOW){
+				$recent[] = $tick;
+			}
+		}
+		if($add){
+			$recent[] = $now;
+		}
+		if($recent === []){
+			unset(self::$toggles[$worldId][$key]);
+		}else{
+			self::$toggles[$worldId][$key] = $recent;
+		}
+		return count($recent) >= self::BURNOUT_TOGGLES;
+	}
+
 	public function onScheduledUpdate() : void{
 		$lit = $this->shouldBeLit();
-		if($lit !== $this->lit){
-			$this->lit = $lit;
-			$this->position->getWorld()->setBlock($this->position, $this);
+		$world = $this->position->getWorld();
+		if($this->lit && !$lit){
+			$this->lit = false;
+			$world->setBlock($this->position, $this);
+			if($this->toggledTooOften(true)){
+				//burnt out: smoke and fizz, it tries again later
+				$center = $this->position->add(0.5, 0.5, 0.5);
+				$world->addSound($center, new \pocketmine\world\sound\FizzSound(2.6));
+				for($i = 0; $i < 5; ++$i){
+					$world->addParticle($center->add(mt_rand(-20, 20) / 100, mt_rand(0, 20) / 100, mt_rand(-20, 20) / 100), new \pocketmine\world\particle\SmokeParticle());
+				}
+				$world->scheduleDelayedBlockUpdate($this->position, self::BURNOUT_RECOVERY);
+			}
+		}elseif(!$this->lit && $lit && !$this->toggledTooOften(false)){
+			$this->lit = true;
+			$world->setBlock($this->position, $this);
 		}
 	}
 }

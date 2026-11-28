@@ -18,6 +18,11 @@ use pocketmine\inventory\Inventory;
 use pocketmine\math\Facing;
 use pocketmine\math\Vector3;
 use pocketmine\world\World;
+use function count;
+use function floor;
+use function intdiv;
+use function max;
+use function min;
 
 /**
  * BetterPMMP's server-side signal rules. Sides are always OUTPUT directions.
@@ -241,5 +246,67 @@ final class RedstonePower{
 			}
 		}
 		return $fullness > 0 ? min(15, 1 + (int) floor(14 * $fullness / $inventory->getSize() + 1.0e-10)) : 0;
+	}
+
+	/**
+	 * What a comparator reads from a block behind it: containers by fullness, and the vanilla
+	 * signals of cake, cauldron, composter, beehive, end portal frame, jukebox, lectern,
+	 * respawn anchor and item frame. Null if the block has no such signal.
+	 */
+	public static function analogSignal(Block $block) : ?int{
+		$tile = $block->getPosition()->getWorld()->getTile($block->getPosition());
+		if($tile instanceof \pocketmine\block\tile\Container){
+			return self::inventorySignal($tile->getInventory());
+		}
+		return match(true){
+			$block instanceof \pocketmine\block\Cake => (\pocketmine\block\Cake::MAX_BITES + 1 - $block->getBites()) * 2,
+			$block instanceof \pocketmine\block\FillableCauldron => intdiv($block->getFillLevel() + 1, 2),
+			$block instanceof \pocketmine\block\Cauldron => 0,
+			$block instanceof \pocketmine\block\VanillaComposter => min(8, $block->getLevel()),
+			$block instanceof \pocketmine\block\VanillaBeehive => min(5, $block->getHoneyLevel()),
+			$block instanceof \pocketmine\block\EndPortalFrame => $block->hasEye() ? 15 : 0,
+			$block instanceof \pocketmine\block\Jukebox => self::recordSignal($block->getRecord()),
+			$block instanceof \pocketmine\block\Lectern => self::lecternSignal($block),
+			$block instanceof \pocketmine\block\RespawnAnchor => intdiv($block->getCharges() * 15, 4),
+			$block instanceof \pocketmine\block\ItemFrame => $block->getFramedItem() !== null && !$block->getFramedItem()->isNull() ? $block->getItemRotation() + 1 : 0,
+			default => null,
+		};
+	}
+
+	private static function recordSignal(?\pocketmine\item\Record $record) : int{
+		if($record === null){
+			return 0;
+		}
+		return match($record->getRecordType()){
+			RecordType::DISK_13 => 1,
+			RecordType::DISK_CAT => 2,
+			RecordType::DISK_BLOCKS => 3,
+			RecordType::DISK_CHIRP => 4,
+			RecordType::DISK_FAR => 5,
+			RecordType::DISK_MALL => 6,
+			RecordType::DISK_MELLOHI => 7,
+			RecordType::DISK_STAL => 8,
+			RecordType::DISK_STRAD, RecordType::DISK_LAVA_CHICKEN => 9,
+			RecordType::DISK_WARD, RecordType::DISK_TEARS => 10,
+			RecordType::DISK_11, RecordType::DISK_CREATOR_MUSIC_BOX => 11,
+			RecordType::DISK_WAIT, RecordType::DISK_CREATOR => 12,
+			RecordType::DISK_PIGSTEP, RecordType::DISK_PRECIPICE => 13,
+			RecordType::DISK_OTHERSIDE, RecordType::DISK_RELIC => 14,
+			RecordType::DISK_5 => 15,
+			default => 1,
+		};
+	}
+
+	private static function lecternSignal(\pocketmine\block\Lectern $lectern) : int{
+		$book = $lectern->getBook();
+		if($book === null){
+			return 0;
+		}
+		$pages = count($book->getPages());
+		if($pages <= 1){
+			return 15;
+		}
+		$page = max(0, min($pages - 1, $lectern->getViewedPage()));
+		return (int) floor($page / ($pages - 1) * 14) + 1;
 	}
 }

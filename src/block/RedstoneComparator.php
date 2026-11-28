@@ -31,7 +31,6 @@ use pocketmine\block\utils\HorizontalFacingTrait;
 use pocketmine\block\utils\PoweredByRedstone;
 use pocketmine\block\utils\PoweredByRedstoneTrait;
 use pocketmine\block\utils\RedstonePower;
-use pocketmine\block\tile\Container;
 use pocketmine\block\utils\StaticSupportTrait;
 use pocketmine\block\utils\SupportType;
 use pocketmine\data\runtime\RuntimeDataDescriber;
@@ -111,16 +110,17 @@ class RedstoneComparator extends Flowable implements AnalogRedstoneSignalEmitter
 		if($rear === null){
 			return $power;
 		}
-		$world = $this->position->getWorld();
-		$tile = $world->getTile($rear->getPosition());
-		if($tile instanceof Container){
-			return RedstonePower::inventorySignal($tile->getInventory());
+		//containers, cake, cauldron, composter, jukebox, lectern ... directly behind
+		$analog = RedstonePower::analogSignal($rear);
+		if($analog !== null){
+			return $analog;
 		}
+		//vanilla: through one solid block, unless that block is powered with 15
 		if($power < 15 && RedstonePower::isConductor($rear)){
 			$far = RedstonePower::side($rear, $this->facing);
-			$tile = $far === null ? null : $world->getTile($far->getPosition());
-			if($tile instanceof Container){
-				return RedstonePower::inventorySignal($tile->getInventory());
+			$analog = $far === null ? null : RedstonePower::analogSignal($far);
+			if($analog !== null){
+				return $analog;
 			}
 		}
 		return $power;
