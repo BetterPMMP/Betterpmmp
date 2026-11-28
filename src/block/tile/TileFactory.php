@@ -89,6 +89,7 @@ final class TileFactory{
 		$this->register(Conduit::class, ["Conduit", "minecraft:conduit"]); //BetterPMMP
 		$this->register(Shelf::class, ["Shelf", "minecraft:shelf"]); //BetterPMMP
 		$this->register(CommandBlock::class, ["CommandBlock", "minecraft:command_block"]); //BetterPMMP
+		$this->register(StructureBlock::class, ["StructureBlock", "minecraft:structure_block"]); //BetterPMMP
 
 		//TODO: ChalkboardBlock
 		//TODO: ChemistryTable
