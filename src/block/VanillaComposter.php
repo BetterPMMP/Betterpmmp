@@ -80,6 +80,36 @@ class VanillaComposter extends GenericBedrockBlock{
 		return true;
 	}
 
+	/** A hopper above drops one item in: same chance as by hand. Returns whether the item was used up. */
+	public function addFromHopper(Item $one) : bool{
+		$level = $this->getLevel();
+		$chance = self::compostChance($one);
+		if($chance === 0 || $level >= 7){
+			return false;
+		}
+		$world = $this->position->getWorld();
+		if(mt_rand(1, 100) <= $chance){
+			$this->setLevel($level + 1);
+			$world->addSound($this->position, new VanillaSound(LevelSoundEvent::BLOCK_COMPOSTER_FILL_SUCCESS));
+			if($level + 1 === 7){
+				$world->scheduleDelayedBlockUpdate($this->position, 20);
+			}
+		}else{
+			$world->addSound($this->position, new VanillaSound(LevelSoundEvent::BLOCK_COMPOSTER_FILL));
+		}
+		return true;
+	}
+
+	/** A hopper below takes the bone meal of a full composter. */
+	public function takeBoneMeal() : ?Item{
+		if($this->getLevel() < 8){
+			return null;
+		}
+		$this->setLevel(0);
+		$this->position->getWorld()->addSound($this->position, new VanillaSound(LevelSoundEvent::BLOCK_COMPOSTER_EMPTY));
+		return VanillaItems::BONE_MEAL();
+	}
+
 	public function onScheduledUpdate() : void{
 		if($this->getLevel() === 7){
 			$this->setLevel(8);

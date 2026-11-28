@@ -35,6 +35,42 @@ use function sin;
  */
 trait MountableAnimalTrait{
 	use RideableTrait;
+	use ChestCarrierTrait;
+
+	/** BetterPMMP: donkeys and mules carry a chest with 15 slots */
+	protected function chestSlots() : int{
+		return $this instanceof \pocketmine\entity\DonkeyMob || $this instanceof \pocketmine\entity\MuleMob ? 15 : 0;
+	}
+
+	protected function canOpenMountInventory() : bool{
+		return $this->tamed && !$this->isBaby() && in_array($this->mountKind(), ["horse", "skeleton_horse"], true);
+	}
+
+	protected function currentMountEquipment() : array{
+		return [
+			MountInventory::SLOT_SADDLE => $this->saddled ? (ExtraVanillaItems::get("minecraft:saddle") ?? \pocketmine\item\VanillaItems::AIR()) : \pocketmine\item\VanillaItems::AIR(),
+			MountInventory::SLOT_ARMOR => $this->horseArmor ?? \pocketmine\item\VanillaItems::AIR(),
+		];
+	}
+
+	protected function onMountEquipmentChanged(int $slot, Item $item) : void{
+		if($slot === MountInventory::SLOT_SADDLE){
+			$saddled = !$item->isNull() && self::isSaddle($item);
+			if($saddled !== $this->saddled){
+				$this->saddled = $saddled;
+				$this->networkPropertiesDirty = true;
+			}
+		}elseif($slot === MountInventory::SLOT_ARMOR){
+			$this->horseArmor = self::horseArmorPoints($item) > 0 ? (clone $item)->setCount(1) : null;
+			$this->broadcastEquipment();
+		}
+	}
+
+	protected function onDispose() : void{
+		$this->chestCarrierDispose();
+		RidingManager::ejectAll($this); //RideableTrait's part, replaced by this method
+		parent::onDispose();
+	}
 
 	private bool $saddled = false;
 	private bool $tamed = false;
@@ -73,6 +109,7 @@ trait MountableAnimalTrait{
 		$this->saddled = $nbt->getByte("Saddled", 0) !== 0;
 		$this->tamed = $nbt->getByte("Tamed", $this->mountKind() === "skeleton_horse" ? 1 : 0) !== 0;
 		$this->temper = $nbt->getInt("Temper", 0);
+		$this->chestCarrierInit($nbt);
 		$armor = $nbt->getCompoundTag("BetterPMMPHorseArmor");
 		if($armor !== null){
 			try{ $this->horseArmor = Item::nbtDeserialize($armor); }catch(\Exception){ $this->horseArmor = null; }
@@ -87,6 +124,7 @@ trait MountableAnimalTrait{
 		if($this->horseArmor !== null){
 			$nbt->setTag("BetterPMMPHorseArmor", $this->horseArmor->nbtSerialize());
 		}
+		$this->chestCarrierSave($nbt);
 		return $nbt;
 	}
 
@@ -157,6 +195,7 @@ trait MountableAnimalTrait{
 				$player->getInventory()->setItemInHand($held);
 			}
 			$this->broadcastEquipment();
+			$this->syncMountEquipment();
 			return true;
 		}
 		if(!$baby && !$this->saddled && self::isSaddle($held) && ($this->tamed || in_array($this->mountKind(), ["pig", "strider", "camel"], true))){
@@ -166,6 +205,11 @@ trait MountableAnimalTrait{
 				$player->getInventory()->setItemInHand($held);
 			}
 			$this->networkPropertiesDirty = true;
+			$this->syncMountEquipment();
+			return true;
+		}
+		//BetterPMMP: chest on donkeys and mules, sneak + use opens the inventory
+		if(RidingManager::getVehicle($player) !== $this && $this->chestCarrierInteract($player, $held)){
 			return true;
 		}
 		// feeding an untamed horse makes it calmer (vanilla temper)
@@ -265,6 +309,9 @@ trait MountableAnimalTrait{
 		parent::syncNetworkData($properties);
 		$properties->setGenericFlag(EntityMetadataFlags::SADDLED, $this->saddled);
 		$properties->setGenericFlag(EntityMetadataFlags::TAMED, $this->tamed);
+		if($this->canOpenMountInventory() || $this->chested){
+			$this->chestCarrierSync($properties);
+		}
 		$controlled = $this->isControlledByDriver();
 		$properties->setGenericFlag(EntityMetadataFlags::WASD_CONTROLLED, $controlled);
 		$properties->setGenericFlag(EntityMetadataFlags::CAN_POWER_JUMP, $controlled && in_array($this->mountKind(), ["horse", "skeleton_horse"], true));
@@ -277,6 +324,9 @@ trait MountableAnimalTrait{
 		}
 		if($this->saddled && ($saddle = ExtraVanillaItems::get("minecraft:saddle")) !== null){
 			$drops[] = $saddle;
+		}
+		foreach($this->chestCarrierDrops() as $drop){
+			$drops[] = $drop;
 		}
 		return $drops;
 	}

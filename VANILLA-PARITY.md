@@ -16,10 +16,10 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 | Falltüren (inkl. Eisen) | ✅ | **neu in 4.4** |
 | Zauntore | ✅ | **neu in 4.4** |
 | Notenblock | ✅ | **neu in 4.4**: Stimmen, Schlagen, steigende Flanke, Instrument nach Block darunter, nur mit Luft darüber |
-| Trichter | 🟡 | **neu in 4.4**: Schieben/Ziehen, Item-Aufsammeln, 8-Tick-Cooldown, Sperre durch Redstone, Ofen-Seitenregeln, Doppeltruhen. Fehlt: Lore mit Trichter, Komposter, Braustand-Seitenregeln |
+| Trichter | ✅ | **neu in 4.4**: Schieben/Ziehen, Item-Aufsammeln, 8-Tick-Cooldown, Sperre durch Redstone, Ofen-Seitenregeln, Doppeltruhen. Komposter und Braustand-Seitenregeln (5.86) |
 | Kolben / Klebekolben | ✅/🟡 | **neu in 4.7**: Bedrock-Regeln (keine Quasi-Konnektivität), Limit 12, Schleim/Honig ziehen Nachbarn mit, Obsidian/Tile-Blöcke unbeweglich, zerbrechliche Blöcke droppen, Kopf über PistonArm-Tile. Blöcke springen ohne moving_block-Animation |
 | Beobachter | ✅ | **neu in 4.7**: 2 Ticks Verzögerung, 2 Ticks Impuls, stark versorgt nach hinten |
-| Werfer / Spender | ✅/🟡 | **neu in 4.7**: Inventar-UI, Pfeile, Schneebälle, Eier, EP-Flaschen, Wurftränke, Wasser/Lava-Eimer setzen und aufnehmen, Feuerzeug, Feuerkugel, Knochenmehl, TNT; Werfer füllt Container. Fehlt: Rüstung anlegen, Boote/Loren, Shulker |
+| Werfer / Spender | ✅/🟡 | **neu in 4.7**: Inventar-UI, Pfeile, Schneebälle, Eier, EP-Flaschen, Wurftränke, Wasser/Lava-Eimer setzen und aufnehmen, Feuerzeug, Feuerkugel, Knochenmehl, TNT; Werfer füllt Container. Rüstung anlegen, Boote/Loren (5.86), Shulker |
 | Schienen + Loren | ✅/🟡 | **neu in 5.2**: Lore zum Mitfahren, folgt geraden, gebogenen und schrägen Schienen, Schwung mit Reibung, Antriebsschienen beschleunigen/bremsen, Aktivierungsschienen werfen ab. Fehlt: Truhen-/Trichter-/TNT-Lore, Sensorschiene |
 | Zielblock | ✅ | **neu in 4.7**: Signalstärke nach Trefferpunkt, 20 Ticks (Pfeil/Dreizack) bzw. 8 Ticks |
 | Sculk-Sensor-Logik, Tageslichtsensor-Feinheiten | ❌ | Blöcke vorhanden (4.7), Vibrationen fehlen |
@@ -46,7 +46,7 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 |---|---|
 | Kern | Nautilus-Rüstung, Befehlsblöcke, Strukturblöcke |
 | Blöcke ohne Funktion | Sculk-Ader (eigene Ausbreitung) |
-| Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel), Lama mit Truhe |
+| Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel) |
 | Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Kolben-Startverzögerung (in Bedrock selbst uneinheitlich) |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
 
@@ -476,6 +476,10 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 |---|---|
 | Java-Bridge: Kisten-Menüs und Inventar | ✅ eigenes ViaProxy-Plugin „BetterPMMP-Bridge“ (Quellcode in `tools/java-bridge-plugin`, wird automatisch nach `java-bridge/plugins/` installiert): Kisten-Fenster in jeder Größe (auch 54 Plätze), keine Block-Prüfung bei Menüs ohne echte Kiste, und Inventar-Klicks, die ViaBedrock noch gar nicht übersetzt, werden an BetterPMMP weitergeleitet. BetterPMMP führt sie wie ein Java-Server aus (Links-/Rechtsklick, Shift, Zahlentasten, F, Q, Doppelklick, Ziehen) – als normale Inventar-Transaktion, Menü-Plugins sehen die Klicks also wie bei Bedrock |
 | ViaProxy-Version | ⚙️ fest auf den getesteten Dev-Build 964 (`viaproxy-build`), „latest“ = immer der neueste |
+| Trichter: Komposter und Braustand | ✅ ungetestet – Trichter über dem Komposter füllt ihn (gleiche Chance wie per Hand), Trichter darunter holt das Knochenmehl. Braustand: von oben nur Brau-Zutaten, von der Seite Lohenstaub (Brennstoff) und Flaschen/Tränke, unten heraus nur die Tränke |
+| Werfer: Rüstung, Boote, Loren | ✅ ungetestet – legt Rüstung, Kürbis, Köpfe und Elytren Spielern und Mobs vor ihm an (freier Platz), setzt Boote (auch Truhenboote) auf Wasser und Loren (auch TNT-, Truhen-, Trichterloren) auf Schienen, sonst fallen sie heraus |
+| Getränkte Pfeile | ✅ ungetestet – Pfeile mit Trank-Wirkung (alle Tränke), Rezept 8 Pfeile + Verweiltrank, Wirkung 1/8 der Trankdauer wie Vanilla. Bogen und Armbrust nehmen jeden Pfeil (Nebenhand zuerst, dann Inventar der Reihe nach), Unendlichkeit spart getränkte Pfeile nicht (wie Vanilla), aufgehobene Pfeile bleiben getränkt, Werfer verschießen sie mit Wirkung |
+| Esel, Maultier, Lama mit Truhe | ✅ ungetestet – gezähmte erwachsene Esel und Maultiere nehmen eine Truhe (15 Plätze), Lamas 3 × Stärke (Stärke 1–5). Schleichen + Benutzen oder die Inventar-Taste beim Reiten öffnet das Tier-Inventar (Sattel, Rüstung/Teppich, Truhe) – auch für Pferde. Lamas zähmen: Weizen/Heu erhöht das Temperament, mit leerer Hand aufsteigen versuchen; gezähmte tragen Teppiche. Truhe und Inhalt fallen beim Tod. Java-Spieler sehen das Java-Pferdefenster (BetterPMMP-Bridge 1.11.0) |
 | Grundwasser (Aquifere) | ✅ offline geprüft – Höhlen sind wie seit 1.18 teilweise geflutet: Der Untergrund ist in Zellen (16 × 12 × 16) geteilt, jede mit eigenem Wasserspiegel (trocken, Wasser, tief unten auch Lava). Zwischen verschiedenen Spiegeln bleibt eine dünne Steinwand, nichts läuft aus (3 Seeds geprüft: 1 von 37.000 Flüssigkeitsblöcken berührt Luft). Schluchten schneiden geflutete Höhlen nicht auf. Gleich schnell wie vorher |
 | Regale mit Redstone | ✅ offline geprüft – versorgte Regale nebeneinander (gleiche Richtung) bilden Reihen bis 3 (links/Mitte/rechts). Benutzen tauscht die ganze Reihe mit den rechten Hotbar-Plätzen: 1 Regal 3, 2 Regale 6, 3 Regale alle 9 |
 | Sculk-Sensor: Frequenzen | ✅ ungetestet – Schritte 1, Geschoss landet 2, Schaden 7, Block benutzen 10, abbauen 12, setzen 13. Der Komparator liest die letzte Frequenz, der kalibrierte Sensor hört mit Redstone-Signal an der Eingangsseite nur auf diese Frequenz |

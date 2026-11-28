@@ -23,6 +23,7 @@ declare(strict_types=1);
 
 namespace pocketmine\block;
 
+use pocketmine\block\inventory\BrewingStandInventory;
 use pocketmine\block\inventory\FurnaceInventory;
 use pocketmine\block\tile\Container;
 use pocketmine\block\tile\Hopper as TileHopper;
@@ -34,12 +35,15 @@ use pocketmine\inventory\Inventory;
 use pocketmine\block\utils\SupportType;
 use pocketmine\data\runtime\RuntimeDataDescriber;
 use pocketmine\item\Item;
+use pocketmine\item\ItemTypeIds;
+use pocketmine\item\VanillaItems;
 use pocketmine\math\AxisAlignedBB;
 use pocketmine\math\Facing;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\world\BlockTransaction;
 use function count;
+use function in_array;
 use function min;
 use function range;
 
@@ -172,6 +176,21 @@ class Hopper extends Transparent implements PoweredByRedstone{
 	private function pushItem(Inventory $inventory) : bool{
 		$target = $this->getContainerAt($this->facing);
 		if($target === null){
+			//vanilla: a hopper pointing down into a composter fills it
+			$composter = $this->facing === Facing::DOWN ? $this->getSide(Facing::DOWN) : null;
+			if($composter instanceof VanillaComposter){
+				for($slot = 0, $size = $inventory->getSize(); $slot < $size; ++$slot){
+					$item = $inventory->getItem($slot);
+					if(!$item->isNull() && VanillaComposter::compostChance($item) > 0){
+						if(!$composter->addFromHopper((clone $item)->setCount(1))){
+							return false; //full
+						}
+						$item->pop();
+						$inventory->setItem($slot, $item);
+						return true;
+					}
+				}
+			}
 			return false;
 		}
 		$targetTile = $this->position->getWorld()->getTile($this->position->getSide($this->facing));
@@ -201,8 +220,22 @@ class Hopper extends Transparent implements PoweredByRedstone{
 	 */
 	private function pullItems(Inventory $inventory) : bool{
 		$source = $this->getContainerAt(Facing::UP);
+		if($source === null && ($composter = $this->getSide(Facing::UP)) instanceof VanillaComposter){
+			//vanilla: a hopper below a full composter takes the bone meal
+			$boneMeal = $composter->getLevel() >= 8 ? VanillaItems::BONE_MEAL() : null;
+			if($boneMeal !== null && $inventory->canAddItem($boneMeal) && ($taken = $composter->takeBoneMeal()) !== null){
+				$inventory->addItem($taken);
+				return true;
+			}
+			return false;
+		}
 		if($source !== null){
-			$slots = $source instanceof FurnaceInventory ? [FurnaceInventory::SLOT_RESULT] : range(0, $source->getSize() - 1);
+			$slots = match(true){
+				$source instanceof FurnaceInventory => [FurnaceInventory::SLOT_RESULT],
+				//vanilla: only the potions are taken out of a brewing stand
+				$source instanceof BrewingStandInventory => [BrewingStandInventory::SLOT_BOTTLE_LEFT, BrewingStandInventory::SLOT_BOTTLE_MIDDLE, BrewingStandInventory::SLOT_BOTTLE_RIGHT],
+				default => range(0, $source->getSize() - 1),
+			};
 			foreach($slots as $slot){
 				$item = $source->getItem($slot);
 				if($item->isNull()){
@@ -253,11 +286,44 @@ class Hopper extends Transparent implements PoweredByRedstone{
 			}
 			return $one->getFuelTime() > 0 && self::insertIntoSlot($target, FurnaceInventory::SLOT_FUEL, $one);
 		}
+		if($target instanceof BrewingStandInventory){
+			//vanilla: from above the ingredient, from the side blaze powder as fuel and bottles into the bottle slots
+			if($hopperFacing === Facing::DOWN){
+				return self::isBrewingIngredient($one) && self::insertIntoSlot($target, BrewingStandInventory::SLOT_INGREDIENT, $one);
+			}
+			if($one->getTypeId() === ItemTypeIds::BLAZE_POWDER){
+				return self::insertIntoSlot($target, BrewingStandInventory::SLOT_FUEL, $one);
+			}
+			if(in_array($one->getTypeId(), [ItemTypeIds::POTION, ItemTypeIds::SPLASH_POTION, ItemTypeIds::LINGERING_POTION, ItemTypeIds::GLASS_BOTTLE], true)){
+				foreach([BrewingStandInventory::SLOT_BOTTLE_LEFT, BrewingStandInventory::SLOT_BOTTLE_MIDDLE, BrewingStandInventory::SLOT_BOTTLE_RIGHT] as $slot){
+					if($target->getItem($slot)->isNull()){
+						$target->setItem($slot, $one);
+						return true;
+					}
+				}
+			}
+			return false;
+		}
 		if(!$target->canAddItem($one)){
 			return false;
 		}
 		$target->addItem($one);
 		return true;
+	}
+
+	private static function isBrewingIngredient(Item $item) : bool{
+		$manager = \pocketmine\Server::getInstance()->getCraftingManager();
+		foreach($manager->getPotionTypeRecipes() as $recipe){
+			if($recipe->getIngredient()->accepts($item)){
+				return true;
+			}
+		}
+		foreach($manager->getPotionContainerChangeRecipes() as $recipe){
+			if($recipe->getIngredient()->accepts($item)){
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private static function insertIntoSlot(Inventory $target, int $slot, Item $one) : bool{
