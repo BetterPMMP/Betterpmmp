@@ -91,7 +91,6 @@ use pocketmine\Server;
 use pocketmine\ServerConfigGroup;
 use pocketmine\utils\AssumptionFailedError;
 use pocketmine\utils\Limits;
-use pocketmine\utils\ReversePriorityQueue;
 use pocketmine\utils\Utils;
 use pocketmine\world\biome\Biome;
 use pocketmine\world\biome\BiomeRegistry;
@@ -313,8 +312,8 @@ class World implements ChunkManager{
 	 */
 	private array $changedBlocks = [];
 
-	/** @phpstan-var ReversePriorityQueue<int, array{Vector3, int, int}> */
-	private ReversePriorityQueue $scheduledBlockUpdateQueue;
+	/** @phpstan-var ScheduledTickQueue */
+	private ScheduledTickQueue $scheduledBlockUpdateQueue;
 	/**
 	 * @phpstan-var array<BlockPosHash, array{due: int, token: int}>
 	 */
@@ -586,7 +585,7 @@ class World implements ChunkManager{
 			}
 		});
 
-		$this->scheduledBlockUpdateQueue = new ReversePriorityQueue();
+		$this->scheduledBlockUpdateQueue = new ScheduledTickQueue();
 		$this->scheduledBlockUpdateQueue->setExtractFlags(\SplPriorityQueue::EXTR_BOTH);
 
 		$this->neighbourBlockUpdateQueue = new \SplQueue();
@@ -1042,7 +1041,7 @@ class World implements ChunkManager{
 
 		$this->timings->scheduledBlockUpdates->startTiming();
 		//Delayed updates
-		while($this->scheduledBlockUpdateQueue->count() > 0 && $this->scheduledBlockUpdateQueue->current()["priority"] <= $currentTick){
+		while($this->scheduledBlockUpdateQueue->count() > 0 && $this->scheduledBlockUpdateQueue->current()["priority"][0] <= $currentTick){
 			[$vec, $token, $expectedType] = $this->scheduledBlockUpdateQueue->extract()["data"];
 			$hash = World::blockHash($vec->x, $vec->y, $vec->z);
 			if(($this->scheduledBlockUpdateQueueIndex[$hash]["token"] ?? null) !== $token){
@@ -1060,7 +1059,7 @@ class World implements ChunkManager{
 				//loaded or not generated yet) waits until its neighbours are there, like outside a ticking area in
 				//vanilla. The tick stays pending and is saved with its chunk.
 				$this->scheduledBlockUpdateQueueIndex[$hash]["due"] = $currentTick + 20;
-				$this->scheduledBlockUpdateQueue->insert([$vec, $token, $expectedType], $currentTick + 20);
+				$this->scheduledBlockUpdateQueue->insert([$vec, $token, $expectedType], [$currentTick + 20, $token]);
 				continue;
 			}
 			unset($this->scheduledBlockUpdateQueueIndex[$hash]);
@@ -1619,7 +1618,7 @@ class World implements ChunkManager{
 		$this->scheduledBlockUpdatesByChunk[World::chunkHash($x >> Chunk::COORD_BIT_SIZE, $z >> Chunk::COORD_BIT_SIZE)][$index] = true;
 		// Tile creation schedules ticks inside setBlockAt(), before its cache is
 		// invalidated. Read the new terrain state instead of a cached old block.
-		$this->scheduledBlockUpdateQueue->insert([new Vector3($x, $y, $z), $token, $this->getBlockAt($x, $y, $z, false, false)->getTypeId()], $due);
+		$this->scheduledBlockUpdateQueue->insert([new Vector3($x, $y, $z), $token, $this->getBlockAt($x, $y, $z, false, false)->getTypeId()], [$due, $token]);
 	}
 
 	/**

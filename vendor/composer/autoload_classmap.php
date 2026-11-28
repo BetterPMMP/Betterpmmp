@@ -2649,6 +2649,7 @@ return array(
     'pocketmine\\world\\Explosion' => $baseDir . '/src/world/Explosion.php',
     'pocketmine\\world\\GameRules' => $baseDir . '/src/world/GameRules.php',
     'pocketmine\\world\\Position' => $baseDir . '/src/world/Position.php',
+    'pocketmine\\world\\ScheduledTickQueue' => $baseDir . '/src/world/ScheduledTickQueue.php',
     'pocketmine\\world\\SimpleChunkManager' => $baseDir . '/src/world/SimpleChunkManager.php',
     'pocketmine\\world\\World' => $baseDir . '/src/world/World.php',
     'pocketmine\\world\\WorldCreationOptions' => $baseDir . '/src/world/WorldCreationOptions.php',

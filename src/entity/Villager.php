@@ -240,6 +240,9 @@ class Villager extends Mob implements Ageable, \pocketmine\entity\trade\Trader{
 	/** Bedrock opens the trade screen only when the villager knows who trades with it. */
 	public function setTradingPlayer(?Player $player) : void{
 		$this->tradingPlayer = $player;
+		if($this->isClosed() || $this->isFlaggedForDespawn()){
+			return; //BetterPMMP: villager already unloaded (server stop, world unload): nobody to tell
+		}
 		$this->networkPropertiesDirty = true;
 		$this->sendData(null);
 	}
