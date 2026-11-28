@@ -2161,4 +2161,11 @@ class Server{
 		}
 		return $this->getWorldManager()->generateWorld($name, $creation);
 	}
+
+	// BetterPMMP: API 3 helper
+	/** @param \pocketmine\player\Player[] $players */
+	public function broadcastPacket(array $players, \pocketmine\network\mcpe\protocol\ClientboundPacket $packet) : bool{
+		\pocketmine\network\mcpe\NetworkBroadcastUtils::broadcastPackets($players, [$packet]);
+		return true;
+	}
 }

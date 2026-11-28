@@ -858,4 +858,18 @@ class Item implements \JsonSerializable{
 	public static function clearCreativeItems() : void{ \pocketmine\inventory\CreativeInventory::getInstance()->clear(); }
 	/** @deprecated API 3: nothing to do any more */
 	public static function initCreativeItems() : void{}
+
+	// BetterPMMP: API 3 helpers
+	/** NBT of the item as binary string (API 3). */
+	public function getCompoundTag() : string{
+		return $this->hasNamedTag() ? (new \pocketmine\nbt\LittleEndianNbtSerializer())->write(new \pocketmine\nbt\TreeRoot($this->getNamedTag())) : "";
+	}
+
+	/** @return $this */
+	public function setCompoundTag(CompoundTag|string $tags) : self{
+		if(is_string($tags)){
+			$tags = $tags === "" ? CompoundTag::create() : (new \pocketmine\nbt\LittleEndianNbtSerializer())->read($tags)->mustGetCompoundTag();
+		}
+		return $this->setNamedTag($tags);
+	}
 }

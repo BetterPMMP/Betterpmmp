@@ -47,4 +47,15 @@ class OfflinePlayer implements IPlayer{
 	public function hasPlayedBefore() : bool{
 		return $this->namedtag !== null;
 	}
+
+	// BetterPMMP: API 3 helpers
+	public function isOnline() : bool{ return $this->getPlayer() !== null; }
+	public function getPlayer() : ?Player{ return \pocketmine\Server::getInstance()->getPlayerExact($this->getName()); }
+	public function getServer() : \pocketmine\Server{ return \pocketmine\Server::getInstance(); }
+	public function isOp() : bool{ return \pocketmine\Server::getInstance()->isOp($this->getName()); }
+	public function setOp(bool $value) : void{ $value ? \pocketmine\Server::getInstance()->addOp($this->getName()) : \pocketmine\Server::getInstance()->removeOp($this->getName()); }
+	public function isBanned() : bool{ return \pocketmine\Server::getInstance()->getNameBans()->isBanned($this->getName()); }
+	public function setBanned(bool $banned) : void{ $banned ? \pocketmine\Server::getInstance()->getNameBans()->addBan($this->getName(), null, null, null) : \pocketmine\Server::getInstance()->getNameBans()->remove($this->getName()); }
+	public function isWhitelisted() : bool{ return \pocketmine\Server::getInstance()->isWhitelisted($this->getName()); }
+	public function setWhitelisted(bool $value) : void{ $value ? \pocketmine\Server::getInstance()->addWhitelist($this->getName()) : \pocketmine\Server::getInstance()->removeWhitelist($this->getName()); }
 }

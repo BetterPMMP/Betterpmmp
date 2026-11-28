@@ -31,4 +31,22 @@ class QueryRegenerateEvent extends ServerEvent{
 	public function getQueryInfo() : QueryInfo{
 		return $this->queryInfo;
 	}
+
+	// BetterPMMP: API 3/4 - the query values used to be on the event itself
+	public function getServerName() : string{ return $this->queryInfo->getServerName(); }
+	public function setServerName(string $v) : void{ $this->queryInfo->setServerName($v); }
+	public function canListPlugins() : bool{ return $this->queryInfo->canListPlugins(); }
+	public function setListPlugins(bool $v) : void{ $this->queryInfo->setListPlugins($v); }
+	public function getPlugins() : array{ return $this->queryInfo->getPlugins(); }
+	public function setPlugins(array $v) : void{ $this->queryInfo->setPlugins($v); }
+	public function getPlayerList() : array{ return $this->queryInfo->getPlayerList(); }
+	public function setPlayerList(array $v) : void{ $this->queryInfo->setPlayerList($v); }
+	public function getPlayerCount() : int{ return $this->queryInfo->getPlayerCount(); }
+	public function setPlayerCount(int $v) : void{ $this->queryInfo->setPlayerCount($v); }
+	public function getMaxPlayerCount() : int{ return $this->queryInfo->getMaxPlayerCount(); }
+	public function setMaxPlayerCount(int $v) : void{ $this->queryInfo->setMaxPlayerCount($v); }
+	public function getWorld() : string{ return $this->queryInfo->getWorld(); }
+	public function setWorld(string $v) : void{ $this->queryInfo->setWorld($v); }
+	public function getLevelName() : string{ return $this->queryInfo->getWorld(); }
+	public function setLevelName(string $world) : void{ $this->queryInfo->setWorld($world); }
 }

@@ -35,4 +35,19 @@ class EntitySpawnEvent extends EntityEvent{
 	public function __construct(Entity $entity){
 		$this->entity = $entity;
 	}
+
+	// BetterPMMP: API 3 helpers
+	public function getPosition() : \pocketmine\world\Position{ return $this->entity->getPosition(); }
+	public function getType() : int{ return self::legacyEntityId($this->entity); }
+	public function isCreature() : bool{ return $this->entity instanceof \pocketmine\entity\Living; }
+	public function isHuman() : bool{ return $this->entity instanceof \pocketmine\entity\Human; }
+	public function isProjectile() : bool{ return $this->entity instanceof \pocketmine\entity\projectile\Projectile; }
+	public function isVehicle() : bool{ return $this->entity instanceof \pocketmine\entity\riding\Rideable && !$this->entity instanceof \pocketmine\entity\Living; }
+	public function isItem() : bool{ return $this->entity instanceof \pocketmine\entity\object\ItemEntity; }
+
+	private static function legacyEntityId(\pocketmine\entity\Entity $entity) : int{
+		$name = strtoupper(str_replace("minecraft:", "", $entity::getNetworkTypeId()));
+		$constant = "pocketmine\\entity\\EntityIds::" . $name;
+		return interface_exists("pocketmine\\entity\\EntityIds") && defined($constant) ? (int) constant($constant) : -1;
+	}
 }
