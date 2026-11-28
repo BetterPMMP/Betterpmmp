@@ -196,6 +196,7 @@ final class NaturalMobSpawner{
 				}
 				if(in_array($biome, $oceanBiomes, true)){
 					$classes[] = DolphinMob::class;
+					$classes[] = \pocketmine\entity\NautilusMob::class; //BetterPMMP: nautili live in all oceans
 				}
 				if(in_array($biome, [...$oceanBiomes, BiomeIds::RIVER, BiomeIds::FROZEN_RIVER], true) && $waterSurfaceY - $world->getMinY() > 5 && $world->getFullLightAt($x, $waterSurfaceY - 1, $z) <= 7){
 					$classes[] = DrownedMob::class;
@@ -736,6 +737,23 @@ final class NaturalMobSpawner{
 				$mob->markNaturalSpawned();
 			}
 			$mob->spawnToAll();
+			//BetterPMMP: about 10 % of adult husks spawn as a camel husk jockey (husk in front with an iron spear,
+			//a parched behind), like vanilla
+			if($mob instanceof \pocketmine\entity\HuskMob && !$mob->isBaby() && mt_rand(0, 9) === 0){
+				$camel = new \pocketmine\entity\CamelHuskMob($location);
+				$camel->spawnToAll();
+				\pocketmine\entity\riding\RidingManager::mount($mob, $camel);
+				$mob->giveSpear();
+				$parched = new ParchedMob($location);
+				$parched->spawnToAll();
+				\pocketmine\entity\riding\RidingManager::mount($parched, $camel);
+			}
+			//BetterPMMP: some drowned in the ocean ride a zombie nautilus (zombie nautilus jockey)
+			if($mob instanceof DrownedMob && !$mob->isBaby() && $mob->isUnderwater() && mt_rand(0, 9) === 0){
+				$nautilus = new \pocketmine\entity\ZombieNautilusMob($location);
+				$nautilus->spawnToAll();
+				\pocketmine\entity\riding\RidingManager::mount($mob, $nautilus);
+			}
 			//vanilla: 5 % of baby zombies spawn riding a chicken (chicken jockey)
 			if($mob instanceof \pocketmine\entity\Zombie && $mob->isBaby() && mt_rand(0, 99) < 5){
 				$chicken = new Chicken($location);

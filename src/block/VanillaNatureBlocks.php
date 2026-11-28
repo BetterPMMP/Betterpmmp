@@ -491,8 +491,27 @@ class VanillaSculkCatalyst extends GenericBedrockBlock{
 				$world->setBlockAt($bx, $by, $bz, VanillaBlocks::SCULK());
 				++$converted;
 				--$charge;
-				if($vein !== null && $above->getTypeId() === BlockTypeIds::AIR && mt_rand(1, 4) === 1){
-					$world->setBlockAt($bx, $by + 1, $bz, $vein->withProperties(["multi_face_direction_bits" => 1]));
+				if($above->getTypeId() === BlockTypeIds::AIR){
+					$far = ($bx - $x) ** 2 + ($bz - $z) ** 2 >= 16;
+					if($far && mt_rand(1, 11) === 1){
+						//vanilla: charges far from the catalyst sometimes grow a sculk sensor, rarely a shrieker
+						//(shriekers grown this way cannot summon a warden)
+						$grow = mt_rand(1, 10) === 1 ? ExtraVanillaBlocks::get("minecraft:sculk_shrieker") : ExtraVanillaBlocks::get("minecraft:sculk_sensor");
+						if($grow !== null){
+							$world->setBlockAt($bx, $by + 1, $bz, $grow);
+						}
+					}elseif($vein !== null && mt_rand(1, 4) === 1){
+						$world->setBlockAt($bx, $by + 1, $bz, $vein->withProperties(["multi_face_direction_bits" => 1]));
+					}
+				}
+				//veins creep onto the sides of blocks next to the new sculk
+				if($vein !== null && mt_rand(1, 3) === 1){
+					foreach([[1, 0], [-1, 0], [0, 1], [0, -1]] as [$dx, $dz]){
+						if($world->getBlockAt($bx + $dx, $by + 1, $bz + $dz)->getTypeId() === BlockTypeIds::AIR && $world->getBlockAt($bx + $dx, $by, $bz + $dz)->isSolid()){
+							$world->setBlockAt($bx + $dx, $by + 1, $bz + $dz, $vein->withProperties(["multi_face_direction_bits" => 1]));
+							break;
+						}
+					}
 				}
 				break;
 			}

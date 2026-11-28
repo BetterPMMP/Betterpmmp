@@ -893,12 +893,17 @@ class CamelMob extends GenericAnimalMob implements \pocketmine\entity\riding\Rid
 	protected const WIDTH = 2.375;
 }
 
-class CamelHuskMob extends GenericHostileMob{
+class CamelHuskMob extends GenericHostileMob implements \pocketmine\entity\riding\Rideable{
+	/** BetterPMMP: undead camel of the desert; spawns carrying a husk (front, with an iron spear) and a parched (back) */
+	use \pocketmine\entity\riding\RideableTrait;
 	protected const ENTITY_ID = EntityIds::CAMEL_HUSK;
 	protected const DISPLAY_NAME = "Camel Husk";
 	protected const SPAWN_EGG_GETTER = "CAMEL_HUSK_SPAWN_EGG";
-	protected const HEIGHT = 1.8;
-	protected const WIDTH = 0.6;
+	protected const HEIGHT = 2.375;
+	protected const WIDTH = 1.7;
+	public function getMaxRiders() : int{ return 2; }
+	public function getSeatPosition(int $seat) : \pocketmine\math\Vector3{ return new \pocketmine\math\Vector3(0, 2.6, $seat === 0 ? 0.5 : -0.5); }
+	public function isControlledByDriver() : bool{ return false; }
 }
 
 class CatMob extends GenericAnimalMob implements TameablePet{
@@ -2099,7 +2104,20 @@ class HorseMob extends GenericAnimalMob implements \pocketmine\entity\riding\Rid
 }
 
 class HuskMob extends GenericHostileMob{
+	/** BetterPMMP: vanilla husk - its hits make the target hungry (7 s) */
+	protected function onMeleeHit(\pocketmine\entity\Living $target) : void{ parent::onMeleeHit($target); $target->getEffects()->add(new \pocketmine\entity\effect\EffectInstance(\pocketmine\entity\effect\VanillaEffects::HUNGER(), 140)); }
 	protected const ENTITY_ID = EntityIds::HUSK;
+	/** BetterPMMP: husks of camel husk jockeys carry an iron spear (shown in the hand, dropped with 8.5 %) */
+	private bool $hasSpear = false;
+	protected function initEntity(CompoundTag $nbt) : void{ parent::initEntity($nbt); $this->hasSpear = $nbt->getByte("BetterPMMPSpear", 0) === 1; }
+	public function saveNBT() : CompoundTag{ return parent::saveNBT()->setByte("BetterPMMPSpear", $this->hasSpear ? 1 : 0); }
+	public function giveSpear() : void{ $this->hasSpear = true; foreach($this->getViewers() as $viewer){ $this->sendSpearTo($viewer); } }
+	private function sendSpearTo(Player $player) : void{
+		$session = $player->getNetworkSession();
+		$session->sendDataPacket(MobEquipmentPacket::create($this->getId(), ItemStackWrapper::legacy($session->getTypeConverter()->coreItemStackToNet(VanillaItems::IRON_SPEAR())), 0, 0, ContainerIds::INVENTORY));
+	}
+	public function spawnTo(Player $player) : void{ parent::spawnTo($player); if($this->hasSpear && $player->isConnected() && isset($this->getViewers()[spl_object_id($player)])){ $this->sendSpearTo($player); } }
+	public function getDrops() : array{ $drops = parent::getDrops(); if($this->hasSpear && mt_rand(0, 999) < 85){ $drops[] = VanillaItems::IRON_SPEAR()->setDamage(mt_rand(0, 100)); } return $drops; }
 	protected const DISPLAY_NAME = "Husk";
 	protected const SPAWN_EGG_GETTER = "HUSK_SPAWN_EGG";
 	protected const HEIGHT = 1.8;
@@ -2301,12 +2319,15 @@ class MuleMob extends GenericAnimalMob implements \pocketmine\entity\riding\Ride
 	protected const WIDTH = 1.6;
 }
 
-class NautilusMob extends GenericSwimmingAnimalMob{
+class NautilusMob extends GenericSwimmingAnimalMob implements \pocketmine\entity\riding\Rideable{
+	/** BetterPMMP: tamed with pufferfish, saddled and ridden under water; the rider can breathe there */
+	use \pocketmine\entity\riding\MountableAnimalTrait;
+	protected function mountKind() : string{ return "nautilus"; }
 	protected const ENTITY_ID = EntityIds::NAUTILUS;
 	protected const DISPLAY_NAME = "Nautilus";
 	protected const SPAWN_EGG_GETTER = "NAUTILUS_SPAWN_EGG";
-	protected const HEIGHT = 1;
-	protected const WIDTH = 1;
+	protected const HEIGHT = 0.95;
+	protected const WIDTH = 0.875;
 }
 
 class NpcMob extends GenericAnimalMob{
@@ -2387,6 +2408,9 @@ class PandaMob extends GenericAnimalMob{
 }
 
 class ParchedMob extends GenericRangedHostileMob{
+	/** BetterPMMP: desert skeleton - does not burn in the sun, its arrows give Weakness */
+	protected function burnsInDaylight() : bool{ return false; }
+	protected function decorateArrow(\pocketmine\entity\projectile\Arrow $arrow) : void{ $arrow->setHitEffect(new \pocketmine\entity\effect\EffectInstance(\pocketmine\entity\effect\VanillaEffects::WEAKNESS(), 600)); }
 	protected const ENTITY_ID = EntityIds::PARCHED;
 	protected const DISPLAY_NAME = "Parched";
 	protected const SPAWN_EGG_GETTER = "PARCHED_SPAWN_EGG";
@@ -3673,12 +3697,17 @@ class ZombieHorseMob extends GenericAnimalMob{
 	protected const WIDTH = 0.6;
 }
 
-class ZombieNautilusMob extends GenericHostileSwimmingMob{
+class ZombieNautilusMob extends GenericHostileSwimmingMob implements \pocketmine\entity\riding\Rideable{
+	/** BetterPMMP: undead nautilus, spawns with a drowned on it (zombie nautilus jockey); the drowned steers it */
+	use \pocketmine\entity\riding\RideableTrait;
 	protected const ENTITY_ID = EntityIds::ZOMBIE_NAUTILUS;
 	protected const DISPLAY_NAME = "Zombie Nautilus";
 	protected const SPAWN_EGG_GETTER = "ZOMBIE_NAUTILUS_SPAWN_EGG";
-	protected const HEIGHT = 1.8;
-	protected const WIDTH = 0.6;
+	protected const HEIGHT = 0.95;
+	protected const WIDTH = 0.875;
+	public function getMaxRiders() : int{ return 1; }
+	public function getSeatPosition(int $seat) : \pocketmine\math\Vector3{ return new \pocketmine\math\Vector3(0, 1.1, 0); }
+	public function isControlledByDriver() : bool{ return false; }
 }
 
 class ZombiePigmanMob extends GenericHostileMob{
