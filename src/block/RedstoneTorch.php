@@ -54,9 +54,13 @@ class RedstoneTorch extends Torch implements Lightable, RedstoneSignalEmitter{
 		return $support === null || RedstonePower::conductorInput($support) === 0;
 	}
 
-	/** vanilla: a torch that turned off 8 times within 60 game ticks burns out */
+	/**
+	 * Bedrock: a torch only burns out when it powers itself without delay (wire from the torch back into its
+	 * own block). Such a loop turns the torch off every 4 game ticks; clocks with a repeater, comparator or
+	 * more torches are slower and never burn out. 8 turn-offs within 30 game ticks only happen in that loop.
+	 */
 	private const BURNOUT_TOGGLES = 8;
-	private const BURNOUT_WINDOW = 60;
+	private const BURNOUT_WINDOW = 30;
 	private const BURNOUT_RECOVERY = 160;
 
 	/**

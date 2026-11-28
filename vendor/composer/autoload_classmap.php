@@ -198,6 +198,7 @@ return array(
     'pocketmine\\world\\generator\\vanilla\\structure\\StructurePiece' => $baseDir . '/src/world/generator/vanilla/structure/StructurePiece.php',
     'pocketmine\\world\\generator\\vanilla\\structure\\StructureStart' => $baseDir . '/src/world/generator/vanilla/structure/StructureStart.php',
     'pocketmine\\world\\generator\\vanilla\\LootTables' => $baseDir . '/src/world/generator/vanilla/LootTables.php',
+    'pocketmine\\world\\generator\\vanilla\\Aquifer' => $baseDir . '/src/world/generator/vanilla/Aquifer.php',
     'pocketmine\\world\\generator\\vanilla\\BlockWriter' => $baseDir . '/src/world/generator/vanilla/BlockWriter.php',
     'pocketmine\\world\\generator\\vanilla\\Overworld' => $baseDir . '/src/world/generator/vanilla/Overworld.php',
     'pocketmine\\world\\generator\\vanilla\\OverworldBiomeBuilder' => $baseDir . '/src/world/generator/vanilla/OverworldBiomeBuilder.php',

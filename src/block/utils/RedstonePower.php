@@ -268,6 +268,7 @@ final class RedstonePower{
 			$block instanceof \pocketmine\block\Jukebox => self::recordSignal($block->getRecord()),
 			$block instanceof \pocketmine\block\Lectern => self::lecternSignal($block),
 			$block instanceof \pocketmine\block\RespawnAnchor => intdiv($block->getCharges() * 15, 4),
+			$block instanceof \pocketmine\block\VanillaSculkSensor => $block->getLastFrequency(),
 			$block instanceof \pocketmine\block\ItemFrame => $block->getFramedItem() !== null && !$block->getFramedItem()->isNull() ? $block->getItemRotation() + 1 : 0,
 			default => null,
 		};

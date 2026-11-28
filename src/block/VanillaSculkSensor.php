@@ -51,9 +51,42 @@ class VanillaSculkSensor extends GenericBedrockBlock implements DirectionalRedst
 		$this->position->getWorld()->setBlock($this->position, $this->withProperties(["sculk_sensor_phase" => $phase]));
 	}
 
-	public function activate(int $strength) : void{
+	/** @var array<int, array<int, int>> world id => block hash => frequency of the last vibration */
+	private static array $frequency = [];
+
+	public function isCalibrated() : bool{
+		return $this->getBedrockName() === "minecraft:calibrated_sculk_sensor";
+	}
+
+	/** Input side of a calibrated sensor (where its amethyst points). */
+	private function inputSide() : int{
+		$tag = $this->getStateData()->getStates()["minecraft:cardinal_direction"] ?? null;
+		return match($tag === null ? "south" : (string) $tag->getValue()){
+			"north" => Facing::NORTH,
+			"east" => Facing::EAST,
+			"west" => Facing::WEST,
+			default => Facing::SOUTH,
+		};
+	}
+
+	/** A calibrated sensor with a redstone signal on its input only listens to that frequency. */
+	public function listensTo(int $frequency) : bool{
+		if(!$this->isCalibrated()){
+			return true;
+		}
+		$input = \pocketmine\block\utils\RedstonePower::fromSide($this, $this->inputSide());
+		return $input === 0 || $input === $frequency;
+	}
+
+	/** Frequency of the last vibration the sensor picked up (read by comparators), 0 if none. */
+	public function getLastFrequency() : int{
+		return $this->position->isValid() ? (self::$frequency[$this->position->getWorld()->getId()][$this->key()] ?? 0) : 0;
+	}
+
+	public function activate(int $strength, int $frequency = 1) : void{
 		$world = $this->position->getWorld();
 		self::$power[$world->getId()][$this->key()] = $strength;
+		self::$frequency[$world->getId()][$this->key()] = $frequency;
 		$this->setPhase(1);
 		$world->addSound($this->position->add(0.5, 0.5, 0.5), new VanillaSound(LevelSoundEvent::POWER_ON_SCULK_SENSOR));
 		$world->notifyRedstoneChange($this->position);
@@ -79,7 +112,8 @@ class VanillaSculkSensor extends GenericBedrockBlock implements DirectionalRedst
 	}
 
 	public function getWeakPowerTowards(int $towards) : int{
-		return $this->signal();
+		//a calibrated sensor does not send its signal back into its input
+		return $this->isCalibrated() && $towards === Facing::opposite($this->inputSide()) ? 0 : $this->signal();
 	}
 
 	public function getStrongPowerTowards(int $towards) : int{

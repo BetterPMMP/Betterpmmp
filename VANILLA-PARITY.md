@@ -29,7 +29,7 @@ Legende: ✅ weitgehend umgesetzt · 🟡 teilweise · ❌ fehlt
 | System | Stand | Hinweis |
 |---|---|---|
 | Overworld-Generator | ✅/🟡 | **neu in 4.5**: Multi-Noise wie 1.18, y -64..319, 50 Oberflächen- + 3 Höhlenbiome, Deepslate. Nicht seedgleich mit Bedrock |
-| Höhlen | ✅/🟡 | Käse-, Spaghetti-, Nudelhöhlen, Lava unter -55, **Schluchten, Geoden, Seen, Fossilien (4.6)**. Fehlen: Aquifere |
+| Höhlen | ✅/🟡 | Käse-, Spaghetti-, Nudelhöhlen, Lava unter -55, **Schluchten, Geoden, Seen, Fossilien (4.6)**, **Grundwasser (Aquifere, 5.86)** |
 | Höhlenbiome | ✅/🟡 | **4.7**: Moos, Moosteppich, Tropfstein, Sculk, Sculk-Kreischer, -Katalysator, Pulverschnee, verdächtiger Sand/Kies |
 | Dörfer | ✅/🟡 | **5.3**: Dörfer werden beim Näherkommen mit 3–10 Bewohnern auf Straßen gefüllt; **4.6**: verzweigte Straßen, 12 Berufsgebäude mit Arbeitsblock und Truhe, Häuser, Felder, Gehege, 5 Biomtypen |
 | Andere Strukturen | ✅/🟡 | **4.6**: Mine, Festung mit Endportal, Verlies, Wüsten-/Dschungeltempel, Iglu, Hexenhütte, Außenposten, Ruinenportal, Schiffswrack, Ozeanruinen, Monument, Waldanwesen, Antike Stadt, Pfadruinen, Schatz (nachgebaut) |
@@ -45,9 +45,9 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 | Bereich | Offen |
 |---|---|
 | Kern | Nautilus-Rüstung, Befehlsblöcke, Strukturblöcke |
-| Blöcke ohne Funktion | Sculk-Ader (eigene Ausbreitung), Regale mit Redstone (ganze Reihe tauschen) |
+| Blöcke ohne Funktion | Sculk-Ader (eigene Ausbreitung) |
 | Mobs mit Standard-KI | Neue 26er-Mobs (Nautilus, Kamel-Wüstenzombie, Schwefelwürfel), Lama mit Truhe |
-| Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Bedrock-Redstone-Timing nicht verglichen; kalibrierter Sculk-Sensor ohne Frequenzen |
+| Abweichungen | Strukturen sind nachgebaut, nicht Block für Block Mojang; Welt nicht seedgleich; Kolben-Startverzögerung (in Bedrock selbst uneinheitlich) |
 | Protokoll | 1.26.60/1.26.62 (Protokoll 2225). 1.26.70 ist noch Vorschau (Protokoll 2259) – Update nötig, sobald es erscheint |
 
 ## Neu in 5.86
@@ -476,8 +476,11 @@ Aus dem Code ermittelt: Mobs, Blöcke und Items, die registriert sind, aber noch
 |---|---|
 | Java-Bridge: Kisten-Menüs und Inventar | ✅ eigenes ViaProxy-Plugin „BetterPMMP-Bridge“ (Quellcode in `tools/java-bridge-plugin`, wird automatisch nach `java-bridge/plugins/` installiert): Kisten-Fenster in jeder Größe (auch 54 Plätze), keine Block-Prüfung bei Menüs ohne echte Kiste, und Inventar-Klicks, die ViaBedrock noch gar nicht übersetzt, werden an BetterPMMP weitergeleitet. BetterPMMP führt sie wie ein Java-Server aus (Links-/Rechtsklick, Shift, Zahlentasten, F, Q, Doppelklick, Ziehen) – als normale Inventar-Transaktion, Menü-Plugins sehen die Klicks also wie bei Bedrock |
 | ViaProxy-Version | ⚙️ fest auf den getesteten Dev-Build 964 (`viaproxy-build`), „latest“ = immer der neueste |
+| Grundwasser (Aquifere) | ✅ offline geprüft – Höhlen sind wie seit 1.18 teilweise geflutet: Der Untergrund ist in Zellen (16 × 12 × 16) geteilt, jede mit eigenem Wasserspiegel (trocken, Wasser, tief unten auch Lava). Zwischen verschiedenen Spiegeln bleibt eine dünne Steinwand, nichts läuft aus (3 Seeds geprüft: 1 von 37.000 Flüssigkeitsblöcken berührt Luft). Schluchten schneiden geflutete Höhlen nicht auf. Gleich schnell wie vorher |
+| Regale mit Redstone | ✅ offline geprüft – versorgte Regale nebeneinander (gleiche Richtung) bilden Reihen bis 3 (links/Mitte/rechts). Benutzen tauscht die ganze Reihe mit den rechten Hotbar-Plätzen: 1 Regal 3, 2 Regale 6, 3 Regale alle 9 |
+| Sculk-Sensor: Frequenzen | ✅ ungetestet – Schritte 1, Geschoss landet 2, Schaden 7, Block benutzen 10, abbauen 12, setzen 13. Der Komparator liest die letzte Frequenz, der kalibrierte Sensor hört mit Redstone-Signal an der Eingangsseite nur auf diese Frequenz |
+| Redstone: Fackel-Durchbrennen wie Bedrock | ✅ nur eine Fackel, die sich ohne Verzögerung selbst versorgt, brennt durch. Takter mit Repeater laufen dauerhaft (in Java würden sie durchbrennen) |
 | Redstone: feste Tick-Reihenfolge | ✅ Block-Ticks, die im selben Spieltick fällig sind, laufen in der Reihenfolge, in der sie geplant wurden (vorher zufällig). Gleiche Schaltung = immer gleiches Ergebnis. Nachgemessen: Repeater 2/4/6/8 Ticks, kurze Impulse auf die Repeater-Verzögerung verlängert, Sperre, Fackel 2 Ticks, Komparator 2 Ticks, Observer 2 Ticks Verzögerung + 2 Ticks Impuls, Takter mit Repeater 1-4 |
-| Redstone: Fackel brennt durch | ✅ wie Vanilla: 8 Mal ausgeschaltet in 60 Ticks, dann bleibt sie aus (Rauch, Zischen) und versucht es nach 160 Ticks wieder |
 | Redstone: Komparator liest Blöcke | ✅ neben Behältern auch Kuchen, Kessel, Komposter, Bienenstock, Endportalrahmen, Plattenspieler (je Schallplatte), Lesepult (Seite), Seelenanker und Rahmen – direkt oder durch einen festen Block |
 | Java-Bridge: Villager-Handel | ✅ Java-Spieler handeln im echten Java-Händlerfenster: Angebotsliste mit Preisen, Rabatt durch „Held des Dorfes“, ausverkaufte Angebote, Stufe und Fortschrittsbalken des Dorfbewohners. Ein Klick auf ein Angebot legt die Bezahlung aus dem Inventar in die Plätze, Shift-Klick auf das Ergebnis handelt so oft wie möglich. Der Server prüft jeden Handel wie bei Bedrock. BetterPMMP-Bridge 1.10.0 |
 | Java-Bridge: alle Java-Versionen | ✅ Java 1.7.2 bis zur neuesten Version können joinen (ViaVersion, ViaBackwards, ViaRewind). Kleine Übersetzungsfehler alter Versionen kicken nicht mehr (`java-bridge: all-java-versions: true`) |

@@ -332,6 +332,7 @@ class ComposerStaticInit01c34b5648e4177bfa963b48f7da5526
         'pocketmine\\world\\generator\\vanilla\\structure\\StructurePiece' => __DIR__ . '/../..' . '/src/world/generator/vanilla/structure/StructurePiece.php',
         'pocketmine\\world\\generator\\vanilla\\structure\\StructureStart' => __DIR__ . '/../..' . '/src/world/generator/vanilla/structure/StructureStart.php',
         'pocketmine\\world\\generator\\vanilla\\LootTables' => __DIR__ . '/../..' . '/src/world/generator/vanilla/LootTables.php',
+        'pocketmine\\world\\generator\\vanilla\\Aquifer' => __DIR__ . '/../..' . '/src/world/generator/vanilla/Aquifer.php',
         'pocketmine\\world\\generator\\vanilla\\BlockWriter' => __DIR__ . '/../..' . '/src/world/generator/vanilla/BlockWriter.php',
         'pocketmine\\world\\generator\\vanilla\\Overworld' => __DIR__ . '/../..' . '/src/world/generator/vanilla/Overworld.php',
         'pocketmine\\world\\generator\\vanilla\\OverworldBiomeBuilder' => __DIR__ . '/../..' . '/src/world/generator/vanilla/OverworldBiomeBuilder.php',
