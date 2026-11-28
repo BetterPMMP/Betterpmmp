@@ -52,12 +52,28 @@ Für Bedrock **und** Java testen, wo „B/J“ steht.
 - [ ] Wüstenzombie-Treffer macht hungrig
 - [ ] Mob stirbt neben Sculk-Katalysator: Sculk breitet sich aus, manchmal wächst ein Sensor
 
+## Neue Blöcke
+
+- [ ] Leuchtfeuer: Pyramide (1–4 Stufen) bauen, Barren/Edelstein bezahlen, Effekt wählen → Effekt für Spieler in der Nähe (B/J)
+- [ ] Leuchtfeuer Stufe 4: zweiter Effekt (Regeneration oder Stufe II)
+- [ ] Webstuhl: Banner + Farbstoff → Muster; Creeper-Muster nur mit Bannervorlage (B/J)
+- [ ] Strukturblock (OP, Kreativ): Speichern, dann woanders Laden; Einstellungen bleiben nach Neustart
+- [ ] Nautilus-Rüstung anlegen (Klick oder Tier-Inventar)
+
 ## Java-Spieler (J)
+
+- [ ] Steinsäge: Rezeptliste erscheint, Auswahl gibt das richtige Ergebnis, Shift-Klick macht mehrere
+- [ ] Crafter: öffnet sich, Felder an-/ausschalten
 
 - [ ] Join mit verschiedenen Versionen (z. B. 1.8.9, 1.12.2, 1.16.5, 1.20.1, neueste)
 - [ ] Villager-Handel: Fenster öffnet sich, Angebote stimmen, Klick auf Angebot legt Bezahlung hinein, Shift-Klick handelt mehrfach
 - [ ] Amboss, Zaubertisch, Schmiedetisch, Schleifstein, Kartentisch
 - [ ] Tier-Inventar (Pferd, Esel, Lama)
+
+## Alte Plugins (API 3)
+
+- [ ] Plugins mit `Entity::createBaseNBT`, `Entity::createEntity`, `Entity::registerEntity` (NPC-, Pet-Plugins)
+- [ ] Query-Plugins (`QueryRegenerateEvent::setServerName`, `setPlayerCount` …)
 
 ## Ältere Punkte (seit Längerem eingebaut, noch nie getestet)
 

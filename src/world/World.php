@@ -4114,4 +4114,14 @@ class World implements ChunkManager{
 		}
 		return $tiles;
 	}
+
+	// BetterPMMP: API 3 helper
+	public function broadcastLevelEvent(?Vector3 $pos, int $evid, int $data = 0) : void{
+		$packet = \pocketmine\network\mcpe\protocol\LevelEventPacket::create($evid, $data, $pos);
+		if($pos !== null){
+			$this->broadcastPacketToViewers($pos, $packet);
+		}else{
+			\pocketmine\network\mcpe\NetworkBroadcastUtils::broadcastPackets($this->getPlayers(), [$packet]);
+		}
+	}
 }

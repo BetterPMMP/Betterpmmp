@@ -1792,4 +1792,52 @@ abstract class Entity{
 	public function isImmobile() : bool{ return $this->hasNoClientPredictions(); }
 	/** @deprecated API 3/4: use setNoClientPredictions() */
 	public function setImmobile(bool $value = true) : void{ $this->setNoClientPredictions($value); }
+
+	// ------------------------------------------------- BetterPMMP: API 3 compatibility
+
+	/**
+	 * API 3: NBT for a new entity at a position (Pos, Motion, Rotation).
+	 * @deprecated use the Location constructor
+	 */
+	public static function createBaseNBT(Vector3 $pos, ?Vector3 $motion = null, float $yaw = 0.0, float $pitch = 0.0) : CompoundTag{
+		return CompoundTag::create()
+			->setTag("Pos", new \pocketmine\nbt\tag\ListTag([new \pocketmine\nbt\tag\DoubleTag($pos->x), new \pocketmine\nbt\tag\DoubleTag($pos->y), new \pocketmine\nbt\tag\DoubleTag($pos->z)]))
+			->setTag("Motion", new \pocketmine\nbt\tag\ListTag([new \pocketmine\nbt\tag\DoubleTag($motion?->x ?? 0.0), new \pocketmine\nbt\tag\DoubleTag($motion?->y ?? 0.0), new \pocketmine\nbt\tag\DoubleTag($motion?->z ?? 0.0)]))
+			->setTag("Rotation", new \pocketmine\nbt\tag\ListTag([new \pocketmine\nbt\tag\FloatTag($yaw), new \pocketmine\nbt\tag\FloatTag($pitch)]));
+	}
+
+	/**
+	 * API 3: registers an entity class under its short name and the given save names.
+	 * @param string[] $saveNames
+	 * @deprecated use EntityFactory::register()
+	 */
+	public static function registerEntity(string $className, bool $force = false, array $saveNames = []) : bool{
+		if(!is_a($className, Entity::class, true)){
+			return false;
+		}
+		$short = (new \ReflectionClass($className))->getShortName();
+		$names = $saveNames === [] ? [$short] : $saveNames;
+		try{
+			EntityFactory::getInstance()->register($className, function(World $world, CompoundTag $nbt) use ($className) : Entity{
+				return new $className(EntityDataHelper::parseLocation($nbt, $world), $nbt);
+			}, $names);
+		}catch(\Throwable){
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * API 3: creates an entity from its save name ("Zombie", "minecraft:zombie" ...) with base NBT.
+	 * @deprecated
+	 */
+	public static function createEntity(int|string $type, World $world, CompoundTag $nbt, mixed ...$args) : ?Entity{
+		$nbt = clone $nbt;
+		$nbt->setString(EntityFactory::TAG_IDENTIFIER, (string) $type);
+		try{
+			return EntityFactory::getInstance()->createFromData($world, $nbt);
+		}catch(\Throwable){
+			return null;
+		}
+	}
 }
